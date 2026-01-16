@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -12,7 +12,8 @@ import {
   ArrowLeftRight,
   Shield,
   UserCog,
-  Car
+  Car,
+  ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -176,16 +177,45 @@ function NavContent() {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Não mostrar botão voltar na página inicial (dashboard)
+  const showBackButton = location.pathname !== "/";
+
+  const handleBack = () => {
+    // Se há histórico, volta para página anterior
+    // Senão, vai para o dashboard
+    if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  };
+
   return (
     <div className="flex h-screen w-full bg-background">
       {/* Sidebar - sempre visível */}
-      <aside className="flex w-64 flex-col border-r border-border bg-sidebar shadow-sm">
+      <aside className="flex w-64 flex-col border-r border-border bg-sidebar shadow-sm flex-shrink-0">
         <NavContent />
       </aside>
 
-      {/* Header com notificações */}
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-end border-b border-border bg-background px-6">
+      {/* Header com botão voltar e notificações */}
+      <div className="flex flex-1 flex-col min-w-0">
+        <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
+          <div className="flex items-center gap-2">
+            {showBackButton && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Voltar</span>
+              </Button>
+            )}
+          </div>
           <NotificationBell />
         </header>
 
