@@ -45,6 +45,8 @@ export default function Veiculos() {
     status: "disponivel",
     funcionario_id: "",
     empresa_id: "",
+    valor_aquisicao: "",
+    data_aquisicao: "",
   });
 
   const filteredVeiculos = veiculos.filter(
@@ -61,6 +63,8 @@ export default function Veiculos() {
       ano_fabricacao: formData.ano_fabricacao ? parseInt(formData.ano_fabricacao) : null,
       ano_modelo: formData.ano_modelo ? parseInt(formData.ano_modelo) : null,
       km_atual: formData.km_atual ? parseInt(formData.km_atual) : null,
+      valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
+      data_aquisicao: formData.data_aquisicao || null,
     };
     if (editingId) {
       await updateVeiculo.mutateAsync({ id: editingId, ...data });
@@ -88,6 +92,8 @@ export default function Veiculos() {
       status: "disponivel",
       funcionario_id: "",
       empresa_id: "",
+      valor_aquisicao: "",
+      data_aquisicao: "",
     });
   };
 
@@ -108,6 +114,8 @@ export default function Veiculos() {
       status: veiculo.status || "disponivel",
       funcionario_id: veiculo.funcionario_id || "",
       empresa_id: veiculo.empresa_id || "",
+      valor_aquisicao: veiculo.valor_aquisicao?.toString() || "",
+      data_aquisicao: veiculo.data_aquisicao || "",
     });
     setIsDialogOpen(true);
   };
@@ -283,6 +291,27 @@ export default function Veiculos() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="data_aquisicao">Data Aquisição</Label>
+                      <Input
+                        id="data_aquisicao"
+                        type="date"
+                        value={formData.data_aquisicao}
+                        onChange={(e) => setFormData({ ...formData, data_aquisicao: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="valor_aquisicao">Valor Aquisição (R$)</Label>
+                      <Input
+                        id="valor_aquisicao"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        value={formData.valor_aquisicao}
+                        onChange={(e) => setFormData({ ...formData, valor_aquisicao: e.target.value })}
+                      />
                     </div>
                   </div>
                   <DialogFooter>
