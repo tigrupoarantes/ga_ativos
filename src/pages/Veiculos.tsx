@@ -2,8 +2,8 @@ import { useState } from "react";
 import { VehicleLayout } from "@/components/VehicleLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useVeiculos } from "@/hooks/useVeiculos";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
-import { useEmpresas } from "@/hooks/useEmpresas";
+import { useFuncionariosSelect, useEmpresasSelect } from "@/hooks/useSelectOptions";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Trash2, Car } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DataTablePagination } from "@/components/DataTablePagination";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -23,13 +24,17 @@ const statusColors: Record<string, string> = {
   baixado: "bg-status-error/10 text-status-error",
 };
 
+const PAGE_SIZE = 25;
+
 export default function Veiculos() {
   const { veiculos, isLoading, createVeiculo, updateVeiculo, deleteVeiculo } = useVeiculos();
-  const { funcionarios } = useFuncionarios();
-  const { empresas } = useEmpresas();
+  const { funcionarios } = useFuncionariosSelect();
+  const { empresas } = useEmpresasSelect();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [formData, setFormData] = useState({
     placa: "",
     marca: "",
@@ -49,12 +54,25 @@ export default function Veiculos() {
     data_aquisicao: "",
   });
 
+  // Filtragem client-side (para conjuntos pequenos, manteremos assim)
+  // Para conjuntos maiores, usar usePaginatedQuery
   const filteredVeiculos = veiculos.filter(
     (v) =>
-      v.placa?.toLowerCase().includes(search.toLowerCase()) ||
-      v.marca?.toLowerCase().includes(search.toLowerCase()) ||
-      v.modelo?.toLowerCase().includes(search.toLowerCase())
+      v.placa?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      v.marca?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      v.modelo?.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
+
+  // Paginação client-side
+  const totalCount = filteredVeiculos.length;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const paginatedVeiculos = filteredVeiculos.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset page when search changes
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +83,8 @@ export default function Veiculos() {
       km_atual: formData.km_atual ? parseInt(formData.km_atual) : null,
       valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
       data_aquisicao: formData.data_aquisicao || null,
+      funcionario_id: formData.funcionario_id || null,
+      empresa_id: formData.empresa_id || null,
     };
     if (editingId) {
       await updateVeiculo.mutateAsync({ id: editingId, ...data });
@@ -97,7 +117,7 @@ export default function Veiculos() {
     });
   };
 
-  const handleEdit = (veiculo: typeof veiculos[0]) => {
+  const handleEdit = (veiculo: (typeof veiculos)[0]) => {
     setEditingId(veiculo.id);
     setFormData({
       placa: veiculo.placa || "",
@@ -142,7 +162,7 @@ export default function Veiculos() {
               <Input
                 placeholder="Buscar veículos..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10 w-[300px]"
               />
             </div>
@@ -332,50 +352,61 @@ export default function Veiculos() {
                 ))}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Placa</TableHead>
-                    <TableHead>Marca/Modelo</TableHead>
-                    <TableHead>Ano</TableHead>
-                    <TableHead>KM</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredVeiculos.map((veiculo) => (
-                    <TableRow key={veiculo.id}>
-                      <TableCell className="font-medium">{veiculo.placa}</TableCell>
-                      <TableCell>{veiculo.marca} {veiculo.modelo}</TableCell>
-                      <TableCell>{veiculo.ano_modelo || "-"}</TableCell>
-                      <TableCell>{veiculo.km_atual?.toLocaleString() || "-"}</TableCell>
-                      <TableCell>
-                        <Badge className={cn("capitalize", statusColors[veiculo.status || "disponivel"])}>
-                          {veiculo.status?.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{(veiculo as any).funcionario?.nome || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(veiculo)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(veiculo.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredVeiculos.length === 0 && (
+              <>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Nenhum veículo encontrado
-                      </TableCell>
+                      <TableHead>Placa</TableHead>
+                      <TableHead>Marca/Modelo</TableHead>
+                      <TableHead>Ano</TableHead>
+                      <TableHead>KM</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Responsável</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedVeiculos.map((veiculo) => (
+                      <TableRow key={veiculo.id}>
+                        <TableCell className="font-medium">{veiculo.placa}</TableCell>
+                        <TableCell>{veiculo.marca} {veiculo.modelo}</TableCell>
+                        <TableCell>{veiculo.ano_modelo || "-"}</TableCell>
+                        <TableCell>{veiculo.km_atual?.toLocaleString() || "-"}</TableCell>
+                        <TableCell>
+                          <Badge className={cn("capitalize", statusColors[veiculo.status || "disponivel"])}>
+                            {veiculo.status?.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{(veiculo as any).funcionario?.nome || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(veiculo)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(veiculo.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {paginatedVeiculos.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          Nenhum veículo encontrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+                {totalCount > PAGE_SIZE && (
+                  <DataTablePagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalCount={totalCount}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setPage}
+                  />
+                )}
+              </>
             )}
           </CardContent>
         </Card>

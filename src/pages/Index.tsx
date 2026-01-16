@@ -1,14 +1,7 @@
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useVeiculos } from "@/hooks/useVeiculos";
-import { useAtivos } from "@/hooks/useAtivos";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
-import { useContratos } from "@/hooks/useContratos";
-import { useOrdensServico } from "@/hooks/useOrdensServico";
-import { usePreventivas } from "@/hooks/usePreventivas";
-import { usePecas } from "@/hooks/usePecas";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { 
   Car, 
   Package, 
@@ -18,12 +11,10 @@ import {
   AlertTriangle, 
   Clock,
   TrendingUp,
-  Calendar,
   ChevronRight
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { format, differenceInDays, isPast } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format } from "date-fns";
 import { 
   BarChart, 
   Bar, 
@@ -36,73 +27,103 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 export default function Index() {
-  const { veiculos } = useVeiculos();
-  const { ativos } = useAtivos();
-  const { funcionarios } = useFuncionarios();
-  const { contratos } = useContratos();
-  const { ordensServico } = useOrdensServico();
-  const { preventivasVencidas, preventivasProximas } = usePreventivas();
-  const { pecasEstoqueBaixo } = usePecas();
+  const { stats, alerts, isLoading } = useDashboardStats();
 
-  // Stats
-  const stats = [
-    { title: "Veículos", value: veiculos.length, icon: Car, href: "/veiculos", color: "text-blue-500" },
-    { title: "Ativos", value: ativos.length, icon: Package, href: "/ativos", color: "text-green-500" },
-    { title: "Funcionários", value: funcionarios.length, icon: Users, href: "/funcionarios", color: "text-purple-500" },
-    { title: "Contratos", value: contratos.length, icon: FileText, href: "/contratos", color: "text-orange-500" },
+  // Stats cards usando dados agregados
+  const statsCards = [
+    { title: "Veículos", value: stats.total_veiculos, icon: Car, href: "/veiculos", color: "text-blue-500" },
+    { title: "Ativos", value: stats.total_ativos, icon: Package, href: "/ativos", color: "text-green-500" },
+    { title: "Funcionários", value: stats.total_funcionarios, icon: Users, href: "/funcionarios", color: "text-purple-500" },
+    { title: "Contratos", value: stats.total_contratos, icon: FileText, href: "/contratos", color: "text-orange-500" },
   ];
 
   // Ordens de serviço por status
-  const ordensAbertas = ordensServico.filter(o => o.status === "aberta").length;
-  const ordensEmAndamento = ordensServico.filter(o => o.status === "em_andamento").length;
-  const ordensFechadas = ordensServico.filter(o => o.status === "fechada").length;
-
   const ordensData = [
-    { name: "Abertas", value: ordensAbertas },
-    { name: "Em Andamento", value: ordensEmAndamento },
-    { name: "Fechadas", value: ordensFechadas },
+    { name: "Abertas", value: stats.ordens_aberta },
+    { name: "Em Andamento", value: stats.ordens_em_andamento },
+    { name: "Fechadas", value: stats.ordens_fechada },
   ];
 
   // Veículos por status
   const veiculosData = [
-    { status: "Disponível", quantidade: veiculos.filter(v => v.status === "disponivel").length },
-    { status: "Em uso", quantidade: veiculos.filter(v => v.status === "em_uso").length },
-    { status: "Manutenção", quantidade: veiculos.filter(v => v.status === "manutencao").length },
-    { status: "Inativo", quantidade: veiculos.filter(v => v.status === "inativo").length },
+    { status: "Disponível", quantidade: stats.veiculos_disponivel },
+    { status: "Em uso", quantidade: stats.veiculos_em_uso },
+    { status: "Manutenção", quantidade: stats.veiculos_manutencao },
+    { status: "Inativo", quantidade: stats.veiculos_inativo },
   ];
+
+  // Montar lista de alertas
+  const alertasList: Array<{ tipo: string; msg: string; link: string }> = [];
+
+  // CNHs vencidas
+  if (alerts.cnhs_vencidas) {
+    alerts.cnhs_vencidas.forEach((f) => {
+      alertasList.push({ tipo: "danger", msg: `CNH vencida: ${f.nome}`, link: "/funcionarios" });
+    });
+  }
 
   // CNHs vencendo
-  const condutores = funcionarios.filter(f => f.is_condutor && f.cnh_validade);
-  const cnhsVencendo = condutores.filter(f => {
-    if (!f.cnh_validade) return false;
-    const dias = differenceInDays(new Date(f.cnh_validade), new Date());
-    return dias <= 30 && dias >= 0;
-  });
-  const cnhsVencidas = condutores.filter(f => {
-    if (!f.cnh_validade) return false;
-    return isPast(new Date(f.cnh_validade));
-  });
+  if (alerts.cnhs_vencendo) {
+    alerts.cnhs_vencendo.forEach((f) => {
+      alertasList.push({
+        tipo: "warning",
+        msg: `CNH vencendo: ${f.nome} (${f.cnh_validade ? format(new Date(f.cnh_validade), "dd/MM/yyyy") : ""})`,
+        link: "/funcionarios",
+      });
+    });
+  }
 
   // Contratos vencendo
-  const contratosVencendo = contratos.filter(c => {
-    if (!c.data_fim) return false;
-    const dias = differenceInDays(new Date(c.data_fim), new Date());
-    return dias <= 30 && dias >= 0;
-  });
+  if (alerts.contratos_vencendo) {
+    alerts.contratos_vencendo.forEach((c) => {
+      alertasList.push({
+        tipo: "warning",
+        msg: `Contrato vencendo: ${c.numero} (${c.data_fim ? format(new Date(c.data_fim), "dd/MM/yyyy") : ""})`,
+        link: "/contratos",
+      });
+    });
+  }
 
-  // Alertas
-  const alertas = [
-    ...cnhsVencidas.map(f => ({ tipo: "danger", msg: `CNH vencida: ${f.nome}`, link: "/funcionarios" })),
-    ...cnhsVencendo.map(f => ({ tipo: "warning", msg: `CNH vencendo: ${f.nome} (${format(new Date(f.cnh_validade!), "dd/MM/yyyy")})`, link: "/funcionarios" })),
-    ...contratosVencendo.map(c => ({ tipo: "warning", msg: `Contrato vencendo: ${c.numero} (${format(new Date(c.data_fim!), "dd/MM/yyyy")})`, link: "/contratos" })),
-    ...preventivasVencidas.map(p => ({ tipo: "danger", msg: `Preventiva vencida: ${p.tipo_manutencao} - ${p.veiculos?.placa || ""}`, link: "/oficina/preventivas" })),
-    ...preventivasProximas.map(p => ({ tipo: "warning", msg: `Preventiva próxima: ${p.tipo_manutencao} - ${p.veiculos?.placa || ""}`, link: "/oficina/preventivas" })),
-    ...pecasEstoqueBaixo.map(p => ({ tipo: "warning", msg: `Estoque baixo: ${p.nome} (${p.quantidade_estoque} ${p.unidade})`, link: "/oficina/pecas" })),
-  ];
+  // Preventivas vencidas
+  if (alerts.preventivas_vencidas) {
+    alerts.preventivas_vencidas.forEach((p) => {
+      alertasList.push({
+        tipo: "danger",
+        msg: `Preventiva vencida: ${p.tipo_manutencao} - ${p.placa || ""}`,
+        link: "/oficina/preventivas",
+      });
+    });
+  }
+
+  // Preventivas próximas
+  if (alerts.preventivas_proximas) {
+    alerts.preventivas_proximas.forEach((p) => {
+      alertasList.push({
+        tipo: "warning",
+        msg: `Preventiva próxima: ${p.tipo_manutencao} - ${p.placa || ""}`,
+        link: "/oficina/preventivas",
+      });
+    });
+  }
+
+  // Peças com estoque baixo
+  if (alerts.pecas_estoque_baixo) {
+    alerts.pecas_estoque_baixo.forEach((p) => {
+      alertasList.push({
+        tipo: "warning",
+        msg: `Estoque baixo: ${p.nome} (${p.quantidade_estoque} ${p.unidade || ""})`,
+        link: "/oficina/pecas",
+      });
+    });
+  }
+
+  const totalOrdens = stats.ordens_aberta + stats.ordens_em_andamento + stats.ordens_fechada;
+  const totalVeiculos = stats.total_veiculos;
 
   return (
     <AppLayout>
@@ -115,7 +136,7 @@ export default function Index() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
+          {statsCards.map((stat) => (
             <Link key={stat.title} to={stat.href}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -123,7 +144,11 @@ export default function Index() {
                   <stat.icon className={`h-5 w-5 ${stat.color}`} />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <div className="text-2xl font-bold">{stat.value}</div>
+                  )}
                 </CardContent>
               </Card>
             </Link>
@@ -148,7 +173,11 @@ export default function Index() {
               </Link>
             </CardHeader>
             <CardContent>
-              {ordensServico.length > 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center h-[200px]">
+                  <Skeleton className="h-32 w-32 rounded-full" />
+                </div>
+              ) : totalOrdens > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie
@@ -187,7 +216,11 @@ export default function Index() {
               <CardDescription>Distribuição da frota</CardDescription>
             </CardHeader>
             <CardContent>
-              {veiculos.length > 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center h-[200px]">
+                  <Skeleton className="h-40 w-full" />
+                </div>
+              ) : totalVeiculos > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={veiculosData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -217,9 +250,15 @@ export default function Index() {
             <CardDescription>Itens que requerem atenção</CardDescription>
           </CardHeader>
           <CardContent>
-            {alertas.length > 0 ? (
+            {isLoading ? (
               <div className="space-y-2">
-                {alertas.slice(0, 10).map((alerta, index) => (
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : alertasList.length > 0 ? (
+              <div className="space-y-2">
+                {alertasList.slice(0, 10).map((alerta, index) => (
                   <Link key={index} to={alerta.link}>
                     <div className={`flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors ${
                       alerta.tipo === "danger" ? "bg-destructive/10" : "bg-yellow-500/10"
@@ -234,9 +273,9 @@ export default function Index() {
                     </div>
                   </Link>
                 ))}
-                {alertas.length > 10 && (
+                {alertasList.length > 10 && (
                   <p className="text-sm text-muted-foreground text-center pt-2">
-                    E mais {alertas.length - 10} alertas...
+                    E mais {alertasList.length - 10} alertas...
                   </p>
                 )}
               </div>

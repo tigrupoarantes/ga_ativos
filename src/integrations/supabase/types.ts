@@ -1203,6 +1203,8 @@ export type Database = {
     }
     Functions: {
       get_current_user_role: { Args: never; Returns: string }
+      get_dashboard_alerts: { Args: { limit_count?: number }; Returns: Json }
+      get_dashboard_stats: { Args: never; Returns: Json }
       is_current_user_admin: { Args: never; Returns: boolean }
     }
     Enums: {
