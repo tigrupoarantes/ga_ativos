@@ -28,7 +28,16 @@ import OrdensServico from "./pages/OrdensServico";
 import Pecas from "./pages/Pecas";
 import Preventivas from "./pages/Preventivas";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutos - dados considerados frescos
+      gcTime: 30 * 60 * 1000, // 30 minutos - tempo no cache após inativo
+      refetchOnWindowFocus: false, // Não recarrega ao focar janela
+      retry: 1, // Apenas 1 retry em caso de erro
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
