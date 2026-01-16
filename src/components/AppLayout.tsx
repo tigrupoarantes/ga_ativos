@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -13,13 +13,49 @@ import {
   Shield,
   UserCog,
   Car,
-  ChevronLeft
+  ChevronLeft,
+  Home,
+  Wrench,
+  ClipboardList,
+  ShieldCheck,
+  Building2,
+  UsersRound
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useCurrentUserPermissions } from "@/hooks/useModulePermissions";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+
+// Mapeamento de rotas para labels e hierarquia
+const routeConfig: Record<string, { label: string; parent?: string }> = {
+  "/": { label: "Dashboard" },
+  "/ativos": { label: "Ativos", parent: "/" },
+  "/tipos-ativos": { label: "Tipos de Ativos", parent: "/" },
+  "/funcionarios": { label: "Funcionários", parent: "/" },
+  "/veiculos": { label: "Veículos", parent: "/" },
+  "/atribuicoes": { label: "Atribuições", parent: "/" },
+  "/historico": { label: "Histórico", parent: "/" },
+  "/configuracoes": { label: "Configurações", parent: "/" },
+  "/usuarios": { label: "Usuários", parent: "/" },
+  "/permissoes": { label: "Permissões", parent: "/" },
+  "/empresas": { label: "Empresas", parent: "/" },
+  "/equipes": { label: "Equipes", parent: "/" },
+  "/contratos": { label: "Contratos", parent: "/" },
+  "/telefonia": { label: "Telefonia", parent: "/" },
+  "/oficina": { label: "Oficina", parent: "/" },
+  "/oficina/ordens": { label: "Ordens de Serviço", parent: "/oficina" },
+  "/oficina/pecas": { label: "Peças", parent: "/oficina" },
+  "/oficina/preventivas": { label: "Preventivas", parent: "/oficina" },
+};
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -183,9 +219,43 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Não mostrar botão voltar na página inicial (dashboard)
   const showBackButton = location.pathname !== "/";
 
+  // Construir breadcrumbs baseado na rota atual
+  const breadcrumbs = useMemo(() => {
+    const path = location.pathname;
+    const crumbs: { path: string; label: string }[] = [];
+    
+    // Encontra a rota atual ou a mais próxima
+    let currentPath = path;
+    let config = routeConfig[currentPath];
+    
+    // Se não encontrar exatamente, tenta encontrar a rota pai
+    if (!config) {
+      const segments = path.split('/').filter(Boolean);
+      for (let i = segments.length; i >= 0; i--) {
+        const testPath = '/' + segments.slice(0, i).join('/');
+        if (routeConfig[testPath]) {
+          currentPath = testPath;
+          config = routeConfig[testPath];
+          break;
+        }
+      }
+    }
+    
+    // Constrói a hierarquia de breadcrumbs
+    while (config) {
+      crumbs.unshift({ path: currentPath, label: config.label });
+      if (config.parent) {
+        currentPath = config.parent;
+        config = routeConfig[currentPath];
+      } else {
+        break;
+      }
+    }
+    
+    return crumbs;
+  }, [location.pathname]);
+
   const handleBack = () => {
-    // Se há histórico, volta para página anterior
-    // Senão, vai para o dashboard
     if (window.history.length > 2) {
       navigate(-1);
     } else {
@@ -200,21 +270,51 @@ export function AppLayout({ children }: AppLayoutProps) {
         <NavContent />
       </aside>
 
-      {/* Header com botão voltar e notificações */}
+      {/* Header com breadcrumb e notificações */}
       <div className="flex flex-1 flex-col min-w-0">
         <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 min-w-0">
             {showBackButton && (
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={handleBack}
-                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground flex-shrink-0"
               >
                 <ChevronLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Voltar</span>
               </Button>
             )}
+            
+            {/* Breadcrumb */}
+            <Breadcrumb className="hidden sm:flex">
+              <BreadcrumbList>
+                {breadcrumbs.map((crumb, index) => (
+                  <BreadcrumbItem key={crumb.path}>
+                    {index < breadcrumbs.length - 1 ? (
+                      <>
+                        <BreadcrumbLink asChild>
+                          <Link to={crumb.path} className="flex items-center gap-1.5">
+                            {index === 0 && <Home className="h-3.5 w-3.5" />}
+                            <span>{crumb.label}</span>
+                          </Link>
+                        </BreadcrumbLink>
+                        <BreadcrumbSeparator />
+                      </>
+                    ) : (
+                      <BreadcrumbPage className="flex items-center gap-1.5">
+                        {breadcrumbs.length === 1 && <Home className="h-3.5 w-3.5" />}
+                        <span>{crumb.label}</span>
+                      </BreadcrumbPage>
+                    )}
+                  </BreadcrumbItem>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
+
+            {/* Mobile: apenas página atual */}
+            <span className="sm:hidden text-sm font-medium text-foreground truncate">
+              {breadcrumbs[breadcrumbs.length - 1]?.label || "Dashboard"}
+            </span>
           </div>
           <NotificationBell />
         </header>
