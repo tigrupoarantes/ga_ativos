@@ -1,0 +1,320 @@
+import { useState } from "react";
+import { AppLayout } from "@/components/AppLayout";
+import { PageHeader } from "@/components/PageHeader";
+import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { useEmpresas } from "@/hooks/useEmpresas";
+import { useEquipes } from "@/hooks/useEquipes";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Edit, Trash2, Users, Car } from "lucide-react";
+
+export default function Funcionarios() {
+  const { funcionarios, isLoading, createFuncionario, updateFuncionario, deleteFuncionario } = useFuncionarios();
+  const { empresas } = useEmpresas();
+  const { equipes } = useEquipes();
+  const [search, setSearch] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    nome: "",
+    email: "",
+    telefone: "",
+    cargo: "",
+    departamento: "",
+    cpf: "",
+    empresa_id: "",
+    equipe_id: "",
+    is_condutor: false,
+    cnh_numero: "",
+    cnh_categoria: "",
+    cnh_validade: "",
+  });
+
+  const filteredFuncionarios = funcionarios.filter(
+    (f) =>
+      f.nome?.toLowerCase().includes(search.toLowerCase()) ||
+      f.email?.toLowerCase().includes(search.toLowerCase()) ||
+      f.cargo?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId) {
+      await updateFuncionario.mutateAsync({ id: editingId, ...formData });
+    } else {
+      await createFuncionario.mutateAsync(formData);
+    }
+    setIsDialogOpen(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData({
+      nome: "",
+      email: "",
+      telefone: "",
+      cargo: "",
+      departamento: "",
+      cpf: "",
+      empresa_id: "",
+      equipe_id: "",
+      is_condutor: false,
+      cnh_numero: "",
+      cnh_categoria: "",
+      cnh_validade: "",
+    });
+  };
+
+  const handleEdit = (funcionario: typeof funcionarios[0]) => {
+    setEditingId(funcionario.id);
+    setFormData({
+      nome: funcionario.nome || "",
+      email: funcionario.email || "",
+      telefone: funcionario.telefone || "",
+      cargo: funcionario.cargo || "",
+      departamento: funcionario.departamento || "",
+      cpf: funcionario.cpf || "",
+      empresa_id: funcionario.empresa_id || "",
+      equipe_id: funcionario.equipe_id || "",
+      is_condutor: funcionario.is_condutor || false,
+      cnh_numero: funcionario.cnh_numero || "",
+      cnh_categoria: funcionario.cnh_categoria || "",
+      cnh_validade: funcionario.cnh_validade || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Tem certeza que deseja excluir este funcionário?")) {
+      await deleteFuncionario.mutateAsync(id);
+    }
+  };
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <PageHeader
+          title="Funcionários"
+          description="Gerencie os funcionários da organização"
+          icon={Users}
+        />
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar funcionários..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 w-[300px]"
+              />
+            </div>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Funcionário
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{editingId ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nome">Nome *</Label>
+                      <Input
+                        id="nome"
+                        value={formData.nome}
+                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="telefone">Telefone</Label>
+                      <Input
+                        id="telefone"
+                        value={formData.telefone}
+                        onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cpf">CPF</Label>
+                      <Input
+                        id="cpf"
+                        value={formData.cpf}
+                        onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cargo">Cargo</Label>
+                      <Input
+                        id="cargo"
+                        value={formData.cargo}
+                        onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="departamento">Departamento</Label>
+                      <Input
+                        id="departamento"
+                        value={formData.departamento}
+                        onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="empresa_id">Empresa</Label>
+                      <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {empresas.map((e) => (
+                            <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="equipe_id">Equipe</Label>
+                      <Select value={formData.equipe_id} onValueChange={(v) => setFormData({ ...formData, equipe_id: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {equipes.map((eq) => (
+                            <SelectItem key={eq.id} value={eq.id}>{eq.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_condutor"
+                      checked={formData.is_condutor}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_condutor: checked as boolean })}
+                    />
+                    <Label htmlFor="is_condutor">É condutor</Label>
+                  </div>
+                  {formData.is_condutor && (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cnh_numero">CNH Número</Label>
+                        <Input
+                          id="cnh_numero"
+                          value={formData.cnh_numero}
+                          onChange={(e) => setFormData({ ...formData, cnh_numero: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cnh_categoria">Categoria</Label>
+                        <Input
+                          id="cnh_categoria"
+                          value={formData.cnh_categoria}
+                          onChange={(e) => setFormData({ ...formData, cnh_categoria: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cnh_validade">Validade</Label>
+                        <Input
+                          id="cnh_validade"
+                          type="date"
+                          value={formData.cnh_validade}
+                          onChange={(e) => setFormData({ ...formData, cnh_validade: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                    <Button type="submit" disabled={createFuncionario.isPending || updateFuncionario.isPending}>
+                      {editingId ? "Salvar" : "Criar"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Cargo</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Equipe</TableHead>
+                    <TableHead>Condutor</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredFuncionarios.map((funcionario) => (
+                    <TableRow key={funcionario.id}>
+                      <TableCell className="font-medium">{funcionario.nome}</TableCell>
+                      <TableCell>{funcionario.email || "-"}</TableCell>
+                      <TableCell>{funcionario.cargo || "-"}</TableCell>
+                      <TableCell>{(funcionario as any).empresa?.nome || "-"}</TableCell>
+                      <TableCell>{(funcionario as any).equipe?.nome || "-"}</TableCell>
+                      <TableCell>
+                        {funcionario.is_condutor ? (
+                          <Badge className="bg-status-info/10 text-status-info">
+                            <Car className="h-3 w-3 mr-1" />
+                            Sim
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(funcionario)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(funcionario.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredFuncionarios.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Nenhum funcionário encontrado
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
