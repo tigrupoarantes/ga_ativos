@@ -11,7 +11,8 @@ import {
   User,
   ArrowLeftRight,
   Shield,
-  UserCog
+  UserCog,
+  Car
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +30,7 @@ const navItems = [
   { icon: Package, label: "Ativos", path: "/ativos", module: "ativos" },
   { icon: FolderKanban, label: "Tipos de Ativos", path: "/tipos-ativos", module: "tipos_ativos" },
   { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
+  { icon: Car, label: "Veículos", path: "/veiculos", module: "veiculos" },
   { icon: ArrowLeftRight, label: "Atribuições", path: "/atribuicoes", module: "atribuicoes" },
   { icon: History, label: "Histórico", path: "/historico", module: "historico" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "configuracoes" },
