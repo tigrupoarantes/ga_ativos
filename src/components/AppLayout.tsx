@@ -15,11 +15,7 @@ import {
   Car,
   ChevronLeft,
   Home,
-  Wrench,
-  ClipboardList,
-  ShieldCheck,
-  Building2,
-  UsersRound
+  Rocket
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -106,13 +102,13 @@ function NavContent() {
   const filteredAdminItems = isAdmin ? adminItems : [];
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-          <Package className="h-5 w-5 text-primary-foreground" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sidebar-primary">
+          <Rocket className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
-        <span className="text-lg font-semibold text-foreground tracking-tight">
+        <span className="text-lg font-semibold text-sidebar-foreground tracking-tight">
           Gestão de Ativos
         </span>
       </div>
@@ -121,7 +117,7 @@ function NavContent() {
       <nav className="flex-1 space-y-1 px-3 py-6 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-sidebar-primary border-t-transparent" />
           </div>
         ) : (
           <>
@@ -135,11 +131,11 @@ function NavContent() {
                   key={item.path}
                   to={item.path}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     "animate-fade-in",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-border hover:text-sidebar-foreground"
                   )}
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
@@ -153,7 +149,7 @@ function NavContent() {
             {filteredAdminItems.length > 0 && (
               <>
                 <div className="pt-4 pb-2 px-3">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
                     Administração
                   </span>
                 </div>
@@ -166,11 +162,11 @@ function NavContent() {
                       key={item.path}
                       to={item.path}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
+                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                         "animate-fade-in",
                         isActive
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-border hover:text-sidebar-foreground"
                       )}
                       style={{ animationDelay: `${(navItems.length + index) * 30}ms` }}
                     >
@@ -188,20 +184,20 @@ function NavContent() {
       {/* User info */}
       <div className="mt-auto border-t border-sidebar-border p-4 space-y-3">
         <div className="flex items-center gap-3 px-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <User className="w-5 h-5 text-primary" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-primary/20">
+            <User className="w-5 h-5 text-sidebar-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">
               {user?.email?.split('@')[0]}
             </p>
-            <p className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</p>
+            <p className="text-xs text-sidebar-foreground/60">{getRoleLabel(userRole)}</p>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent rounded-xl"
+          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-border rounded-xl"
           onClick={signOut}
         >
           <LogOut className="w-4 h-4" />
@@ -266,7 +262,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex h-screen w-full bg-background">
       {/* Sidebar - sempre visível */}
-      <aside className="flex w-64 flex-col border-r border-border bg-sidebar shadow-sm flex-shrink-0">
+      <aside className="flex w-64 flex-col flex-shrink-0">
         <NavContent />
       </aside>
 
