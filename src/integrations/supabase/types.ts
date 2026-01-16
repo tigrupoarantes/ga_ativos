@@ -117,6 +117,7 @@ export type Database = {
           created_at: string | null
           data_aquisicao: string | null
           descricao: string | null
+          detalhes_especificos: Json | null
           empresa_id: string | null
           fotos: string[] | null
           funcionario_id: string | null
@@ -140,6 +141,7 @@ export type Database = {
           created_at?: string | null
           data_aquisicao?: string | null
           descricao?: string | null
+          detalhes_especificos?: Json | null
           empresa_id?: string | null
           fotos?: string[] | null
           funcionario_id?: string | null
@@ -163,6 +165,7 @@ export type Database = {
           created_at?: string | null
           data_aquisicao?: string | null
           descricao?: string | null
+          detalhes_especificos?: Json | null
           empresa_id?: string | null
           fotos?: string[] | null
           funcionario_id?: string | null
@@ -203,6 +206,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      atribuicoes: {
+        Row: {
+          active: boolean | null
+          ativo_id: string | null
+          created_at: string | null
+          data_atribuicao: string | null
+          data_devolucao: string | null
+          funcionario_id: string | null
+          id: string
+          observacoes: string | null
+          status: string | null
+          updated_at: string | null
+          usuario_operacao: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          ativo_id?: string | null
+          created_at?: string | null
+          data_atribuicao?: string | null
+          data_devolucao?: string | null
+          funcionario_id?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          usuario_operacao?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          ativo_id?: string | null
+          created_at?: string | null
+          data_atribuicao?: string | null
+          data_devolucao?: string | null
+          funcionario_id?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          usuario_operacao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atribuicoes_ativo_id_fkey"
+            columns: ["ativo_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atribuicoes_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_log: {
+        Row: {
+          acao: string
+          entidade: string
+          entidade_id: string
+          id: string
+          payload: Json | null
+          timestamp: string | null
+          usuario: string | null
+        }
+        Insert: {
+          acao: string
+          entidade: string
+          entidade_id: string
+          id?: string
+          payload?: Json | null
+          timestamp?: string | null
+          usuario?: string | null
+        }
+        Update: {
+          acao?: string
+          entidade?: string
+          entidade_id?: string
+          id?: string
+          payload?: Json | null
+          timestamp?: string | null
+          usuario?: string | null
+        }
+        Relationships: []
       }
       contratos: {
         Row: {
@@ -805,6 +895,42 @@ export type Database = {
           },
         ]
       }
+      tipos_veiculos: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome_tipo: string
+          taxa_anual_depreciacao: number | null
+          taxa_mensal_depreciacao: number | null
+          updated_at: string | null
+          vida_util_anos: number | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome_tipo: string
+          taxa_anual_depreciacao?: number | null
+          taxa_mensal_depreciacao?: number | null
+          updated_at?: string | null
+          vida_util_anos?: number | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome_tipo?: string
+          taxa_anual_depreciacao?: number | null
+          taxa_mensal_depreciacao?: number | null
+          updated_at?: string | null
+          vida_util_anos?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -924,6 +1050,171 @@ export type Database = {
             columns: ["funcionario_id"]
             isOneToOne: false
             referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      veiculos_documentos: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          nome_arquivo: string
+          tamanho_bytes: number | null
+          tipo_documento: string
+          url: string
+          veiculo_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome_arquivo: string
+          tamanho_bytes?: number | null
+          tipo_documento: string
+          url: string
+          veiculo_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome_arquivo?: string
+          tamanho_bytes?: number | null
+          tipo_documento?: string
+          url?: string
+          veiculo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veiculos_documentos_veiculo_id_fkey"
+            columns: ["veiculo_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      veiculos_historico_responsavel: {
+        Row: {
+          data_alteracao: string | null
+          funcionario_anterior_id: string | null
+          funcionario_novo_id: string | null
+          id: string
+          observacoes: string | null
+          usuario_alteracao: string | null
+          veiculo_id: string | null
+        }
+        Insert: {
+          data_alteracao?: string | null
+          funcionario_anterior_id?: string | null
+          funcionario_novo_id?: string | null
+          id?: string
+          observacoes?: string | null
+          usuario_alteracao?: string | null
+          veiculo_id?: string | null
+        }
+        Update: {
+          data_alteracao?: string | null
+          funcionario_anterior_id?: string | null
+          funcionario_novo_id?: string | null
+          id?: string
+          observacoes?: string | null
+          usuario_alteracao?: string | null
+          veiculo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veiculos_historico_responsavel_funcionario_anterior_id_fkey"
+            columns: ["funcionario_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "veiculos_historico_responsavel_funcionario_novo_id_fkey"
+            columns: ["funcionario_novo_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "veiculos_historico_responsavel_veiculo_id_fkey"
+            columns: ["veiculo_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      veiculos_multas: {
+        Row: {
+          active: boolean | null
+          codigo_infracao: string | null
+          comprovante_url: string | null
+          created_at: string | null
+          data_infracao: string
+          data_lancamento: string | null
+          descricao_infracao: string
+          funcionario_responsavel_id: string | null
+          id: string
+          local_infracao: string | null
+          observacoes: string | null
+          pontos: number | null
+          status: string | null
+          updated_at: string | null
+          valor_multa: number | null
+          veiculo_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          codigo_infracao?: string | null
+          comprovante_url?: string | null
+          created_at?: string | null
+          data_infracao: string
+          data_lancamento?: string | null
+          descricao_infracao: string
+          funcionario_responsavel_id?: string | null
+          id?: string
+          local_infracao?: string | null
+          observacoes?: string | null
+          pontos?: number | null
+          status?: string | null
+          updated_at?: string | null
+          valor_multa?: number | null
+          veiculo_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          codigo_infracao?: string | null
+          comprovante_url?: string | null
+          created_at?: string | null
+          data_infracao?: string
+          data_lancamento?: string | null
+          descricao_infracao?: string
+          funcionario_responsavel_id?: string | null
+          id?: string
+          local_infracao?: string | null
+          observacoes?: string | null
+          pontos?: number | null
+          status?: string | null
+          updated_at?: string | null
+          valor_multa?: number | null
+          veiculo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veiculos_multas_funcionario_responsavel_id_fkey"
+            columns: ["funcionario_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "veiculos_multas_veiculo_id_fkey"
+            columns: ["veiculo_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
             referencedColumns: ["id"]
           },
         ]
