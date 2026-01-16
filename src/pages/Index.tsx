@@ -250,53 +250,6 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Link to="/veiculos">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-              <CardContent className="flex items-center gap-4 p-6">
-                <Car className="h-8 w-8 text-blue-500" />
-                <div>
-                  <h3 className="font-semibold">Gerenciar Veículos</h3>
-                  <p className="text-sm text-muted-foreground">Cadastrar, editar, visualizar</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/oficina">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-              <CardContent className="flex items-center gap-4 p-6">
-                <Wrench className="h-8 w-8 text-orange-500" />
-                <div>
-                  <h3 className="font-semibold">Oficina</h3>
-                  <p className="text-sm text-muted-foreground">Ordens e manutenções</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/ativos">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-              <CardContent className="flex items-center gap-4 p-6">
-                <Package className="h-8 w-8 text-green-500" />
-                <div>
-                  <h3 className="font-semibold">Gerenciar Ativos</h3>
-                  <p className="text-sm text-muted-foreground">Equipamentos e dispositivos</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/contratos">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-              <CardContent className="flex items-center gap-4 p-6">
-                <Calendar className="h-8 w-8 text-purple-500" />
-                <div>
-                  <h3 className="font-semibold">Contratos</h3>
-                  <p className="text-sm text-muted-foreground">Gestão de contratos</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
       </div>
     </AppLayout>
   );
