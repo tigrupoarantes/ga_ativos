@@ -1,0 +1,155 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export interface VeiculoMulta {
+  id: string;
+  veiculo_id: string | null;
+  funcionario_responsavel_id: string | null;
+  data_infracao: string;
+  data_lancamento: string | null;
+  codigo_infracao: string | null;
+  descricao_infracao: string;
+  valor_multa: number | null;
+  pontos: number | null;
+  local_infracao: string | null;
+  status: string | null;
+  observacoes: string | null;
+  comprovante_url: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  active: boolean | null;
+  veiculo?: {
+    id: string;
+    placa: string;
+    marca: string;
+    modelo: string;
+  };
+  funcionario_responsavel?: {
+    id: string;
+    nome: string;
+  };
+}
+
+type VeiculoMultaInsert = {
+  veiculo_id?: string | null;
+  funcionario_responsavel_id?: string | null;
+  data_infracao: string;
+  codigo_infracao?: string | null;
+  descricao_infracao: string;
+  valor_multa?: number | null;
+  pontos?: number | null;
+  local_infracao?: string | null;
+  status?: string | null;
+  observacoes?: string | null;
+  comprovante_url?: string | null;
+};
+
+type VeiculoMultaUpdate = Partial<VeiculoMultaInsert> & { id: string };
+
+export function useVeiculosMultas(veiculoId?: string) {
+  const queryClient = useQueryClient();
+
+  const { data: multas = [], isLoading, error } = useQuery({
+    queryKey: ["veiculos_multas", veiculoId],
+    queryFn: async () => {
+      let query = supabase
+        .from("veiculos_multas")
+        .select(`
+          *,
+          veiculo:veiculos(id, placa, marca, modelo),
+          funcionario_responsavel:funcionarios(id, nome)
+        `)
+        .eq("active", true)
+        .order("data_infracao", { ascending: false });
+
+      if (veiculoId) {
+        query = query.eq("veiculo_id", veiculoId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data as VeiculoMulta[];
+    },
+  });
+
+  const createMulta = useMutation({
+    mutationFn: async (multa: VeiculoMultaInsert) => {
+      const { data, error } = await supabase
+        .from("veiculos_multas")
+        .insert(multa)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["veiculos_multas"] });
+      toast.success("Multa registrada com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao registrar multa: " + error.message);
+    },
+  });
+
+  const updateMulta = useMutation({
+    mutationFn: async ({ id, ...updates }: VeiculoMultaUpdate) => {
+      const { data, error } = await supabase
+        .from("veiculos_multas")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["veiculos_multas"] });
+      toast.success("Multa atualizada!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar multa: " + error.message);
+    },
+  });
+
+  const deleteMulta = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("veiculos_multas")
+        .update({ active: false })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["veiculos_multas"] });
+      toast.success("Multa excluída!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao excluir multa: " + error.message);
+    },
+  });
+
+  // Estatísticas de multas
+  const totalMultas = multas.length;
+  const valorTotalMultas = multas.reduce((acc, m) => acc + (m.valor_multa || 0), 0);
+  const pontosTotais = multas.reduce((acc, m) => acc + (m.pontos || 0), 0);
+  const multasPendentes = multas.filter(m => m.status === 'PENDENTE').length;
+
+  return {
+    multas,
+    isLoading,
+    error,
+    createMulta,
+    updateMulta,
+    deleteMulta,
+    // Estatísticas
+    totalMultas,
+    valorTotalMultas,
+    pontosTotais,
+    multasPendentes,
+  };
+}
