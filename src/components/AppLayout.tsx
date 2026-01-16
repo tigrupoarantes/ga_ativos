@@ -9,12 +9,10 @@ import {
   FolderKanban,
   LogOut,
   User,
-  Building2,
-  Car,
-  Phone,
-  FileSignature,
   Menu,
-  Wrench
+  ArrowLeftRight,
+  Shield,
+  UserCog
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,20 +26,21 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
+// Menu reorganizado conforme PRD - Sistema de Gestão de Ativos
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", module: "dashboard" },
   { icon: Package, label: "Ativos", path: "/ativos", module: "ativos" },
   { icon: FolderKanban, label: "Tipos de Ativos", path: "/tipos-ativos", module: "tipos_ativos" },
-  { icon: FileSignature, label: "Termos de Comodato", path: "/termos-comodato", module: "ativos" },
   { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
-  { icon: Building2, label: "Empresas", path: "/empresas", module: "empresas" },
-  { icon: Users, label: "Equipes", path: "/equipes", module: "funcionarios" },
-  { icon: Car, label: "Veículos", path: "/veiculos", module: "veiculos" },
-  { icon: Wrench, label: "Oficina", path: "/oficina", module: "oficina" },
-  { icon: Phone, label: "Telefonia", path: "/telefonia", module: "telefonia" },
-  { icon: FileSignature, label: "Contratos", path: "/contratos", module: "contratos" },
+  { icon: ArrowLeftRight, label: "Atribuições", path: "/atribuicoes", module: "atribuicoes" },
   { icon: History, label: "Histórico", path: "/historico", module: "historico" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "configuracoes" },
+];
+
+// Menu administrativo - apenas para admins
+const adminItems = [
+  { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
+  { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -67,6 +66,9 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
     return allowedModules.includes(item.module);
   });
 
+  // Show admin items only for admins
+  const filteredAdminItems = isAdmin ? adminItems : [];
+
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
@@ -75,7 +77,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           <Package className="h-5 w-5 text-primary-foreground" />
         </div>
         <span className="text-lg font-semibold text-foreground tracking-tight">
-          Gestão
+          Gestão de Ativos
         </span>
       </div>
 
@@ -86,33 +88,66 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : (
-          filteredNavItems.map((item, index) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path ||
-              (item.path === "/veiculos" && location.pathname.startsWith("/veiculos")) ||
-              (item.path === "/oficina" && location.pathname.startsWith("/oficina")) ||
-              (item.path === "/telefonia" && location.pathname.startsWith("/telefonia")) ||
-              (item.path === "/contratos" && location.pathname.startsWith("/contratos"));
+          <>
+            {filteredNavItems.map((item, index) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path ||
+                (item.path === "/atribuicoes" && location.pathname.startsWith("/atribuicoes"));
 
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={onNavigate}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
-                  "animate-fade-in",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-                style={{ animationDelay: `${index * 30}ms` }}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                <span className="truncate">{item.label}</span>
-              </Link>
-            );
-          })
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
+                    "animate-fade-in",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+
+            {/* Admin Section */}
+            {filteredAdminItems.length > 0 && (
+              <>
+                <div className="pt-4 pb-2 px-3">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Administração
+                  </span>
+                </div>
+                {filteredAdminItems.map((item, index) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
+                        "animate-fade-in",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      )}
+                      style={{ animationDelay: `${(navItems.length + index) * 30}ms` }}
+                    >
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </>
+            )}
+          </>
         )}
       </nav>
 
