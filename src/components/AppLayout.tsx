@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -9,7 +9,6 @@ import {
   FolderKanban,
   LogOut,
   User,
-  Menu,
   ArrowLeftRight,
   Shield,
   UserCog
@@ -18,8 +17,6 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUserPermissions } from "@/hooks/useModulePermissions";
 
 interface AppLayoutProps {
@@ -43,7 +40,7 @@ const adminItems = [
   { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
 ];
 
-function NavContent({ onNavigate }: { onNavigate?: () => void }) {
+function NavContent() {
   const location = useLocation();
   const { user, userRole, signOut } = useAuth();
   const { allowedModules, isAdmin, isLoading } = useCurrentUserPermissions();
@@ -98,7 +95,6 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                 <Link
                   key={item.path}
                   to={item.path}
-                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
                     "animate-fade-in",
@@ -130,7 +126,6 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                     <Link
                       key={item.path}
                       to={item.path}
-                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
                         "animate-fade-in",
@@ -151,7 +146,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         )}
       </nav>
 
-      {/* User info - Apple style */}
+      {/* User info */}
       <div className="mt-auto border-t border-sidebar-border p-4 space-y-3">
         <div className="flex items-center gap-3 px-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -179,64 +174,26 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const isMobile = useIsMobile();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  return (
+    <div className="flex h-screen w-full bg-background">
+      {/* Sidebar - sempre visível */}
+      <aside className="flex w-64 flex-col border-r border-border bg-sidebar shadow-sm">
+        <NavContent />
+      </aside>
 
-  // Mobile Layout
-  if (isMobile) {
-    return (
-      <div className="flex min-h-screen flex-col bg-background">
-        {/* Mobile Header */}
-        <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 safe-area-top">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Package className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="text-base font-semibold">Gestão</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-80 p-0">
-                <NavContent onNavigate={() => setMobileMenuOpen(false)} />
-              </SheetContent>
-            </Sheet>
-          </div>
+      {/* Header com notificações */}
+      <div className="flex flex-1 flex-col">
+        <header className="flex h-14 items-center justify-end border-b border-border bg-background px-6">
+          <NotificationBell />
         </header>
 
-        {/* Mobile Content */}
+        {/* Main content */}
         <main className="flex-1 overflow-auto">
-          <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="mx-auto max-w-7xl p-6 lg:p-8">
             {children}
           </div>
         </main>
       </div>
-    );
-  }
-
-  // Desktop Layout
-  return (
-    <div className="flex h-screen w-full bg-background">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col border-r border-border bg-sidebar shadow-sm">
-        <NavContent />
-        <div className="absolute top-4 right-4">
-          <NotificationBell />
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-7xl p-6 lg:p-8">
-          {children}
-        </div>
-      </main>
     </div>
   );
 }
