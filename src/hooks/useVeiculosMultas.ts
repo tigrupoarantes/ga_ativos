@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 export interface VeiculoMulta {
   id: string;
-  veiculo_id: string | null;
+  veiculo_placa: string | null;
   funcionario_responsavel_id: string | null;
   data_infracao: string;
   data_lancamento: string | null;
@@ -19,12 +19,6 @@ export interface VeiculoMulta {
   created_at: string | null;
   updated_at: string | null;
   active: boolean | null;
-  veiculo?: {
-    id: string;
-    placa: string;
-    marca: string;
-    modelo: string;
-  };
   funcionario_responsavel?: {
     id: string;
     nome: string;
@@ -32,7 +26,7 @@ export interface VeiculoMulta {
 }
 
 type VeiculoMultaInsert = {
-  veiculo_id?: string | null;
+  veiculo_placa?: string | null;
   funcionario_responsavel_id?: string | null;
   data_infracao: string;
   codigo_infracao?: string | null;
@@ -47,24 +41,23 @@ type VeiculoMultaInsert = {
 
 type VeiculoMultaUpdate = Partial<VeiculoMultaInsert> & { id: string };
 
-export function useVeiculosMultas(veiculoId?: string) {
+export function useVeiculosMultas(veiculoPlaca?: string) {
   const queryClient = useQueryClient();
 
   const { data: multas = [], isLoading, error } = useQuery({
-    queryKey: ["veiculos_multas", veiculoId],
+    queryKey: ["veiculos_multas", veiculoPlaca],
     queryFn: async () => {
       let query = supabase
         .from("veiculos_multas")
         .select(`
           *,
-          veiculo:veiculos(id, placa, marca, modelo),
           funcionario_responsavel:funcionarios(id, nome)
         `)
         .eq("active", true)
         .order("data_infracao", { ascending: false });
 
-      if (veiculoId) {
-        query = query.eq("veiculo_id", veiculoId);
+      if (veiculoPlaca) {
+        query = query.eq("veiculo_placa", veiculoPlaca);
       }
 
       const { data, error } = await query;

@@ -4,23 +4,17 @@ import { toast } from "sonner";
 
 export interface VeiculoDocumento {
   id: string;
-  veiculo_id: string | null;
+  veiculo_placa: string | null;
   nome_arquivo: string;
   tipo_documento: string;
   url: string;
   tamanho_bytes: number | null;
   created_at: string | null;
   active: boolean | null;
-  veiculo?: {
-    id: string;
-    placa: string;
-    marca: string;
-    modelo: string;
-  };
 }
 
 type VeiculoDocumentoInsert = {
-  veiculo_id?: string | null;
+  veiculo_placa?: string | null;
   nome_arquivo: string;
   tipo_documento: string;
   url: string;
@@ -29,23 +23,20 @@ type VeiculoDocumentoInsert = {
 
 type VeiculoDocumentoUpdate = Partial<VeiculoDocumentoInsert> & { id: string };
 
-export function useVeiculosDocumentos(veiculoId?: string) {
+export function useVeiculosDocumentos(veiculoPlaca?: string) {
   const queryClient = useQueryClient();
 
   const { data: documentos = [], isLoading, error } = useQuery({
-    queryKey: ["veiculos_documentos", veiculoId],
+    queryKey: ["veiculos_documentos", veiculoPlaca],
     queryFn: async () => {
       let query = supabase
         .from("veiculos_documentos")
-        .select(`
-          *,
-          veiculo:veiculos(id, placa, marca, modelo)
-        `)
+        .select("*")
         .eq("active", true)
         .order("created_at", { ascending: false });
 
-      if (veiculoId) {
-        query = query.eq("veiculo_id", veiculoId);
+      if (veiculoPlaca) {
+        query = query.eq("veiculo_placa", veiculoPlaca);
       }
 
       const { data, error } = await query;

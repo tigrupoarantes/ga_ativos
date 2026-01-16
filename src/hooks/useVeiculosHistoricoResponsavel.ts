@@ -4,18 +4,12 @@ import { toast } from "sonner";
 
 export interface VeiculoHistoricoResponsavel {
   id: string;
-  veiculo_id: string | null;
+  veiculo_placa: string | null;
   funcionario_anterior_id: string | null;
   funcionario_novo_id: string | null;
   data_alteracao: string | null;
   usuario_alteracao: string | null;
   observacoes: string | null;
-  veiculo?: {
-    id: string;
-    placa: string;
-    marca: string;
-    modelo: string;
-  };
   funcionario_anterior?: {
     id: string;
     nome: string;
@@ -27,31 +21,30 @@ export interface VeiculoHistoricoResponsavel {
 }
 
 type VeiculoHistoricoInsert = {
-  veiculo_id?: string | null;
+  veiculo_placa?: string | null;
   funcionario_anterior_id?: string | null;
   funcionario_novo_id?: string | null;
   usuario_alteracao?: string | null;
   observacoes?: string | null;
 };
 
-export function useVeiculosHistoricoResponsavel(veiculoId?: string) {
+export function useVeiculosHistoricoResponsavel(veiculoPlaca?: string) {
   const queryClient = useQueryClient();
 
   const { data: historico = [], isLoading, error } = useQuery({
-    queryKey: ["veiculos_historico_responsavel", veiculoId],
+    queryKey: ["veiculos_historico_responsavel", veiculoPlaca],
     queryFn: async () => {
       let query = supabase
         .from("veiculos_historico_responsavel")
         .select(`
           *,
-          veiculo:veiculos(id, placa, marca, modelo),
           funcionario_anterior:funcionarios!veiculos_historico_responsavel_funcionario_anterior_id_fkey(id, nome),
           funcionario_novo:funcionarios!veiculos_historico_responsavel_funcionario_novo_id_fkey(id, nome)
         `)
         .order("data_alteracao", { ascending: false });
 
-      if (veiculoId) {
-        query = query.eq("veiculo_id", veiculoId);
+      if (veiculoPlaca) {
+        query = query.eq("veiculo_placa", veiculoPlaca);
       }
 
       const { data, error } = await query;

@@ -1063,7 +1063,7 @@ export type Database = {
           tamanho_bytes: number | null
           tipo_documento: string
           url: string
-          veiculo_id: string | null
+          veiculo_placa: string | null
         }
         Insert: {
           active?: boolean | null
@@ -1073,7 +1073,7 @@ export type Database = {
           tamanho_bytes?: number | null
           tipo_documento: string
           url: string
-          veiculo_id?: string | null
+          veiculo_placa?: string | null
         }
         Update: {
           active?: boolean | null
@@ -1083,17 +1083,9 @@ export type Database = {
           tamanho_bytes?: number | null
           tipo_documento?: string
           url?: string
-          veiculo_id?: string | null
+          veiculo_placa?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "veiculos_documentos_veiculo_id_fkey"
-            columns: ["veiculo_id"]
-            isOneToOne: false
-            referencedRelation: "veiculos"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       veiculos_historico_responsavel: {
         Row: {
@@ -1103,7 +1095,7 @@ export type Database = {
           id: string
           observacoes: string | null
           usuario_alteracao: string | null
-          veiculo_id: string | null
+          veiculo_placa: string | null
         }
         Insert: {
           data_alteracao?: string | null
@@ -1112,7 +1104,7 @@ export type Database = {
           id?: string
           observacoes?: string | null
           usuario_alteracao?: string | null
-          veiculo_id?: string | null
+          veiculo_placa?: string | null
         }
         Update: {
           data_alteracao?: string | null
@@ -1121,7 +1113,7 @@ export type Database = {
           id?: string
           observacoes?: string | null
           usuario_alteracao?: string | null
-          veiculo_id?: string | null
+          veiculo_placa?: string | null
         }
         Relationships: [
           {
@@ -1136,13 +1128,6 @@ export type Database = {
             columns: ["funcionario_novo_id"]
             isOneToOne: false
             referencedRelation: "funcionarios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "veiculos_historico_responsavel_veiculo_id_fkey"
-            columns: ["veiculo_id"]
-            isOneToOne: false
-            referencedRelation: "veiculos"
             referencedColumns: ["id"]
           },
         ]
@@ -1164,7 +1149,7 @@ export type Database = {
           status: string | null
           updated_at: string | null
           valor_multa: number | null
-          veiculo_id: string | null
+          veiculo_placa: string | null
         }
         Insert: {
           active?: boolean | null
@@ -1182,7 +1167,7 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
           valor_multa?: number | null
-          veiculo_id?: string | null
+          veiculo_placa?: string | null
         }
         Update: {
           active?: boolean | null
@@ -1200,7 +1185,7 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
           valor_multa?: number | null
-          veiculo_id?: string | null
+          veiculo_placa?: string | null
         }
         Relationships: [
           {
@@ -1208,13 +1193,6 @@ export type Database = {
             columns: ["funcionario_responsavel_id"]
             isOneToOne: false
             referencedRelation: "funcionarios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "veiculos_multas_veiculo_id_fkey"
-            columns: ["veiculo_id"]
-            isOneToOne: false
-            referencedRelation: "veiculos"
             referencedColumns: ["id"]
           },
         ]
