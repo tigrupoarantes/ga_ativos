@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
-import { useEmpresas } from "@/hooks/useEmpresas";
-import { useEquipes } from "@/hooks/useEquipes";
+import { useFuncionariosPaginated } from "@/hooks/useFuncionarios";
+import { useEmpresasSelect, useEquipesSelect } from "@/hooks/useSelectOptions";
+import { useDebounce } from "@/hooks/useDebounce";
+import { DataTablePagination } from "@/components/DataTablePagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,10 +18,31 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Users, Car } from "lucide-react";
 
 export default function Funcionarios() {
-  const { funcionarios, isLoading, createFuncionario, updateFuncionario, deleteFuncionario } = useFuncionarios();
-  const { empresas } = useEmpresas();
-  const { equipes } = useEquipes();
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const [pageSize, setPageSize] = useState(25);
+  
+  const {
+    funcionarios,
+    isLoading,
+    page,
+    totalCount,
+    totalPages,
+    setPage,
+    setSearch,
+    createFuncionario,
+    updateFuncionario,
+    deleteFuncionario,
+  } = useFuncionariosPaginated({ pageSize });
+
+  // Update search when debounced value changes
+  useState(() => {
+    setSearch(debouncedSearch);
+  });
+
+  const { empresas } = useEmpresasSelect();
+  const { equipes } = useEquipesSelect();
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -38,12 +60,20 @@ export default function Funcionarios() {
     cnh_validade: "",
   });
 
-  const filteredFuncionarios = funcionarios.filter(
-    (f) =>
-      f.nome?.toLowerCase().includes(search.toLowerCase()) ||
-      f.email?.toLowerCase().includes(search.toLowerCase()) ||
-      f.cargo?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Sync debounced search with hook
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+  };
+
+  // Effect to sync debounced search
+  if (debouncedSearch !== searchInput) {
+    // This will trigger on next render cycle
+  }
+
+  // Update search in hook when debounce changes
+  useState(() => {
+    setSearch(debouncedSearch);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,12 +129,17 @@ export default function Funcionarios() {
     }
   };
 
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <PageHeader
           title="Funcionários"
-          description="Gerencie os funcionários da organização"
+          description={`Gerencie os funcionários da organização (${totalCount} registros)`}
           icon={Users}
         />
 
@@ -114,8 +149,11 @@ export default function Funcionarios() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar funcionários..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => {
+                  setSearchInput(e.target.value);
+                  setSearch(e.target.value);
+                }}
                 className="pl-10 w-[300px]"
               />
             </div>
@@ -259,58 +297,72 @@ export default function Funcionarios() {
           <CardContent>
             {isLoading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4, 5].map((i) => (
                   <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Cargo</TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Equipe</TableHead>
-                    <TableHead>Condutor</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredFuncionarios.map((funcionario) => (
-                    <TableRow key={funcionario.id}>
-                      <TableCell className="font-medium">{funcionario.nome}</TableCell>
-                      <TableCell>{funcionario.email || "-"}</TableCell>
-                      <TableCell>{funcionario.cargo || "-"}</TableCell>
-                      <TableCell>{(funcionario as any).empresa?.nome || "-"}</TableCell>
-                      <TableCell>{(funcionario as any).equipe?.nome || "-"}</TableCell>
-                      <TableCell>
-                        {funcionario.is_condutor ? (
-                          <Badge className="bg-status-info/10 text-status-info">
-                            <Car className="h-3 w-3 mr-1" />
-                            Sim
-                          </Badge>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(funcionario)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(funcionario.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredFuncionarios.length === 0 && (
+              <>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Nenhum funcionário encontrado
-                      </TableCell>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Cargo</TableHead>
+                      <TableHead>Empresa</TableHead>
+                      <TableHead>Equipe</TableHead>
+                      <TableHead>Condutor</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {funcionarios.map((funcionario) => (
+                      <TableRow key={funcionario.id}>
+                        <TableCell className="font-medium">{funcionario.nome}</TableCell>
+                        <TableCell>{funcionario.email || "-"}</TableCell>
+                        <TableCell>{funcionario.cargo || "-"}</TableCell>
+                        <TableCell>{(funcionario as any).empresa?.nome || "-"}</TableCell>
+                        <TableCell>{(funcionario as any).equipe?.nome || "-"}</TableCell>
+                        <TableCell>
+                          {funcionario.is_condutor ? (
+                            <Badge className="bg-status-info/10 text-status-info">
+                              <Car className="h-3 w-3 mr-1" />
+                              Sim
+                            </Badge>
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(funcionario)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(funcionario.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {funcionarios.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          Nenhum funcionário encontrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+                
+                <div className="mt-4">
+                  <DataTablePagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalCount={totalCount}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={handlePageSizeChange}
+                    showPageSizeSelector
+                  />
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
