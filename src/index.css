@@ -2,131 +2,151 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Apple-inspired Design System
-   Clean, minimal, with generous spacing and refined typography
+/* GA360 Design System
+   Apple-inspired/minimalista | Cor principal: Violeta (#8B5CF6)
+   Bordas: 12px | Efeitos: glass + sombras suaves
    All colors MUST be HSL
 */
 
 @layer base {
   :root {
-    /* Apple-like neutral backgrounds */
-    --background: 0 0% 98%;
-    --foreground: 220 15% 12%;
+    /* GA360 - Light Mode */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 12%;
+    --card-foreground: 240 10% 3.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 12%;
+    --popover-foreground: 240 10% 3.9%;
 
-    /* Primary: Apple Blue */
-    --primary: 211 100% 50%;
+    /* Primary: Violeta GA360 #8B5CF6 */
+    --primary: 257 85% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 211 100% 45%;
+    --primary-hover: 257 85% 55%;
 
-    /* Secondary: Subtle gray-blue */
-    --secondary: 210 14% 95%;
-    --secondary-foreground: 220 15% 12%;
-    --secondary-hover: 210 14% 90%;
+    /* Secondary: Subtle gray */
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 20%;
+    --secondary-hover: 240 4.8% 92%;
 
-    /* Accent: Soft highlight */
-    --accent: 211 100% 96%;
-    --accent-foreground: 211 100% 50%;
+    /* Accent: Soft violet #A78BFA */
+    --accent: 256 91% 67%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 256 91% 62%;
 
-    --muted: 210 14% 96%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 50%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 211 100% 50%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 257 85% 60%;
 
-    /* Status colors - Apple-like vibrant */
-    --status-available: 142 71% 45%;
-    --status-allocated: 211 100% 50%;
-    --status-maintenance: 45 93% 47%;
-    --status-inactive: 220 10% 50%;
+    /* Status colors - GA360 */
+    --status-available: 142 76% 36%;
+    --status-allocated: 257 85% 60%;
+    --status-maintenance: 38 92% 50%;
+    --status-inactive: 240 3.8% 50%;
 
     /* Semantic colors */
-    --success: 142 71% 45%;
-    --warning: 45 93% 47%;
-    --info: 211 100% 50%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
 
-    /* Apple-like generous radius */
+    /* Custom colors GA360 */
+    --cyan: 189 94% 43%;
+    --coral: 16 100% 66%;
+    --navy: 224 71% 30%;
+
+    /* GA360 radius */
     --radius: 0.75rem;
 
-    /* Apple-inspired shadows */
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
-    --shadow-lg: 0 4px 24px rgba(0,0,0,0.08);
+    /* GA360-inspired shadows */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02);
+    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02);
     --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
 
-    /* Slower, smoother Apple-like transitions */
-    --transition-fast: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
-    --transition-base: 350ms cubic-bezier(0.25, 0.1, 0.25, 1);
-    --transition-slow: 500ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    /* GA360 transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 320ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
-    /* Sidebar - clean and minimal */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 15% 30%;
-    --sidebar-primary: 211 100% 50%;
+    /* Sidebar - Dark navy theme */
+    --sidebar-background: 252 28% 14%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 257 85% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 14% 96%;
-    --sidebar-accent-foreground: 220 15% 12%;
-    --sidebar-border: 220 13% 93%;
-    --sidebar-ring: 211 100% 50%;
+    --sidebar-accent: 257 85% 60%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 252 28% 20%;
+    --sidebar-ring: 257 85% 60%;
+
+    /* Glassmorphism */
+    --glass-bg: rgba(255, 255, 255, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.5);
   }
 
   .dark {
-    --background: 220 20% 7%;
-    --foreground: 210 20% 95%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 100%;
 
-    --card: 220 18% 10%;
-    --card-foreground: 210 20% 95%;
+    --card: 240 10% 7%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 220 18% 10%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 240 10% 7%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 211 100% 55%;
+    --primary: 257 85% 65%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 211 100% 60%;
+    --primary-hover: 257 85% 70%;
 
-    --secondary: 220 15% 16%;
-    --secondary-foreground: 210 20% 95%;
-    --secondary-hover: 220 15% 20%;
+    --secondary: 240 5.9% 15%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 240 5.9% 20%;
 
-    --accent: 220 15% 16%;
-    --accent-foreground: 211 100% 55%;
+    --accent: 256 91% 70%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 256 91% 75%;
 
-    --muted: 220 15% 14%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 240 5.9% 15%;
+    --muted-foreground: 240 5% 65%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
-    --ring: 211 100% 55%;
+    --border: 240 5.9% 20%;
+    --input: 240 5.9% 20%;
+    --ring: 257 85% 65%;
 
     --status-available: 142 60% 50%;
-    --status-allocated: 211 100% 55%;
-    --status-maintenance: 45 90% 55%;
-    --status-inactive: 215 15% 55%;
+    --status-allocated: 257 85% 65%;
+    --status-maintenance: 38 90% 55%;
+    --status-inactive: 240 5% 55%;
 
     --success: 142 60% 50%;
-    --warning: 45 90% 55%;
-    --info: 211 100% 55%;
+    --warning: 38 90% 55%;
+    --info: 199 89% 55%;
 
-    --sidebar-background: 220 20% 7%;
-    --sidebar-foreground: 210 20% 80%;
-    --sidebar-primary: 211 100% 55%;
+    --sidebar-background: 240 10% 5%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 257 85% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 14%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 15% 16%;
-    --sidebar-ring: 211 100% 55%;
+    --sidebar-accent: 257 85% 65%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 5.9% 15%;
+    --sidebar-ring: 257 85% 65%;
+
+    /* Glassmorphism - Dark */
+    --glass-bg: rgba(15, 15, 20, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.08);
   }
 }
 
@@ -136,19 +156,24 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
 
-  /* Apple-style smooth focus states */
+  /* GA360-style focus states */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
-/* Apple-Inspired Animations */
+/* GA360 Animations */
 @layer utilities {
   .animate-fade-in {
-    animation: fadeIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.3s ease-out forwards;
   }
 
   .animate-slide-up {
@@ -156,11 +181,24 @@
   }
 
   .animate-scale-in {
-    animation: scaleIn 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation: scaleIn 0.2s ease-out forwards;
   }
 
-  .animate-wizard-slide-in {
-    animation: wizardSlideIn 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out forwards;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-float-orb {
+    animation: floatOrb 20s ease-in-out infinite;
+  }
+
+  .animate-auth-gradient {
+    animation: authGradientShift 15s ease infinite;
+    background-size: 400% 400%;
   }
 
   .animate-shake {
@@ -168,6 +206,11 @@
   }
 
   @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fadeInUp {
     from {
       opacity: 0;
       transform: translateY(16px);
@@ -192,7 +235,7 @@
   @keyframes scaleIn {
     from {
       opacity: 0;
-      transform: scale(0.96);
+      transform: scale(0.95);
     }
     to {
       opacity: 1;
@@ -200,15 +243,33 @@
     }
   }
 
-  @keyframes wizardSlideIn {
+  @keyframes slideInRight {
     from {
       opacity: 0;
-      transform: translateX(24px);
+      transform: translateX(16px);
     }
     to {
       opacity: 1;
       transform: translateX(0);
     }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes floatOrb {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(10px, -10px); }
+    50% { transform: translate(-5px, -20px); }
+    75% { transform: translate(-10px, -10px); }
+  }
+
+  @keyframes authGradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 
   @keyframes shake {
@@ -226,16 +287,16 @@
     @apply border-destructive focus:ring-destructive/20;
   }
 
-  /* Apple-style hover effects */
+  /* GA360-style hover effects */
   .hover-scale {
-    @apply transition-transform duration-300 ease-out hover:scale-[1.02] active:scale-[0.98];
+    @apply transition-transform duration-200 hover:scale-105;
   }
 
   .hover-lift {
     @apply transition-all duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5;
   }
 
-  /* Card hover effect - Apple style */
+  /* Card hover effect */
   .card-hover {
     @apply transition-all duration-300 ease-out hover:shadow-lg hover:-translate-y-1;
   }
@@ -245,9 +306,23 @@
     @apply animate-pulse bg-muted rounded-lg;
   }
 
-  /* Apple-style glass effect */
+  /* GA360 Glassmorphism */
   .glass {
-    @apply bg-background/80 backdrop-blur-xl;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Auth card glass */
+  .glass-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
   }
 
   /* Staggered animation delays */
@@ -282,6 +357,25 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  /* GA360 Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
   }
 
   /* Scrollbar hide */
