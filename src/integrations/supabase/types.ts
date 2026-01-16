@@ -420,6 +420,54 @@ export type Database = {
           },
         ]
       }
+      itens_ordem: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          ordem_id: string
+          peca_id: string | null
+          preco_total: number | null
+          preco_unitario: number | null
+          quantidade: number
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          ordem_id: string
+          peca_id?: string | null
+          preco_total?: number | null
+          preco_unitario?: number | null
+          quantidade?: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          ordem_id?: string
+          peca_id?: string | null
+          preco_total?: number | null
+          preco_unitario?: number | null
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_ordem_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_ordem_peca_id_fkey"
+            columns: ["peca_id"]
+            isOneToOne: false
+            referencedRelation: "pecas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           can_edit: boolean | null
@@ -446,6 +494,60 @@ export type Database = {
           role?: string
         }
         Relationships: []
+      }
+      movimentacoes_estoque: {
+        Row: {
+          created_at: string
+          id: string
+          motivo: string | null
+          ordem_id: string | null
+          peca_id: string
+          quantidade: number
+          quantidade_anterior: number | null
+          quantidade_atual: number | null
+          tipo: string
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          ordem_id?: string | null
+          peca_id: string
+          quantidade: number
+          quantidade_anterior?: number | null
+          quantidade_atual?: number | null
+          tipo: string
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          ordem_id?: string | null
+          peca_id?: string
+          quantidade?: number
+          quantidade_anterior?: number | null
+          quantidade_atual?: number | null
+          tipo?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_estoque_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_estoque_peca_id_fkey"
+            columns: ["peca_id"]
+            isOneToOne: false
+            referencedRelation: "pecas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -479,6 +581,229 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      ordens_servico: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          custo_mao_obra: number | null
+          custo_pecas: number | null
+          custo_total: number | null
+          data_abertura: string
+          data_fechamento: string | null
+          data_previsao: string | null
+          descricao: string | null
+          diagnostico: string | null
+          id: string
+          km_entrada: number | null
+          km_saida: number | null
+          numero: string | null
+          observacoes: string | null
+          preventiva_id: string | null
+          prioridade: string | null
+          responsavel_id: string | null
+          solicitante_id: string | null
+          solucao: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          veiculo_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          custo_mao_obra?: number | null
+          custo_pecas?: number | null
+          custo_total?: number | null
+          data_abertura?: string
+          data_fechamento?: string | null
+          data_previsao?: string | null
+          descricao?: string | null
+          diagnostico?: string | null
+          id?: string
+          km_entrada?: number | null
+          km_saida?: number | null
+          numero?: string | null
+          observacoes?: string | null
+          preventiva_id?: string | null
+          prioridade?: string | null
+          responsavel_id?: string | null
+          solicitante_id?: string | null
+          solucao?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          veiculo_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          custo_mao_obra?: number | null
+          custo_pecas?: number | null
+          custo_total?: number | null
+          data_abertura?: string
+          data_fechamento?: string | null
+          data_previsao?: string | null
+          descricao?: string | null
+          diagnostico?: string | null
+          id?: string
+          km_entrada?: number | null
+          km_saida?: number | null
+          numero?: string | null
+          observacoes?: string | null
+          preventiva_id?: string | null
+          prioridade?: string | null
+          responsavel_id?: string | null
+          solicitante_id?: string | null
+          solucao?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          veiculo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_servico_preventiva_id_fkey"
+            columns: ["preventiva_id"]
+            isOneToOne: false
+            referencedRelation: "preventivas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_veiculo_id_fkey"
+            columns: ["veiculo_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pecas: {
+        Row: {
+          active: boolean | null
+          categoria: string | null
+          codigo: string | null
+          created_at: string
+          descricao: string | null
+          estoque_minimo: number | null
+          fornecedor: string | null
+          id: string
+          localizacao: string | null
+          nome: string
+          preco_unitario: number | null
+          quantidade_estoque: number
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          categoria?: string | null
+          codigo?: string | null
+          created_at?: string
+          descricao?: string | null
+          estoque_minimo?: number | null
+          fornecedor?: string | null
+          id?: string
+          localizacao?: string | null
+          nome: string
+          preco_unitario?: number | null
+          quantidade_estoque?: number
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          categoria?: string | null
+          codigo?: string | null
+          created_at?: string
+          descricao?: string | null
+          estoque_minimo?: number | null
+          fornecedor?: string | null
+          id?: string
+          localizacao?: string | null
+          nome?: string
+          preco_unitario?: number | null
+          quantidade_estoque?: number
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      preventivas: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          descricao: string | null
+          id: string
+          observacoes: string | null
+          periodicidade_dias: number | null
+          periodicidade_km: number | null
+          proxima_realizacao: string | null
+          proximo_km: number | null
+          status: string | null
+          tipo_manutencao: string
+          ultima_realizacao: string | null
+          ultimo_km: number | null
+          updated_at: string
+          veiculo_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          observacoes?: string | null
+          periodicidade_dias?: number | null
+          periodicidade_km?: number | null
+          proxima_realizacao?: string | null
+          proximo_km?: number | null
+          status?: string | null
+          tipo_manutencao: string
+          ultima_realizacao?: string | null
+          ultimo_km?: number | null
+          updated_at?: string
+          veiculo_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          observacoes?: string | null
+          periodicidade_dias?: number | null
+          periodicidade_km?: number | null
+          proxima_realizacao?: string | null
+          proximo_km?: number | null
+          status?: string | null
+          tipo_manutencao?: string
+          ultima_realizacao?: string | null
+          ultimo_km?: number | null
+          updated_at?: string
+          veiculo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preventivas_veiculo_id_fkey"
+            columns: ["veiculo_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
