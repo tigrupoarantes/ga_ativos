@@ -14,12 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Car, History } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Car, History, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { HistoricoVeiculoDialog } from "@/components/HistoricoVeiculoDialog";
 import { ConfirmResponsavelDialog } from "@/components/ConfirmResponsavelDialog";
+import { ConsultaFipeDialog } from "@/components/ConsultaFipeDialog";
+import { format } from "date-fns";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -43,6 +45,10 @@ export default function Veiculos() {
   const [historicoVeiculoInfo, setHistoricoVeiculoInfo] = useState<string>("");
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<typeof formData | null>(null);
+  const [fipeDialogOpen, setFipeDialogOpen] = useState(false);
+  const [fipeVeiculoId, setFipeVeiculoId] = useState<string | null>(null);
+  const [fipeVeiculoInfo, setFipeVeiculoInfo] = useState("");
+  const [fipeVeiculoTipo, setFipeVeiculoTipo] = useState("carro");
   const [page, setPage] = useState(1);
   const [formData, setFormData] = useState({
     placa: "",
@@ -426,6 +432,7 @@ export default function Veiculos() {
                       <TableHead>Renavam</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Responsável</TableHead>
+                      <TableHead className="text-right">Valor FIPE</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -443,6 +450,38 @@ export default function Veiculos() {
                         </TableCell>
                         <TableCell>{(veiculo as any).funcionario?.nome || "-"}</TableCell>
                         <TableCell className="text-right">
+                          {(veiculo as any).valor_fipe ? (
+                            <div className="text-right">
+                              <div className="font-medium">
+                                {new Intl.NumberFormat("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                }).format((veiculo as any).valor_fipe)}
+                              </div>
+                              {(veiculo as any).data_consulta_fipe && (
+                                <div className="text-xs text-muted-foreground">
+                                  {format(new Date((veiculo as any).data_consulta_fipe), "dd/MM/yyyy")}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Consultar FIPE"
+                            onClick={() => {
+                              setFipeVeiculoId(veiculo.id);
+                              setFipeVeiculoInfo(`${veiculo.placa} - ${veiculo.marca} ${veiculo.modelo}`);
+                              setFipeVeiculoTipo(veiculo.tipo || "carro");
+                              setFipeDialogOpen(true);
+                            }}
+                          >
+                            <DollarSign className="h-4 w-4 text-primary" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -465,7 +504,7 @@ export default function Veiculos() {
                     ))}
                     {paginatedVeiculos.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           Nenhum veículo encontrado
                         </TableCell>
                       </TableRow>
@@ -520,6 +559,22 @@ export default function Veiculos() {
           onConfirm={handleConfirmResponsavel}
           isPending={updateVeiculo.isPending || registrarAlteracaoResponsavel.isPending}
         />
+
+        {fipeVeiculoId && (
+          <ConsultaFipeDialog
+            open={fipeDialogOpen}
+            onOpenChange={(open) => {
+              setFipeDialogOpen(open);
+              if (!open) {
+                setFipeVeiculoId(null);
+                setFipeVeiculoInfo("");
+              }
+            }}
+            veiculoId={fipeVeiculoId}
+            veiculoInfo={fipeVeiculoInfo}
+            tipoInicial={fipeVeiculoTipo}
+          />
+        )}
       </div>
     </VehicleLayout>
   );

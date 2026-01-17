@@ -1,1 +1,4 @@
 project_id = "aahtjjolpmrfcxxiouxj"
+
+[functions.consulta-fipe]
+verify_jwt = false
