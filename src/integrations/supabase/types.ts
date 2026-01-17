@@ -970,10 +970,12 @@ export type Database = {
           ano_fabricacao: number | null
           ano_modelo: number | null
           chassi: string | null
+          codigo_fipe: string | null
           combustivel: string | null
           cor: string | null
           created_at: string | null
           data_aquisicao: string | null
+          data_consulta_fipe: string | null
           empresa_id: string | null
           fotos: string[] | null
           funcionario_id: string | null
@@ -995,10 +997,12 @@ export type Database = {
           ano_fabricacao?: number | null
           ano_modelo?: number | null
           chassi?: string | null
+          codigo_fipe?: string | null
           combustivel?: string | null
           cor?: string | null
           created_at?: string | null
           data_aquisicao?: string | null
+          data_consulta_fipe?: string | null
           empresa_id?: string | null
           fotos?: string[] | null
           funcionario_id?: string | null
@@ -1020,10 +1024,12 @@ export type Database = {
           ano_fabricacao?: number | null
           ano_modelo?: number | null
           chassi?: string | null
+          codigo_fipe?: string | null
           combustivel?: string | null
           cor?: string | null
           created_at?: string | null
           data_aquisicao?: string | null
+          data_consulta_fipe?: string | null
           empresa_id?: string | null
           fotos?: string[] | null
           funcionario_id?: string | null
