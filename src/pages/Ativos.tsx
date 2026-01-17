@@ -13,9 +13,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotebookForm } from "@/components/NotebookForm";
+import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
 import { useQueryClient } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
@@ -34,6 +35,8 @@ export default function Ativos() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [historicoAtivoId, setHistoricoAtivoId] = useState<string | null>(null);
+  const [historicoAtivoNome, setHistoricoAtivoNome] = useState<string | undefined>(undefined);
   const [formData, setFormData] = useState({
     patrimonio: "",
     nome: "",
@@ -114,6 +117,11 @@ export default function Ativos() {
     setIsDialogOpen(false);
     resetForm();
     queryClient.invalidateQueries({ queryKey: ["ativos"] });
+  };
+
+  const handleOpenHistorico = (ativo: typeof ativos[0]) => {
+    setHistoricoAtivoId(ativo.id);
+    setHistoricoAtivoNome(ativo.nome);
   };
 
   // Verificar se o tipo selecionado é Notebook
@@ -315,6 +323,14 @@ export default function Ativos() {
                       </TableCell>
                       <TableCell>{(ativo as any).funcionario?.nome || "-"}</TableCell>
                       <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          title="Histórico de movimentação"
+                          onClick={() => handleOpenHistorico(ativo)}
+                        >
+                          <History className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(ativo)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -337,6 +353,18 @@ export default function Ativos() {
           </CardContent>
         </Card>
       </div>
+
+      <HistoricoAtivoDialog
+        ativoId={historicoAtivoId}
+        ativoNome={historicoAtivoNome}
+        open={!!historicoAtivoId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setHistoricoAtivoId(null);
+            setHistoricoAtivoNome(undefined);
+          }
+        }}
+      />
     </AppLayout>
   );
 }
