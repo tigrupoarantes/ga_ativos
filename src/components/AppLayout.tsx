@@ -14,7 +14,8 @@ import {
   Car,
   ChevronLeft,
   Home,
-  Rocket
+  Rocket,
+  Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +47,7 @@ const routeConfig: Record<string, { label: string; parent?: string }> = {
   "/equipes": { label: "Equipes", parent: "/" },
   "/contratos": { label: "Contratos", parent: "/" },
   "/telefonia": { label: "Telefonia", parent: "/" },
+  "/linhas-telefonicas": { label: "Linhas Telefônicas", parent: "/" },
   "/oficina": { label: "Oficina", parent: "/" },
   "/oficina/ordens": { label: "Ordens de Serviço", parent: "/oficina" },
   "/oficina/pecas": { label: "Peças", parent: "/oficina" },
@@ -63,7 +65,7 @@ const navItems = [
   { icon: FolderKanban, label: "Tipos de Ativos", path: "/tipos-ativos", module: "tipos_ativos" },
   { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
   { icon: Car, label: "Veículos", path: "/veiculos", module: "veiculos" },
-  
+  { icon: Phone, label: "Linhas Telefônicas", path: "/linhas-telefonicas", module: "telefonia" },
   { icon: History, label: "Histórico", path: "/historico", module: "historico" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "configuracoes" },
 ];

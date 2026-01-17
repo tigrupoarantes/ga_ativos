@@ -1,0 +1,390 @@
+import { useState } from "react";
+import { AppLayout } from "@/components/AppLayout";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Phone,
+  UserCheck,
+  UserX,
+} from "lucide-react";
+import { useLinhasTelefonicas } from "@/hooks/useLinhasTelefonicas";
+import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
+import { ImportLinhasDialog } from "@/components/ImportLinhasDialog";
+import { useDebounce } from "@/hooks/useDebounce";
+
+const OPERADORAS = ["Vivo", "Claro", "TIM", "Oi", "Outras"];
+
+interface FormData {
+  numero: string;
+  funcionario_id: string;
+  operadora: string;
+  plano: string;
+  observacoes: string;
+}
+
+const initialFormData: FormData = {
+  numero: "",
+  funcionario_id: "",
+  operadora: "",
+  plano: "",
+  observacoes: "",
+};
+
+export default function LinhasTelefonicas() {
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+
+  const { linhas, isLoading, createLinha, updateLinha, deleteLinha, bulkCreateLinhas, stats } =
+    useLinhasTelefonicas(debouncedSearch);
+  const { funcionarios } = useFuncionarios();
+
+  const formatPhone = (phone: string): string => {
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditingId(null);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const data = {
+      numero: formData.numero.replace(/\D/g, ""),
+      funcionario_id: formData.funcionario_id || null,
+      operadora: formData.operadora || null,
+      plano: formData.plano || null,
+      observacoes: formData.observacoes || null,
+    };
+
+    if (editingId) {
+      updateLinha.mutate({ id: editingId, ...data }, {
+        onSuccess: () => {
+          setDialogOpen(false);
+          resetForm();
+        },
+      });
+    } else {
+      createLinha.mutate(data, {
+        onSuccess: () => {
+          setDialogOpen(false);
+          resetForm();
+        },
+      });
+    }
+  };
+
+  const handleEdit = (linha: any) => {
+    setFormData({
+      numero: linha.numero,
+      funcionario_id: linha.funcionario_id || "",
+      operadora: linha.operadora || "",
+      plano: linha.plano || "",
+      observacoes: linha.observacoes || "",
+    });
+    setEditingId(linha.id);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Tem certeza que deseja remover esta linha?")) {
+      deleteLinha.mutate(id);
+    }
+  };
+
+  const handleImportComplete = (linhasData: any[]) => {
+    bulkCreateLinhas.mutate(linhasData);
+  };
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <PageHeader
+          title="Linhas Telefônicas"
+          description="Gerencie as linhas telefônicas e suas atribuições"
+          actions={
+            <div className="flex gap-2">
+              <ImportLinhasDialog onImportComplete={handleImportComplete} />
+              <Dialog open={dialogOpen} onOpenChange={(open) => {
+                setDialogOpen(open);
+                if (!open) resetForm();
+              }}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nova Linha
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingId ? "Editar Linha" : "Nova Linha Telefônica"}
+                    </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="numero">Número da Linha *</Label>
+                  <Input
+                    id="numero"
+                    placeholder="(11) 99999-9999"
+                    value={formData.numero}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, numero: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Funcionário Responsável</Label>
+                  <FuncionarioCombobox
+                    value={formData.funcionario_id}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, funcionario_id: value }))
+                    }
+                    funcionarios={funcionarios || []}
+                    placeholder="Selecione o funcionário (opcional)"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Operadora</Label>
+                    <Select
+                      value={formData.operadora}
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({ ...prev, operadora: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OPERADORAS.map((op) => (
+                          <SelectItem key={op} value={op}>
+                            {op}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="plano">Plano</Label>
+                    <Input
+                      id="plano"
+                      placeholder="Ex: Corporativo 50GB"
+                      value={formData.plano}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, plano: e.target.value }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="observacoes">Observações</Label>
+                  <Textarea
+                    id="observacoes"
+                    placeholder="Observações adicionais..."
+                    value={formData.observacoes}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, observacoes: e.target.value }))
+                    }
+                  />
+                </div>
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setDialogOpen(false);
+                        resetForm();
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={createLinha.isPending || updateLinha.isPending}>
+                      {editingId ? "Salvar" : "Cadastrar"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+          }
+        />
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total de Linhas</p>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                </div>
+                <Phone className="h-8 w-8 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Atribuídas</p>
+                  <p className="text-2xl font-bold">{stats.atribuidas}</p>
+                </div>
+                <UserCheck className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Disponíveis</p>
+                  <p className="text-2xl font-bold">{stats.disponiveis}</p>
+                </div>
+                <UserX className="h-8 w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search */}
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por número ou funcionário..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Table */}
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Número</TableHead>
+                <TableHead>Funcionário</TableHead>
+                <TableHead>Operadora</TableHead>
+                <TableHead>Plano</TableHead>
+                <TableHead className="w-[100px]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  </TableRow>
+                ))
+              ) : linhas?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Nenhuma linha telefônica cadastrada
+                  </TableCell>
+                </TableRow>
+              ) : (
+                linhas?.map((linha) => (
+                  <TableRow key={linha.id}>
+                    <TableCell className="font-medium">
+                      {formatPhone(linha.numero)}
+                    </TableCell>
+                    <TableCell>
+                      {linha.funcionario ? (
+                        <div>
+                          <span>{linha.funcionario.nome}</span>
+                          {linha.funcionario.cpf && (
+                            <span className="text-xs text-muted-foreground block">
+                              CPF: {linha.funcionario.cpf}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{linha.operadora || "-"}</TableCell>
+                    <TableCell>{linha.plano || "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(linha)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(linha.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
