@@ -9,7 +9,6 @@ import {
   FolderKanban,
   LogOut,
   User,
-  ArrowLeftRight,
   Shield,
   UserCog,
   Car,
@@ -38,7 +37,7 @@ const routeConfig: Record<string, { label: string; parent?: string }> = {
   "/tipos-ativos": { label: "Tipos de Ativos", parent: "/" },
   "/funcionarios": { label: "Funcionários", parent: "/" },
   "/veiculos": { label: "Veículos", parent: "/" },
-  "/atribuicoes": { label: "Atribuições", parent: "/" },
+  
   "/historico": { label: "Histórico", parent: "/" },
   "/configuracoes": { label: "Configurações", parent: "/" },
   "/usuarios": { label: "Usuários", parent: "/" },
@@ -64,7 +63,7 @@ const navItems = [
   { icon: FolderKanban, label: "Tipos de Ativos", path: "/tipos-ativos", module: "tipos_ativos" },
   { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
   { icon: Car, label: "Veículos", path: "/veiculos", module: "veiculos" },
-  { icon: ArrowLeftRight, label: "Atribuições", path: "/atribuicoes", module: "atribuicoes" },
+  
   { icon: History, label: "Histórico", path: "/historico", module: "historico" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "configuracoes" },
 ];
@@ -123,8 +122,7 @@ function NavContent() {
           <>
             {filteredNavItems.map((item, index) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path ||
-                (item.path === "/atribuicoes" && location.pathname.startsWith("/atribuicoes"));
+              const isActive = location.pathname === item.path;
 
               return (
                 <Link

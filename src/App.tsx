@@ -13,7 +13,7 @@ import NotFound from "./pages/NotFound";
 import Ativos from "./pages/Ativos";
 import TiposAtivos from "./pages/TiposAtivos";
 import Funcionarios from "./pages/Funcionarios";
-import Atribuicoes from "./pages/Atribuicoes";
+
 import Empresas from "./pages/Empresas";
 import Equipes from "./pages/Equipes";
 import Veiculos from "./pages/Veiculos";
@@ -58,7 +58,7 @@ const App = () => (
             
             {/* Pessoas */}
             <Route path="/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
-            <Route path="/atribuicoes" element={<ProtectedRoute><Atribuicoes /></ProtectedRoute>} />
+            
             <Route path="/empresas" element={<ProtectedRoute><Empresas /></ProtectedRoute>} />
             <Route path="/equipes" element={<ProtectedRoute><Equipes /></ProtectedRoute>} />
             
