@@ -46,7 +46,6 @@ export default function Veiculos() {
     tipo: "",
     chassi: "",
     renavam: "",
-    km_atual: "",
     status: "disponivel",
     funcionario_id: "",
     empresa_id: "",
@@ -80,7 +79,6 @@ export default function Veiculos() {
       ...formData,
       ano_fabricacao: formData.ano_fabricacao ? parseInt(formData.ano_fabricacao) : null,
       ano_modelo: formData.ano_modelo ? parseInt(formData.ano_modelo) : null,
-      km_atual: formData.km_atual ? parseInt(formData.km_atual) : null,
       valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
       data_aquisicao: formData.data_aquisicao || null,
       funcionario_id: formData.funcionario_id || null,
@@ -108,7 +106,6 @@ export default function Veiculos() {
       tipo: "",
       chassi: "",
       renavam: "",
-      km_atual: "",
       status: "disponivel",
       funcionario_id: "",
       empresa_id: "",
@@ -130,7 +127,6 @@ export default function Veiculos() {
       tipo: veiculo.tipo || "",
       chassi: veiculo.chassi || "",
       renavam: veiculo.renavam || "",
-      km_atual: veiculo.km_atual?.toString() || "",
       status: veiculo.status || "disponivel",
       funcionario_id: veiculo.funcionario_id || "",
       empresa_id: veiculo.empresa_id || "",
@@ -278,12 +274,23 @@ export default function Veiculos() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="km_atual">KM Atual</Label>
+                      <Label htmlFor="renavam">Renavam</Label>
                       <Input
-                        id="km_atual"
-                        type="number"
-                        value={formData.km_atual}
-                        onChange={(e) => setFormData({ ...formData, km_atual: e.target.value })}
+                        id="renavam"
+                        value={formData.renavam}
+                        onChange={(e) => setFormData({ ...formData, renavam: e.target.value })}
+                        maxLength={11}
+                        placeholder="00000000000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chassi">Chassi</Label>
+                      <Input
+                        id="chassi"
+                        value={formData.chassi}
+                        onChange={(e) => setFormData({ ...formData, chassi: e.target.value.toUpperCase() })}
+                        maxLength={17}
+                        placeholder="9BWZZZ377VT004251"
                       />
                     </div>
                     <div className="space-y-2">
@@ -359,7 +366,7 @@ export default function Veiculos() {
                       <TableHead>Placa</TableHead>
                       <TableHead>Marca/Modelo</TableHead>
                       <TableHead>Ano</TableHead>
-                      <TableHead>KM</TableHead>
+                      <TableHead>Renavam</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Responsável</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
@@ -371,7 +378,7 @@ export default function Veiculos() {
                         <TableCell className="font-medium">{veiculo.placa}</TableCell>
                         <TableCell>{veiculo.marca} {veiculo.modelo}</TableCell>
                         <TableCell>{veiculo.ano_modelo || "-"}</TableCell>
-                        <TableCell>{veiculo.km_atual?.toLocaleString() || "-"}</TableCell>
+                        <TableCell>{veiculo.renavam || "-"}</TableCell>
                         <TableCell>
                           <Badge className={cn("capitalize", statusColors[veiculo.status || "disponivel"])}>
                             {veiculo.status?.replace("_", " ")}
