@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Users, Car } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ImportFuncionariosDialog } from "@/components/ImportFuncionariosDialog";
 
 // Função para normalizar CPF (apenas números)
 const normalizeCpf = (cpf: string) => cpf.replace(/\D/g, '');
@@ -211,13 +212,15 @@ export default function Funcionarios() {
                 className="pl-10 w-[300px]"
               />
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Funcionário
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <ImportFuncionariosDialog />
+              <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Funcionário
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>{editingId ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
@@ -361,6 +364,7 @@ export default function Funcionarios() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
