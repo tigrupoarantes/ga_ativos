@@ -2,7 +2,8 @@ import { useState } from "react";
 import { VehicleLayout } from "@/components/VehicleLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useVeiculos } from "@/hooks/useVeiculos";
-import { useFuncionariosSelect, useEmpresasSelect } from "@/hooks/useSelectOptions";
+import { useEmpresasSelect, useFuncionariosCombobox } from "@/hooks/useSelectOptions";
+import { useVeiculosHistoricoResponsavel } from "@/hooks/useVeiculosHistoricoResponsavel";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Car } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Car, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/DataTablePagination";
+import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
+import { HistoricoVeiculoDialog } from "@/components/HistoricoVeiculoDialog";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -28,12 +31,15 @@ const PAGE_SIZE = 25;
 
 export default function Veiculos() {
   const { veiculos, isLoading, createVeiculo, updateVeiculo, deleteVeiculo } = useVeiculos();
-  const { funcionarios } = useFuncionariosSelect();
+  const { funcionarios: funcionariosCombobox } = useFuncionariosCombobox();
   const { empresas } = useEmpresasSelect();
+  const { registrarAlteracaoResponsavel } = useVeiculosHistoricoResponsavel();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [historicoVeiculoPlaca, setHistoricoVeiculoPlaca] = useState<string | null>(null);
+  const [historicoVeiculoInfo, setHistoricoVeiculoInfo] = useState<string>("");
   const [page, setPage] = useState(1);
   const [formData, setFormData] = useState({
     placa: "",
@@ -84,10 +90,35 @@ export default function Veiculos() {
       funcionario_id: formData.funcionario_id || null,
       empresa_id: formData.empresa_id || null,
     };
+    
     if (editingId) {
+      // Verificar se o responsável mudou para registrar histórico
+      const veiculoAtual = veiculos.find(v => v.id === editingId);
+      const responsavelAnterior = veiculoAtual?.funcionario_id || null;
+      const responsavelNovo = formData.funcionario_id || null;
+      
       await updateVeiculo.mutateAsync({ id: editingId, ...data });
+      
+      // Registrar histórico se responsável mudou
+      if (responsavelAnterior !== responsavelNovo) {
+        await registrarAlteracaoResponsavel.mutateAsync({
+          veiculo_placa: veiculoAtual?.placa,
+          funcionario_anterior_id: responsavelAnterior,
+          funcionario_novo_id: responsavelNovo,
+          observacoes: "Alteração via edição de veículo",
+        });
+      }
     } else {
-      await createVeiculo.mutateAsync(data);
+      const result = await createVeiculo.mutateAsync(data);
+      // Registrar primeiro responsável se houver
+      if (formData.funcionario_id) {
+        await registrarAlteracaoResponsavel.mutateAsync({
+          veiculo_placa: formData.placa,
+          funcionario_anterior_id: null,
+          funcionario_novo_id: formData.funcionario_id,
+          observacoes: "Responsável inicial ao cadastrar veículo",
+        });
+      }
     }
     setIsDialogOpen(false);
     resetForm();
@@ -295,16 +326,12 @@ export default function Veiculos() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="funcionario_id">Responsável</Label>
-                      <Select value={formData.funcionario_id} onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {funcionarios.map((f) => (
-                            <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FuncionarioCombobox
+                        value={formData.funcionario_id}
+                        onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}
+                        funcionarios={funcionariosCombobox}
+                        placeholder="Buscar por nome ou CPF"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="empresa_id">Empresa</Label>
@@ -386,6 +413,17 @@ export default function Veiculos() {
                         </TableCell>
                         <TableCell>{(veiculo as any).funcionario?.nome || "-"}</TableCell>
                         <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Histórico de responsáveis"
+                            onClick={() => {
+                              setHistoricoVeiculoPlaca(veiculo.placa);
+                              setHistoricoVeiculoInfo(`${veiculo.placa} - ${veiculo.marca} ${veiculo.modelo}`);
+                            }}
+                          >
+                            <History className="h-4 w-4 text-muted-foreground" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(veiculo)}>
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -417,6 +455,18 @@ export default function Veiculos() {
             )}
           </CardContent>
         </Card>
+
+        <HistoricoVeiculoDialog
+          veiculoPlaca={historicoVeiculoPlaca}
+          veiculoInfo={historicoVeiculoInfo}
+          open={!!historicoVeiculoPlaca}
+          onOpenChange={(open) => {
+            if (!open) {
+              setHistoricoVeiculoPlaca(null);
+              setHistoricoVeiculoInfo("");
+            }
+          }}
+        />
       </div>
     </VehicleLayout>
   );

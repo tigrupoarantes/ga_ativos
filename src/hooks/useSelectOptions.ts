@@ -137,3 +137,30 @@ export function useTiposAtivosSelect() {
 
   return { tipos, isLoading };
 }
+
+// Hook otimizado para Combobox de Funcionários (com CPF)
+interface FuncionarioCombobox {
+  id: string;
+  nome: string;
+  cpf: string | null;
+}
+
+export function useFuncionariosCombobox() {
+  const { data: funcionarios = [], isLoading } = useQuery({
+    queryKey: ["funcionarios-combobox"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("funcionarios")
+        .select("id, nome, cpf")
+        .eq("active", true)
+        .order("nome");
+
+      if (error) throw error;
+      return data as FuncionarioCombobox[];
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  return { funcionarios, isLoading };
+}
