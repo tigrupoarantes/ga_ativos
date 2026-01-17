@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useVeiculos } from "@/hooks/useVeiculos";
 import { useEmpresasSelect, useFuncionariosCombobox } from "@/hooks/useSelectOptions";
 import { useVeiculosHistoricoResponsavel } from "@/hooks/useVeiculosHistoricoResponsavel";
+import { useVeiculosDocumentos } from "@/hooks/useVeiculosDocumentos";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,15 +13,17 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Car, History, DollarSign } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { HistoricoVeiculoDialog } from "@/components/HistoricoVeiculoDialog";
 import { ConfirmResponsavelDialog } from "@/components/ConfirmResponsavelDialog";
 import { ConsultaFipeDialog } from "@/components/ConsultaFipeDialog";
+import { VeiculoDocumentosSection } from "@/components/VeiculoDocumentosSection";
 import { format } from "date-fns";
 
 const statusColors: Record<string, string> = {
@@ -50,6 +53,7 @@ export default function Veiculos() {
   const [fipeVeiculoInfo, setFipeVeiculoInfo] = useState("");
   const [fipeVeiculoTipo, setFipeVeiculoTipo] = useState("carro");
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("dados");
   const [formData, setFormData] = useState({
     placa: "",
     marca: "",
@@ -162,6 +166,7 @@ export default function Veiculos() {
 
   const resetForm = () => {
     setEditingId(null);
+    setActiveTab("dados");
     setFormData({
       placa: "",
       marca: "",
@@ -236,181 +241,205 @@ export default function Veiculos() {
                   Novo Veículo
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingId ? "Editar Veículo" : "Novo Veículo"}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="placa">Placa *</Label>
-                      <Input
-                        id="placa"
-                        value={formData.placa}
-                        onChange={(e) => setFormData({ ...formData, placa: e.target.value.toUpperCase() })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="marca">Marca *</Label>
-                      <Input
-                        id="marca"
-                        value={formData.marca}
-                        onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="modelo">Modelo *</Label>
-                      <Input
-                        id="modelo"
-                        value={formData.modelo}
-                        onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ano_fabricacao">Ano Fab.</Label>
-                      <Input
-                        id="ano_fabricacao"
-                        type="number"
-                        value={formData.ano_fabricacao}
-                        onChange={(e) => setFormData({ ...formData, ano_fabricacao: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ano_modelo">Ano Mod.</Label>
-                      <Input
-                        id="ano_modelo"
-                        type="number"
-                        value={formData.ano_modelo}
-                        onChange={(e) => setFormData({ ...formData, ano_modelo: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cor">Cor</Label>
-                      <Input
-                        id="cor"
-                        value={formData.cor}
-                        onChange={(e) => setFormData({ ...formData, cor: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="combustivel">Combustível</Label>
-                      <Select value={formData.combustivel} onValueChange={(v) => setFormData({ ...formData, combustivel: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="gasolina">Gasolina</SelectItem>
-                          <SelectItem value="etanol">Etanol</SelectItem>
-                          <SelectItem value="flex">Flex</SelectItem>
-                          <SelectItem value="diesel">Diesel</SelectItem>
-                          <SelectItem value="eletrico">Elétrico</SelectItem>
-                          <SelectItem value="hibrido">Híbrido</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo">Tipo</Label>
-                      <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="carro">Carro</SelectItem>
-                          <SelectItem value="moto">Moto</SelectItem>
-                          <SelectItem value="caminhao">Caminhão</SelectItem>
-                          <SelectItem value="van">Van</SelectItem>
-                          <SelectItem value="utilitario">Utilitário</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Status</Label>
-                      <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="disponivel">Disponível</SelectItem>
-                          <SelectItem value="em_uso">Em Uso</SelectItem>
-                          <SelectItem value="manutencao">Manutenção</SelectItem>
-                          <SelectItem value="baixado">Baixado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="renavam">Renavam</Label>
-                      <Input
-                        id="renavam"
-                        value={formData.renavam}
-                        onChange={(e) => setFormData({ ...formData, renavam: e.target.value })}
-                        maxLength={11}
-                        placeholder="00000000000"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="chassi">Chassi</Label>
-                      <Input
-                        id="chassi"
-                        value={formData.chassi}
-                        onChange={(e) => setFormData({ ...formData, chassi: e.target.value.toUpperCase() })}
-                        maxLength={17}
-                        placeholder="9BWZZZ377VT004251"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="funcionario_id">Responsável</Label>
-                      <FuncionarioCombobox
-                        value={formData.funcionario_id}
-                        onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}
-                        funcionarios={funcionariosCombobox}
-                        placeholder="Buscar por nome ou CPF"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="empresa_id">Empresa</Label>
-                      <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {empresas.map((e) => (
-                            <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="data_aquisicao">Data Aquisição</Label>
-                      <Input
-                        id="data_aquisicao"
-                        type="date"
-                        value={formData.data_aquisicao}
-                        onChange={(e) => setFormData({ ...formData, data_aquisicao: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="valor_aquisicao">Valor Aquisição (R$)</Label>
-                      <Input
-                        id="valor_aquisicao"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0,00"
-                        value={formData.valor_aquisicao}
-                        onChange={(e) => setFormData({ ...formData, valor_aquisicao: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                    <Button type="submit" disabled={createVeiculo.isPending || updateVeiculo.isPending}>
-                      {editingId ? "Salvar" : "Criar"}
-                    </Button>
-                  </DialogFooter>
-                </form>
+                
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="dados">
+                      <Car className="h-4 w-4 mr-2" />
+                      Dados do Veículo
+                    </TabsTrigger>
+                    {editingId && formData.placa && (
+                      <TabsTrigger value="documentos">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Documentos
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
+                  
+                  <TabsContent value="dados">
+                    <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="placa">Placa *</Label>
+                          <Input
+                            id="placa"
+                            value={formData.placa}
+                            onChange={(e) => setFormData({ ...formData, placa: e.target.value.toUpperCase() })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="marca">Marca *</Label>
+                          <Input
+                            id="marca"
+                            value={formData.marca}
+                            onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="modelo">Modelo *</Label>
+                          <Input
+                            id="modelo"
+                            value={formData.modelo}
+                            onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="ano_fabricacao">Ano Fab.</Label>
+                          <Input
+                            id="ano_fabricacao"
+                            type="number"
+                            value={formData.ano_fabricacao}
+                            onChange={(e) => setFormData({ ...formData, ano_fabricacao: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="ano_modelo">Ano Mod.</Label>
+                          <Input
+                            id="ano_modelo"
+                            type="number"
+                            value={formData.ano_modelo}
+                            onChange={(e) => setFormData({ ...formData, ano_modelo: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cor">Cor</Label>
+                          <Input
+                            id="cor"
+                            value={formData.cor}
+                            onChange={(e) => setFormData({ ...formData, cor: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="combustivel">Combustível</Label>
+                          <Select value={formData.combustivel} onValueChange={(v) => setFormData({ ...formData, combustivel: v })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="gasolina">Gasolina</SelectItem>
+                              <SelectItem value="etanol">Etanol</SelectItem>
+                              <SelectItem value="flex">Flex</SelectItem>
+                              <SelectItem value="diesel">Diesel</SelectItem>
+                              <SelectItem value="eletrico">Elétrico</SelectItem>
+                              <SelectItem value="hibrido">Híbrido</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tipo">Tipo</Label>
+                          <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="carro">Carro</SelectItem>
+                              <SelectItem value="moto">Moto</SelectItem>
+                              <SelectItem value="caminhao">Caminhão</SelectItem>
+                              <SelectItem value="van">Van</SelectItem>
+                              <SelectItem value="utilitario">Utilitário</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="status">Status</Label>
+                          <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="disponivel">Disponível</SelectItem>
+                              <SelectItem value="em_uso">Em Uso</SelectItem>
+                              <SelectItem value="manutencao">Manutenção</SelectItem>
+                              <SelectItem value="baixado">Baixado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="renavam">Renavam</Label>
+                          <Input
+                            id="renavam"
+                            value={formData.renavam}
+                            onChange={(e) => setFormData({ ...formData, renavam: e.target.value })}
+                            maxLength={11}
+                            placeholder="00000000000"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="chassi">Chassi</Label>
+                          <Input
+                            id="chassi"
+                            value={formData.chassi}
+                            onChange={(e) => setFormData({ ...formData, chassi: e.target.value.toUpperCase() })}
+                            maxLength={17}
+                            placeholder="9BWZZZ377VT004251"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="funcionario_id">Responsável</Label>
+                          <FuncionarioCombobox
+                            value={formData.funcionario_id}
+                            onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}
+                            funcionarios={funcionariosCombobox}
+                            placeholder="Buscar por nome ou CPF"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="empresa_id">Empresa</Label>
+                          <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {empresas.map((e) => (
+                                <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="data_aquisicao">Data Aquisição</Label>
+                          <Input
+                            id="data_aquisicao"
+                            type="date"
+                            value={formData.data_aquisicao}
+                            onChange={(e) => setFormData({ ...formData, data_aquisicao: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="valor_aquisicao">Valor Aquisição (R$)</Label>
+                          <Input
+                            id="valor_aquisicao"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0,00"
+                            value={formData.valor_aquisicao}
+                            onChange={(e) => setFormData({ ...formData, valor_aquisicao: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                        <Button type="submit" disabled={createVeiculo.isPending || updateVeiculo.isPending}>
+                          {editingId ? "Salvar" : "Criar"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </TabsContent>
+                  
+                  {editingId && formData.placa && (
+                    <TabsContent value="documentos">
+                      <VeiculoDocumentosSection veiculoPlaca={formData.placa} />
+                    </TabsContent>
+                  )}
+                </Tabs>
               </DialogContent>
             </Dialog>
           </CardHeader>

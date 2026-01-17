@@ -17,7 +17,7 @@ import Funcionarios from "./pages/Funcionarios";
 import Empresas from "./pages/Empresas";
 import Equipes from "./pages/Equipes";
 import Veiculos from "./pages/Veiculos";
-import VeiculosDocumentos from "./pages/VeiculosDocumentos";
+
 import VeiculosMultas from "./pages/VeiculosMultas";
 import VeiculosHistorico from "./pages/VeiculosHistorico";
 import Contratos from "./pages/Contratos";
@@ -67,7 +67,7 @@ const App = () => (
             
             {/* Veículos */}
             <Route path="/veiculos" element={<ProtectedRoute><Veiculos /></ProtectedRoute>} />
-            <Route path="/veiculos/documentos" element={<ProtectedRoute><VeiculosDocumentos /></ProtectedRoute>} />
+            
             <Route path="/veiculos/multas" element={<ProtectedRoute><VeiculosMultas /></ProtectedRoute>} />
             <Route path="/veiculos/historico" element={<ProtectedRoute><VeiculosHistorico /></ProtectedRoute>} />
             
