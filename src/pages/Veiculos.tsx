@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { HistoricoVeiculoDialog } from "@/components/HistoricoVeiculoDialog";
+import { ConfirmResponsavelDialog } from "@/components/ConfirmResponsavelDialog";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -40,6 +41,8 @@ export default function Veiculos() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [historicoVeiculoPlaca, setHistoricoVeiculoPlaca] = useState<string | null>(null);
   const [historicoVeiculoInfo, setHistoricoVeiculoInfo] = useState<string>("");
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<typeof formData | null>(null);
   const [page, setPage] = useState(1);
   const [formData, setFormData] = useState({
     placa: "",
@@ -81,23 +84,42 @@ export default function Veiculos() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const data = {
-      ...formData,
-      ano_fabricacao: formData.ano_fabricacao ? parseInt(formData.ano_fabricacao) : null,
-      ano_modelo: formData.ano_modelo ? parseInt(formData.ano_modelo) : null,
-      valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
-      data_aquisicao: formData.data_aquisicao || null,
-      funcionario_id: formData.funcionario_id || null,
-      empresa_id: formData.empresa_id || null,
-    };
     
     if (editingId) {
-      // Verificar se o responsável mudou para registrar histórico
+      // Verificar se o responsável mudou
       const veiculoAtual = veiculos.find(v => v.id === editingId);
       const responsavelAnterior = veiculoAtual?.funcionario_id || null;
       const responsavelNovo = formData.funcionario_id || null;
       
-      await updateVeiculo.mutateAsync({ id: editingId, ...data });
+      if (responsavelAnterior !== responsavelNovo) {
+        // Abrir dialog de confirmação
+        setPendingFormData({ ...formData });
+        setConfirmDialogOpen(true);
+        return;
+      }
+    }
+    
+    // Proceder com salvamento normal
+    await saveVeiculo(formData, null);
+  };
+
+  const saveVeiculo = async (data: typeof formData, observacoes: string | null) => {
+    const veiculoData = {
+      ...data,
+      ano_fabricacao: data.ano_fabricacao ? parseInt(data.ano_fabricacao) : null,
+      ano_modelo: data.ano_modelo ? parseInt(data.ano_modelo) : null,
+      valor_aquisicao: data.valor_aquisicao ? parseFloat(data.valor_aquisicao) : null,
+      data_aquisicao: data.data_aquisicao || null,
+      funcionario_id: data.funcionario_id || null,
+      empresa_id: data.empresa_id || null,
+    };
+    
+    if (editingId) {
+      const veiculoAtual = veiculos.find(v => v.id === editingId);
+      const responsavelAnterior = veiculoAtual?.funcionario_id || null;
+      const responsavelNovo = data.funcionario_id || null;
+      
+      await updateVeiculo.mutateAsync({ id: editingId, ...veiculoData });
       
       // Registrar histórico se responsável mudou
       if (responsavelAnterior !== responsavelNovo) {
@@ -105,23 +127,31 @@ export default function Veiculos() {
           veiculo_placa: veiculoAtual?.placa,
           funcionario_anterior_id: responsavelAnterior,
           funcionario_novo_id: responsavelNovo,
-          observacoes: "Alteração via edição de veículo",
+          observacoes: observacoes || "Alteração via edição de veículo",
         });
       }
     } else {
-      const result = await createVeiculo.mutateAsync(data);
+      await createVeiculo.mutateAsync(veiculoData);
       // Registrar primeiro responsável se houver
-      if (formData.funcionario_id) {
+      if (data.funcionario_id) {
         await registrarAlteracaoResponsavel.mutateAsync({
-          veiculo_placa: formData.placa,
+          veiculo_placa: data.placa,
           funcionario_anterior_id: null,
-          funcionario_novo_id: formData.funcionario_id,
-          observacoes: "Responsável inicial ao cadastrar veículo",
+          funcionario_novo_id: data.funcionario_id,
+          observacoes: observacoes || "Responsável inicial ao cadastrar veículo",
         });
       }
     }
     setIsDialogOpen(false);
+    setConfirmDialogOpen(false);
+    setPendingFormData(null);
     resetForm();
+  };
+
+  const handleConfirmResponsavel = async (observacoes: string) => {
+    if (pendingFormData) {
+      await saveVeiculo(pendingFormData, observacoes);
+    }
   };
 
   const resetForm = () => {
@@ -466,6 +496,29 @@ export default function Veiculos() {
               setHistoricoVeiculoInfo("");
             }
           }}
+        />
+
+        <ConfirmResponsavelDialog
+          open={confirmDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setConfirmDialogOpen(false);
+              setPendingFormData(null);
+            }
+          }}
+          responsavelAnteriorNome={
+            editingId
+              ? funcionariosCombobox.find(
+                  (f) => f.id === veiculos.find((v) => v.id === editingId)?.funcionario_id
+                )?.nome || null
+              : null
+          }
+          responsavelNovoNome={
+            funcionariosCombobox.find((f) => f.id === pendingFormData?.funcionario_id)?.nome || null
+          }
+          veiculoInfo={pendingFormData ? `${pendingFormData.placa} - ${pendingFormData.marca} ${pendingFormData.modelo}` : ""}
+          onConfirm={handleConfirmResponsavel}
+          isPending={updateVeiculo.isPending || registrarAlteracaoResponsavel.isPending}
         />
       </div>
     </VehicleLayout>
