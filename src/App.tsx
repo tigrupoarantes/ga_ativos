@@ -22,6 +22,7 @@ import VeiculosMultas from "./pages/VeiculosMultas";
 import VeiculosHistorico from "./pages/VeiculosHistorico";
 import Contratos from "./pages/Contratos";
 import Telefonia from "./pages/Telefonia";
+import LinhasTelefonicas from "./pages/LinhasTelefonicas";
 import Configuracoes from "./pages/Configuracoes";
 import Permissoes from "./pages/Permissoes";
 import Usuarios from "./pages/Usuarios";
@@ -79,6 +80,7 @@ const App = () => (
             
             {/* Outros módulos */}
             <Route path="/telefonia" element={<ProtectedRoute><Telefonia /></ProtectedRoute>} />
+            <Route path="/linhas-telefonicas" element={<ProtectedRoute><LinhasTelefonicas /></ProtectedRoute>} />
             <Route path="/contratos" element={<ProtectedRoute><Contratos /></ProtectedRoute>} />
             <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
             

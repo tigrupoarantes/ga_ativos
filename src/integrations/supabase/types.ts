@@ -561,6 +561,50 @@ export type Database = {
           },
         ]
       }
+      linhas_telefonicas: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          funcionario_id: string | null
+          id: string
+          numero: string
+          observacoes: string | null
+          operadora: string | null
+          plano: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          funcionario_id?: string | null
+          id?: string
+          numero: string
+          observacoes?: string | null
+          operadora?: string | null
+          plano?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          funcionario_id?: string | null
+          id?: string
+          numero?: string
+          observacoes?: string | null
+          operadora?: string | null
+          plano?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linhas_telefonicas_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           can_edit: boolean | null
