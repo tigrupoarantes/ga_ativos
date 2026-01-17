@@ -2,8 +2,9 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useAtivos, useTiposAtivos } from "@/hooks/useAtivos";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { useFuncionariosCombobox } from "@/hooks/useSelectOptions";
 import { useEmpresas } from "@/hooks/useEmpresas";
+import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +31,7 @@ export default function Ativos() {
   const queryClient = useQueryClient();
   const { ativos, isLoading, createAtivo, updateAtivo, deleteAtivo } = useAtivos();
   const { tipos } = useTiposAtivos();
-  const { funcionarios } = useFuncionarios();
+  const { funcionarios } = useFuncionariosCombobox();
   const { empresas } = useEmpresas();
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -253,16 +254,12 @@ export default function Ativos() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="funcionario_id">Funcionário</Label>
-                        <Select value={formData.funcionario_id} onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {funcionarios.map((f) => (
-                              <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FuncionarioCombobox
+                          value={formData.funcionario_id}
+                          onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}
+                          funcionarios={funcionarios}
+                          placeholder="Buscar por nome ou CPF"
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="empresa_id">Empresa</Label>
