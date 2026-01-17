@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Wrench, Gauge, ClipboardList, Package, ShieldCheck, Droplets } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AppLayout } from "@/components/AppLayout";
 
 interface OficinaLayoutProps {
   children: ReactNode;
@@ -19,7 +20,8 @@ export function OficinaLayout({ children }: OficinaLayoutProps) {
   const location = useLocation();
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <AppLayout>
+      <div className="space-y-6 md:space-y-8">
       {/* Header da seção - Apple style */}
       <div className="border-b border-border/50 pb-5 md:pb-6">
         <div className="flex items-start sm:items-center gap-3 md:gap-4 mb-5 md:mb-6">
@@ -71,5 +73,6 @@ export function OficinaLayout({ children }: OficinaLayoutProps) {
         {children}
       </div>
     </div>
+    </AppLayout>
   );
 }

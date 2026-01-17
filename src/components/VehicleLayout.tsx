@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Car } from "lucide-react";
+import { AppLayout } from "@/components/AppLayout";
 
 interface VehicleLayoutProps {
   children: ReactNode;
@@ -7,7 +8,8 @@ interface VehicleLayoutProps {
 
 export function VehicleLayout({ children }: VehicleLayoutProps) {
   return (
-    <div className="space-y-6 md:space-y-8">
+    <AppLayout>
+      <div className="space-y-6 md:space-y-8">
       {/* Header da seção */}
       <div className="border-b border-border/50 pb-5 md:pb-6">
         <div className="flex items-start sm:items-center gap-3 md:gap-4">
@@ -30,5 +32,6 @@ export function VehicleLayout({ children }: VehicleLayoutProps) {
         {children}
       </div>
     </div>
+    </AppLayout>
   );
 }
