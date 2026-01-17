@@ -13,8 +13,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Package, Smartphone, Laptop } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NotebookForm } from "@/components/NotebookForm";
+import { useQueryClient } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -24,6 +26,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Ativos() {
+  const queryClient = useQueryClient();
   const { ativos, isLoading, createAtivo, updateAtivo, deleteAtivo } = useAtivos();
   const { tipos } = useTiposAtivos();
   const { funcionarios } = useFuncionarios();
@@ -107,6 +110,16 @@ export default function Ativos() {
     }
   };
 
+  const handleFormSuccess = () => {
+    setIsDialogOpen(false);
+    resetForm();
+    queryClient.invalidateQueries({ queryKey: ["ativos"] });
+  };
+
+  // Verificar se o tipo selecionado é Notebook
+  const tipoSelecionado = tipos.find((t) => t.id === formData.tipo_id);
+  const isNotebook = tipoSelecionado?.name?.toLowerCase().includes("notebook");
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -138,121 +151,133 @@ export default function Ativos() {
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>{editingId ? "Editar Ativo" : "Novo Ativo"}</DialogTitle>
+                  <DialogTitle>
+                    {editingId ? "Editar Ativo" : isNotebook ? "Novo Notebook" : "Novo Ativo"}
+                  </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="patrimonio">Patrimônio *</Label>
-                      <Input
-                        id="patrimonio"
-                        value={formData.patrimonio}
-                        onChange={(e) => setFormData({ ...formData, patrimonio: e.target.value })}
-                        required
-                      />
+                
+                {/* Formulário específico para Notebook (sem edição) */}
+                {!editingId && isNotebook ? (
+                  <NotebookForm
+                    onSuccess={handleFormSuccess}
+                    onCancel={() => setIsDialogOpen(false)}
+                  />
+                ) : (
+                  /* Formulário padrão para outros tipos e edição */
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="patrimonio">Patrimônio *</Label>
+                        <Input
+                          id="patrimonio"
+                          value={formData.patrimonio}
+                          onChange={(e) => setFormData({ ...formData, patrimonio: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="nome">Nome *</Label>
+                        <Input
+                          id="nome"
+                          value={formData.nome}
+                          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tipo_id">Tipo</Label>
+                        <Select value={formData.tipo_id} onValueChange={(v) => setFormData({ ...formData, tipo_id: v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tipos.map((t) => (
+                              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Status</Label>
+                        <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="disponivel">Disponível</SelectItem>
+                            <SelectItem value="em_uso">Em Uso</SelectItem>
+                            <SelectItem value="manutencao">Manutenção</SelectItem>
+                            <SelectItem value="baixado">Baixado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="marca">Marca</Label>
+                        <Input
+                          id="marca"
+                          value={formData.marca}
+                          onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="modelo">Modelo</Label>
+                        <Input
+                          id="modelo"
+                          value={formData.modelo}
+                          onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="numero_serie">Número de Série</Label>
+                        <Input
+                          id="numero_serie"
+                          value={formData.numero_serie}
+                          onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="imei">IMEI</Label>
+                        <Input
+                          id="imei"
+                          value={formData.imei}
+                          onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="funcionario_id">Funcionário</Label>
+                        <Select value={formData.funcionario_id} onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {funcionarios.map((f) => (
+                              <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="empresa_id">Empresa</Label>
+                        <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {empresas.map((e) => (
+                              <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="nome">Nome *</Label>
-                      <Input
-                        id="nome"
-                        value={formData.nome}
-                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo_id">Tipo</Label>
-                      <Select value={formData.tipo_id} onValueChange={(v) => setFormData({ ...formData, tipo_id: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tipos.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Status</Label>
-                      <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="disponivel">Disponível</SelectItem>
-                          <SelectItem value="em_uso">Em Uso</SelectItem>
-                          <SelectItem value="manutencao">Manutenção</SelectItem>
-                          <SelectItem value="baixado">Baixado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="marca">Marca</Label>
-                      <Input
-                        id="marca"
-                        value={formData.marca}
-                        onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="modelo">Modelo</Label>
-                      <Input
-                        id="modelo"
-                        value={formData.modelo}
-                        onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="numero_serie">Número de Série</Label>
-                      <Input
-                        id="numero_serie"
-                        value={formData.numero_serie}
-                        onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="imei">IMEI</Label>
-                      <Input
-                        id="imei"
-                        value={formData.imei}
-                        onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="funcionario_id">Funcionário</Label>
-                      <Select value={formData.funcionario_id} onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {funcionarios.map((f) => (
-                            <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="empresa_id">Empresa</Label>
-                      <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {empresas.map((e) => (
-                            <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                    <Button type="submit" disabled={createAtivo.isPending || updateAtivo.isPending}>
-                      {editingId ? "Salvar" : "Criar"}
-                    </Button>
-                  </DialogFooter>
-                </form>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                      <Button type="submit" disabled={createAtivo.isPending || updateAtivo.isPending}>
+                        {editingId ? "Salvar" : "Criar"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                )}
               </DialogContent>
             </Dialog>
           </CardHeader>
