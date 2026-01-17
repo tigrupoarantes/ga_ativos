@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
-import { useTiposAtivos, useAtivos } from "@/hooks/useAtivos";
+import { useTiposAtivos, useAtivos, generatePatrimonio } from "@/hooks/useAtivos";
 import { Loader2, Info } from "lucide-react";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 
@@ -45,6 +45,16 @@ export function NotebookForm({ onSuccess, onCancel }: NotebookFormProps) {
     setIsSubmitting(true);
 
     try {
+      // Gerar patrimônio automaticamente via função do banco
+      let patrimonio = `NTB-${Date.now()}`; // fallback
+      if (tipoNotebook?.id) {
+        try {
+          patrimonio = await generatePatrimonio(tipoNotebook.id);
+        } catch (err) {
+          console.warn("Usando patrimônio fallback:", err);
+        }
+      }
+
       await createAtivo.mutateAsync({
         nome: `Notebook ${formData.marca} ${formData.modelo}`,
         marca: formData.marca,
@@ -56,7 +66,7 @@ export function NotebookForm({ onSuccess, onCancel }: NotebookFormProps) {
           : null,
         funcionario_id: formData.funcionario_id || null,
         tipo_id: tipoNotebook?.id || null,
-        patrimonio: `NTB-${Date.now()}`,
+        patrimonio,
         status: "em_uso",
       });
       onSuccess();

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
-import { useTiposAtivos, useAtivos } from "@/hooks/useAtivos";
+import { useTiposAtivos, useAtivos, generatePatrimonio } from "@/hooks/useAtivos";
 import { Loader2, Info } from "lucide-react";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 
@@ -39,6 +39,16 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
     setIsSubmitting(true);
 
     try {
+      // Gerar patrimônio automaticamente via função do banco
+      let patrimonio = `CEL-${Date.now()}`; // fallback
+      if (tipoCelular?.id) {
+        try {
+          patrimonio = await generatePatrimonio(tipoCelular.id);
+        } catch (err) {
+          console.warn("Usando patrimônio fallback:", err);
+        }
+      }
+
       await createAtivo.mutateAsync({
         nome: `Celular ${formData.modelo}`,
         modelo: formData.modelo,
@@ -49,7 +59,7 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
           : null,
         funcionario_id: formData.funcionario_id || null,
         tipo_id: tipoCelular?.id || null,
-        patrimonio: `CEL-${Date.now()}`,
+        patrimonio,
         status: "em_uso",
       });
       onSuccess();

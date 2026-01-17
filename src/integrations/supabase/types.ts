@@ -83,6 +83,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          prefix: string | null
           updated_at: string | null
           useful_life_months: number | null
         }
@@ -94,6 +95,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          prefix?: string | null
           updated_at?: string | null
           useful_life_months?: number | null
         }
@@ -105,6 +107,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          prefix?: string | null
           updated_at?: string | null
           useful_life_months?: number | null
         }
@@ -1202,6 +1205,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_patrimonio: { Args: { p_tipo_id: string }; Returns: string }
       get_current_user_role: { Args: never; Returns: string }
       get_dashboard_alerts: { Args: { limit_count?: number }; Returns: Json }
       get_dashboard_stats: { Args: never; Returns: Json }
