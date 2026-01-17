@@ -102,7 +102,11 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
       toast.success("Funcionário criado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar funcionário: " + error.message);
+      if (error.message?.includes('idx_funcionarios_cpf_unique')) {
+        toast.error("Já existe um funcionário com este CPF");
+      } else {
+        toast.error("Erro ao criar funcionário: " + error.message);
+      }
     },
   });
 
@@ -123,7 +127,11 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
       toast.success("Funcionário atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar funcionário: " + error.message);
+      if (error.message?.includes('idx_funcionarios_cpf_unique')) {
+        toast.error("Já existe um funcionário com este CPF");
+      } else {
+        toast.error("Erro ao atualizar funcionário: " + error.message);
+      }
     },
   });
 

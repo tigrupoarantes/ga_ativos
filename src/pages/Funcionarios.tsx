@@ -16,6 +16,38 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Users, Car } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+// Função para normalizar CPF (apenas números)
+const normalizeCpf = (cpf: string) => cpf.replace(/\D/g, '');
+
+// Função para formatar CPF para exibição
+const formatCpf = (cpf: string) => {
+  const nums = normalizeCpf(cpf);
+  if (nums.length !== 11) return cpf;
+  return nums.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
+// Verificar duplicidade de CPF
+const checkCpfDuplicate = async (cpf: string, currentId?: string | null): Promise<boolean> => {
+  const normalized = normalizeCpf(cpf);
+  if (!normalized || normalized.length !== 11) return false;
+  
+  let query = supabase
+    .from('funcionarios')
+    .select('id')
+    .eq('cpf', normalized)
+    .eq('active', true)
+    .limit(1);
+  
+  if (currentId) {
+    query = query.neq('id', currentId);
+  }
+  
+  const { data } = await query;
+  return data !== null && data.length > 0;
+};
 
 export default function Funcionarios() {
   const [searchInput, setSearchInput] = useState("");
@@ -77,13 +109,35 @@ export default function Funcionarios() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      await updateFuncionario.mutateAsync({ id: editingId, ...formData });
-    } else {
-      await createFuncionario.mutateAsync(formData);
+    
+    // Validar CPF duplicado antes de salvar
+    if (formData.cpf) {
+      const isDuplicate = await checkCpfDuplicate(formData.cpf, editingId);
+      if (isDuplicate) {
+        toast.error('Já existe um funcionário com este CPF');
+        return;
+      }
     }
-    setIsDialogOpen(false);
-    resetForm();
+    
+    // Normalizar CPF antes de salvar
+    const dataToSave = {
+      ...formData,
+      cpf: formData.cpf ? normalizeCpf(formData.cpf) : formData.cpf,
+    };
+    
+    try {
+      if (editingId) {
+        await updateFuncionario.mutateAsync({ id: editingId, ...dataToSave });
+      } else {
+        await createFuncionario.mutateAsync(dataToSave);
+      }
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error: any) {
+      if (error.message?.includes('idx_funcionarios_cpf_unique')) {
+        toast.error('Já existe um funcionário com este CPF');
+      }
+    }
   };
 
   const resetForm = () => {
@@ -200,8 +254,22 @@ export default function Funcionarios() {
                       <Label htmlFor="cpf">CPF</Label>
                       <Input
                         id="cpf"
+                        placeholder="000.000.000-00"
                         value={formData.cpf}
-                        onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                        onChange={(e) => {
+                          // Permite formatação visual durante digitação
+                          const value = e.target.value;
+                          const nums = value.replace(/\D/g, '').slice(0, 11);
+                          let formatted = nums;
+                          if (nums.length > 9) {
+                            formatted = `${nums.slice(0,3)}.${nums.slice(3,6)}.${nums.slice(6,9)}-${nums.slice(9)}`;
+                          } else if (nums.length > 6) {
+                            formatted = `${nums.slice(0,3)}.${nums.slice(3,6)}.${nums.slice(6)}`;
+                          } else if (nums.length > 3) {
+                            formatted = `${nums.slice(0,3)}.${nums.slice(3)}`;
+                          }
+                          setFormData({ ...formData, cpf: formatted });
+                        }}
                       />
                     </div>
                     <div className="space-y-2">
