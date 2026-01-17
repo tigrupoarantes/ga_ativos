@@ -1,17 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useTiposAtivos, useAtivos } from "@/hooks/useAtivos";
 import { Loader2, Info } from "lucide-react";
+import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 
 interface CelularFormProps {
   onSuccess: () => void;
@@ -38,11 +32,6 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
     (t) =>
       t.name?.toLowerCase().includes("celular") ||
       t.category?.toLowerCase().includes("celular")
-  );
-
-  // Funcionário selecionado para exibir CPF
-  const funcionarioSelecionado = funcionarios.find(
-    (f) => f.id === formData.funcionario_id
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,33 +132,13 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="funcionario">Funcionário Responsável *</Label>
-        <Select
+        <Label>Funcionário Responsável *</Label>
+        <FuncionarioCombobox
           value={formData.funcionario_id}
           onValueChange={(value) =>
             setFormData({ ...formData, funcionario_id: value })
           }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o funcionário" />
-          </SelectTrigger>
-          <SelectContent>
-            {funcionarios.map((funcionario) => (
-              <SelectItem key={funcionario.id} value={funcionario.id}>
-                {funcionario.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label>CPF Responsável</Label>
-        <Input
-          value={funcionarioSelecionado?.cpf || ""}
-          disabled
-          className="bg-muted"
-          placeholder="Selecione um funcionário acima"
+          funcionarios={funcionarios}
         />
       </div>
 
