@@ -10,6 +10,17 @@ type AssetType = Tables<"asset_types">;
 type AssetTypeInsert = TablesInsert<"asset_types">;
 type AssetTypeUpdate = TablesUpdate<"asset_types">;
 
+// Função para gerar patrimônio automaticamente via RPC
+export async function generatePatrimonio(tipoId: string): Promise<string> {
+  const { data, error } = await supabase
+    .rpc('generate_patrimonio', { p_tipo_id: tipoId });
+
+  if (error) {
+    console.error('Erro ao gerar patrimônio:', error);
+    throw error;
+  }
+  return data as string;
+}
 export function useAtivos() {
   const queryClient = useQueryClient();
 

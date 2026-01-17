@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Trash2, FolderKanban } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function TiposAtivos() {
   const { tipos, isLoading, createTipo, updateTipo, deleteTipo } = useTiposAtivos();
@@ -21,6 +22,7 @@ export default function TiposAtivos() {
     name: "",
     description: "",
     category: "",
+    prefix: "",
     depreciation_rate: "",
     useful_life_months: "",
   });
@@ -35,6 +37,7 @@ export default function TiposAtivos() {
     e.preventDefault();
     const data = {
       ...formData,
+      prefix: formData.prefix.toUpperCase() || null,
       depreciation_rate: formData.depreciation_rate ? parseFloat(formData.depreciation_rate) : null,
       useful_life_months: formData.useful_life_months ? parseInt(formData.useful_life_months) : null,
     };
@@ -53,6 +56,7 @@ export default function TiposAtivos() {
       name: "",
       description: "",
       category: "",
+      prefix: "",
       depreciation_rate: "",
       useful_life_months: "",
     });
@@ -64,6 +68,7 @@ export default function TiposAtivos() {
       name: tipo.name || "",
       description: tipo.description || "",
       category: tipo.category || "",
+      prefix: (tipo as any).prefix || "",
       depreciation_rate: tipo.depreciation_rate?.toString() || "",
       useful_life_months: tipo.useful_life_months?.toString() || "",
     });
@@ -117,14 +122,30 @@ export default function TiposAtivos() {
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Categoria</Label>
-                    <Input
-                      id="category"
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      placeholder="Ex: Eletrônicos, Veículos, Móveis"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Categoria</Label>
+                      <Input
+                        id="category"
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        placeholder="Ex: Eletrônicos, Veículos"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="prefix">Prefixo Patrimônio</Label>
+                      <Input
+                        id="prefix"
+                        value={formData.prefix}
+                        onChange={(e) => setFormData({ ...formData, prefix: e.target.value.toUpperCase().slice(0, 5) })}
+                        placeholder="Ex: NTB, CEL, IMP"
+                        maxLength={5}
+                        className="uppercase"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        3-5 letras para identificar o tipo no código de patrimônio
+                      </p>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Descrição</Label>
@@ -177,8 +198,8 @@ export default function TiposAtivos() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
+                    <TableHead>Prefixo</TableHead>
                     <TableHead>Categoria</TableHead>
-                    <TableHead>Descrição</TableHead>
                     <TableHead>Taxa Depreciação</TableHead>
                     <TableHead>Vida Útil</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -188,8 +209,14 @@ export default function TiposAtivos() {
                   {filteredTipos.map((tipo) => (
                     <TableRow key={tipo.id}>
                       <TableCell className="font-medium">{tipo.name}</TableCell>
+                      <TableCell>
+                        {(tipo as any).prefix ? (
+                          <Badge variant="outline" className="font-mono">
+                            {(tipo as any).prefix}
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
                       <TableCell>{tipo.category || "-"}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{tipo.description || "-"}</TableCell>
                       <TableCell>{tipo.depreciation_rate ? `${tipo.depreciation_rate}%` : "-"}</TableCell>
                       <TableCell>{tipo.useful_life_months ? `${tipo.useful_life_months} meses` : "-"}</TableCell>
                       <TableCell className="text-right">
