@@ -1,11 +1,23 @@
+import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Phone, Smartphone, Wifi, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Phone, Smartphone, Wifi, Settings2, Plus } from "lucide-react";
 import { useAtivos } from "@/hooks/useAtivos";
+import { CelularForm } from "@/components/CelularForm";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Telefonia() {
+  const queryClient = useQueryClient();
   const { ativos } = useAtivos();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   // Filter assets that have phone-related data (chip_linha or imei)
   const phoneAssets = ativos.filter(a => a.chip_linha || a.imei);
@@ -34,6 +46,11 @@ export default function Telefonia() {
     },
   ];
 
+  const handleFormSuccess = () => {
+    setIsDialogOpen(false);
+    queryClient.invalidateQueries({ queryKey: ["ativos"] });
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -41,6 +58,12 @@ export default function Telefonia() {
           title="Telefonia"
           description="Gerencie linhas telefônicas e chips"
           icon={Phone}
+          actions={
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Celular
+            </Button>
+          }
         />
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -76,9 +99,13 @@ export default function Telefonia() {
                   <Settings2 className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-medium mb-2">Nenhum ativo com telefonia</h3>
-                <p className="text-muted-foreground max-w-sm">
-                  Cadastre ativos com chip ou IMEI na página de Ativos para visualizá-los aqui.
+                <p className="text-muted-foreground max-w-sm mb-4">
+                  Cadastre um celular usando o botão acima para visualizá-lo aqui.
                 </p>
+                <Button onClick={() => setIsDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Cadastrar Celular
+                </Button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -113,6 +140,18 @@ export default function Telefonia() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Cadastrar Celular</DialogTitle>
+          </DialogHeader>
+          <CelularForm
+            onSuccess={handleFormSuccess}
+            onCancel={() => setIsDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
