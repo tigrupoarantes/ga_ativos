@@ -57,8 +57,8 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
           id, nome, email, telefone, cargo, departamento, cpf,
           empresa_id, equipe_id, is_condutor,
           cnh_numero, cnh_categoria, cnh_validade,
-          empresa:empresas(id, nome),
-          equipe:equipes(id, nome)
+          empresa:empresas!funcionarios_empresa_id_fkey(id, nome),
+          equipe:equipes!funcionarios_equipe_id_fkey(id, nome)
         `)
         .eq("active", true)
         .order("nome")
@@ -175,8 +175,8 @@ export function useFuncionarios() {
         .from("funcionarios")
         .select(`
           *,
-          empresa:empresas(*),
-          equipe:equipes(*)
+          empresa:empresas!funcionarios_empresa_id_fkey(*),
+          equipe:equipes!funcionarios_equipe_id_fkey(*)
         `)
         .eq("active", true)
         .order("nome");
@@ -264,7 +264,7 @@ export function useCondutores() {
         .from("funcionarios")
         .select(`
           *,
-          empresa:empresas(*)
+          empresa:empresas!funcionarios_empresa_id_fkey(*)
         `)
         .eq("active", true)
         .eq("is_condutor", true)
