@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useFuncionariosPaginated } from "@/hooks/useFuncionarios";
-import { useEmpresasSelect, useEquipesSelect } from "@/hooks/useSelectOptions";
+import { useEmpresasSelect } from "@/hooks/useSelectOptions";
 import { useDebounce } from "@/hooks/useDebounce";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { Button } from "@/components/ui/button";
@@ -74,7 +74,6 @@ export default function Funcionarios() {
   });
 
   const { empresas } = useEmpresasSelect();
-  const { equipes } = useEquipesSelect();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -86,7 +85,6 @@ export default function Funcionarios() {
     departamento: "",
     cpf: "",
     empresa_id: "",
-    equipe_id: "",
     is_condutor: false,
     cnh_numero: "",
     cnh_categoria: "",
@@ -120,10 +118,19 @@ export default function Funcionarios() {
       }
     }
     
-    // Normalizar CPF antes de salvar
+    // Normalizar dados - converter strings vazias para null
     const dataToSave = {
-      ...formData,
-      cpf: formData.cpf ? normalizeCpf(formData.cpf) : formData.cpf,
+      nome: formData.nome,
+      email: formData.email || null,
+      telefone: formData.telefone || null,
+      cargo: formData.cargo || null,
+      departamento: formData.departamento || null,
+      cpf: formData.cpf ? normalizeCpf(formData.cpf) : null,
+      empresa_id: formData.empresa_id || null,
+      is_condutor: formData.is_condutor,
+      cnh_numero: formData.cnh_numero || null,
+      cnh_categoria: formData.cnh_categoria || null,
+      cnh_validade: formData.cnh_validade || null,
     };
     
     try {
@@ -151,7 +158,6 @@ export default function Funcionarios() {
       departamento: "",
       cpf: "",
       empresa_id: "",
-      equipe_id: "",
       is_condutor: false,
       cnh_numero: "",
       cnh_categoria: "",
@@ -169,7 +175,6 @@ export default function Funcionarios() {
       departamento: funcionario.departamento || "",
       cpf: funcionario.cpf || "",
       empresa_id: funcionario.empresa_id || "",
-      equipe_id: funcionario.equipe_id || "",
       is_condutor: funcionario.is_condutor || false,
       cnh_numero: funcionario.cnh_numero || "",
       cnh_categoria: funcionario.cnh_categoria || "",
@@ -304,19 +309,6 @@ export default function Funcionarios() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="equipe_id">Equipe</Label>
-                      <Select value={formData.equipe_id} onValueChange={(v) => setFormData({ ...formData, equipe_id: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {equipes.map((eq) => (
-                            <SelectItem key={eq.id} value={eq.id}>{eq.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -382,7 +374,6 @@ export default function Funcionarios() {
                       <TableHead>Email</TableHead>
                       <TableHead>Cargo</TableHead>
                       <TableHead>Empresa</TableHead>
-                      <TableHead>Equipe</TableHead>
                       <TableHead>Condutor</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -394,7 +385,6 @@ export default function Funcionarios() {
                         <TableCell>{funcionario.email || "-"}</TableCell>
                         <TableCell>{funcionario.cargo || "-"}</TableCell>
                         <TableCell>{(funcionario as any).empresa?.nome || "-"}</TableCell>
-                        <TableCell>{(funcionario as any).equipe?.nome || "-"}</TableCell>
                         <TableCell>
                           {funcionario.is_condutor ? (
                             <Badge className="bg-status-info/10 text-status-info">
@@ -415,7 +405,7 @@ export default function Funcionarios() {
                     ))}
                     {funcionarios.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           Nenhum funcionário encontrado
                         </TableCell>
                       </TableRow>
