@@ -60,7 +60,7 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
         funcionario_id: formData.funcionario_id || null,
         tipo_id: tipoCelular?.id || null,
         patrimonio,
-        status: "em_uso",
+        status: formData.funcionario_id ? "em_uso" : "disponivel",
       });
       onSuccess();
     } catch (error) {
@@ -74,8 +74,7 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
     formData.modelo.trim() !== "" &&
     formData.imei.trim() !== "" &&
     formData.data_aquisicao !== "" &&
-    formData.valor_aquisicao !== "" &&
-    formData.funcionario_id !== "";
+    formData.valor_aquisicao !== "";
 
   if (loadingFuncionarios || loadingTipos) {
     return (
@@ -142,7 +141,7 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label>Funcionário Responsável *</Label>
+        <Label>Funcionário Responsável (opcional)</Label>
         <FuncionarioCombobox
           value={formData.funcionario_id}
           onValueChange={(value) =>
@@ -150,6 +149,11 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
           }
           funcionarios={funcionarios}
         />
+        {!formData.funcionario_id && (
+          <p className="text-sm text-muted-foreground">
+            Sem funcionário associado - equipamento ficará como "Disponível"
+          </p>
+        )}
       </div>
 
       {tipoCelular && (
