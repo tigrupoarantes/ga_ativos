@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -192,16 +193,24 @@ export default function Auth() {
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="remember-me" 
-                    checked={rememberMe} 
-                    onCheckedChange={(checked) => setRememberMe(checked === true)} 
-                    className="rounded"
-                  />
-                  <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer text-muted-foreground">
-                    Lembrar meu usuário
-                  </Label>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="remember-me" 
+                      checked={rememberMe} 
+                      onCheckedChange={(checked) => setRememberMe(checked === true)} 
+                      className="rounded"
+                    />
+                    <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer text-muted-foreground">
+                      Lembrar meu usuário
+                    </Label>
+                  </div>
+                  <Link 
+                    to="/reset-password" 
+                    className="text-sm text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Esqueci minha senha
+                  </Link>
                 </div>
                 <Button 
                   type="submit" 
