@@ -139,7 +139,15 @@ export function SmtpConfigForm() {
                 placeholder="smtp.exemplo.com"
                 className="pl-10"
                 value={formData.host}
-                onChange={(e) => setFormData(prev => ({ ...prev, host: e.target.value }))}
+                onChange={(e) => {
+                  // Remove port numbers that might be accidentally included
+                  let host = e.target.value.trim();
+                  // Remove :port if user accidentally types it
+                  host = host.replace(/:\d+$/, '');
+                  // Remove trailing numbers that look like ports (e.g., "smtp.server.com587" -> "smtp.server.com")
+                  host = host.replace(/\d{2,5}$/, '');
+                  setFormData(prev => ({ ...prev, host }));
+                }}
               />
             </div>
           </div>
