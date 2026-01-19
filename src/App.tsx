@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 // Pages
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Ativos from "./pages/Ativos";
 import TiposAtivos from "./pages/TiposAtivos";
@@ -52,6 +53,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Dashboard */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
