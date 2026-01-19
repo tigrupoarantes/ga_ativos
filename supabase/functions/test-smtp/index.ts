@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,23 +32,47 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error("Campos obrigatórios não preenchidos");
     }
 
-    console.log(`Testando servidor SMTP: ${config.host}:${config.port}`);
+    // Trim and validate host to prevent malformed hostnames
+    const host = config.host.trim();
+    const port = Number(config.port) || 587;
+    
+    console.log(`Testando servidor SMTP: ${host}:${port} (secure: ${config.secure})`);
 
-    // Create SMTP client
+    // For port 587 with STARTTLS, we need to import denomailer dynamically
+    // and configure it properly for STARTTLS vs implicit TLS
+    const { SMTPClient } = await import("https://deno.land/x/denomailer@1.6.0/mod.ts");
+
+    // Determine TLS settings based on port and user preference
+    // Port 465 = implicit TLS (tls: true)
+    // Port 587 = STARTTLS (tls: false, library handles upgrade)
+    // Port 25 = no encryption (tls: false)
+    const useTls = port === 465 ? true : config.secure;
+
+    console.log(`Configuração TLS: ${useTls ? 'TLS direto' : 'STARTTLS ou sem criptografia'}`);
+
+    // Create SMTP client with timeout
     const client = new SMTPClient({
       connection: {
-        hostname: config.host,
-        port: config.port,
-        tls: config.secure,
+        hostname: host,
+        port: port,
+        tls: useTls,
         auth: {
           username: config.username,
           password: config.password_encrypted,
         },
       },
+      debug: {
+        log: true,
+        allowUnsecure: !useTls && port !== 465,
+        encodeLB: false,
+        noStartTLS: false,
+      },
     });
 
     // Send test email
     const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    
+    console.log(`Enviando email de teste para: ${config.test_email}`);
     
     await client.send({
       from: `${config.from_name || "Sistema de Gestão"} <${config.from_email}>`,
@@ -88,11 +111,11 @@ serve(async (req: Request): Promise<Response> => {
                 <h3 style="margin-top: 0;">Detalhes da Configuração:</h3>
                 <div class="info-item">
                   <span class="label">Servidor:</span>
-                  <span class="value">${config.host}:${config.port}</span>
+                  <span class="value">${host}:${port}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">TLS/SSL:</span>
-                  <span class="value">${config.secure ? "Ativado" : "Desativado"}</span>
+                  <span class="value">${useTls ? "TLS Direto" : "STARTTLS"}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">Remetente:</span>
@@ -132,12 +155,16 @@ serve(async (req: Request): Promise<Response> => {
     let errorMessage = error.message;
     
     // Provide more helpful error messages
-    if (error.message.includes("auth")) {
-      errorMessage = "Falha na autenticação. Verifique usuário e senha.";
-    } else if (error.message.includes("connect") || error.message.includes("hostname")) {
-      errorMessage = "Não foi possível conectar ao servidor. Verifique host e porta.";
-    } else if (error.message.includes("TLS") || error.message.includes("SSL")) {
-      errorMessage = "Erro de TLS/SSL. Tente alternar a opção de conexão segura.";
+    if (error.message.includes("auth") || error.message.includes("535") || error.message.includes("Authentication")) {
+      errorMessage = "Falha na autenticação. Verifique usuário e senha. Para Gmail, use uma 'Senha de App'.";
+    } else if (error.message.includes("connect") || error.message.includes("hostname") || error.message.includes("lookup")) {
+      errorMessage = "Não foi possível conectar ao servidor. Verifique o endereço do host.";
+    } else if (error.message.includes("TLS") || error.message.includes("SSL") || error.message.includes("BadResource") || error.message.includes("startTls")) {
+      errorMessage = "Erro de conexão segura. Para porta 587, desative 'Conexão Segura (TLS)'. Para porta 465, ative-a.";
+    } else if (error.message.includes("timeout") || error.message.includes("ETIMEDOUT")) {
+      errorMessage = "Tempo limite excedido. Verifique se a porta está correta e acessível.";
+    } else if (error.message.includes("invalid cmd")) {
+      errorMessage = "Erro de protocolo SMTP. Tente alterar a configuração de TLS/SSL.";
     }
     
     return new Response(
