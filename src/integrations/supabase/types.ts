@@ -942,6 +942,51 @@ export type Database = {
           },
         ]
       }
+      smtp_config: {
+        Row: {
+          created_at: string | null
+          from_email: string
+          from_name: string | null
+          host: string
+          id: string
+          is_active: boolean | null
+          password_encrypted: string
+          port: number
+          secure: boolean | null
+          updated_at: string | null
+          updated_by: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          from_email: string
+          from_name?: string | null
+          host: string
+          id?: string
+          is_active?: boolean | null
+          password_encrypted: string
+          port?: number
+          secure?: boolean | null
+          updated_at?: string | null
+          updated_by?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          from_email?: string
+          from_name?: string | null
+          host?: string
+          id?: string
+          is_active?: boolean | null
+          password_encrypted?: string
+          port?: number
+          secure?: boolean | null
+          updated_at?: string | null
+          updated_by?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       tipos_veiculos: {
         Row: {
           active: boolean | null

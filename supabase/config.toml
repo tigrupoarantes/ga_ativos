@@ -2,3 +2,9 @@ project_id = "aahtjjolpmrfcxxiouxj"
 
 [functions.consulta-fipe]
 verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.test-smtp]
+verify_jwt = false
