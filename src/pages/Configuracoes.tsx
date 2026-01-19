@@ -1,15 +1,13 @@
-import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Settings, Shield, Users, Bell, Database, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
+import { SmtpConfigForm } from "@/components/SmtpConfigForm";
 
 export default function Configuracoes() {
   const { userRole } = useAuth();
@@ -215,6 +213,9 @@ export default function Configuracoes() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* SMTP Configuration */}
+              <SmtpConfigForm />
             </TabsContent>
           )}
         </Tabs>
