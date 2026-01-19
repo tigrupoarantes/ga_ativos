@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Shield, Users, Bell, Database } from "lucide-react";
+import { Settings, Shield, Users, Bell, Database, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 
@@ -178,6 +178,23 @@ export default function Configuracoes() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2 mb-6">
+                    <Link to="/empresas">
+                      <Card className="cursor-pointer hover:bg-accent transition-colors">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Empresas
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground">
+                            Gerencie as empresas cadastradas no sistema
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </div>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Modo de Manutenção</Label>
