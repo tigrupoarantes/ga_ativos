@@ -7,15 +7,30 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Mail, Send, Eye, EyeOff, Server } from "lucide-react";
+import { Loader2, Mail, Send, Eye, EyeOff, Server, CheckCircle2, AlertCircle } from "lucide-react";
 
 const SMTP_PRESETS = [
-  { name: "Gmail", host: "smtp.gmail.com", port: 587, secure: false },
+  { name: "Gmail (TLS)", host: "smtp.gmail.com", port: 465, secure: true },
+  { name: "Gmail (STARTTLS)", host: "smtp.gmail.com", port: 587, secure: false },
   { name: "Outlook/Office 365", host: "smtp.office365.com", port: 587, secure: false },
-  { name: "Amazon SES", host: "email-smtp.us-east-1.amazonaws.com", port: 587, secure: false },
+  { name: "Amazon SES (TLS)", host: "email-smtp.us-east-1.amazonaws.com", port: 465, secure: true },
   { name: "SendGrid", host: "smtp.sendgrid.net", port: 587, secure: false },
   { name: "Personalizado", host: "", port: 587, secure: false },
 ];
+
+// Helper to determine if port/secure combination is valid
+const getPortSecureConfig = (port: number) => {
+  if (port === 465) return { secure: true, message: "Porta 465 requer TLS ativado (conexão segura direta)", valid: true };
+  if (port === 587) return { secure: false, message: "Para porta 587, mantenha TLS desativado neste ambiente", valid: true };
+  if (port === 25) return { secure: false, message: "Porta 25 não suporta criptografia", valid: true };
+  return { secure: false, message: "Porta não padrão - verifique as configurações do seu servidor", valid: false };
+};
+
+const isValidPortSecureCombination = (port: number, secure: boolean): boolean => {
+  if (port === 465) return secure === true;
+  if (port === 587 || port === 25) return secure === false;
+  return true; // For non-standard ports, allow any configuration
+};
 
 export function SmtpConfigForm() {
   const { user } = useAuth();
@@ -153,14 +168,43 @@ export function SmtpConfigForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="port">Porta</Label>
-            <Input
-              id="port"
-              type="number"
-              placeholder="587"
-              value={formData.port}
-              onChange={(e) => setFormData(prev => ({ ...prev, port: parseInt(e.target.value) || 587 }))}
-            />
+            <div className="relative">
+              <Input
+                id="port"
+                type="number"
+                placeholder="587"
+                value={formData.port}
+                onChange={(e) => {
+                  const port = parseInt(e.target.value) || 587;
+                  const config = getPortSecureConfig(port);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    port,
+                    secure: config.secure 
+                  }));
+                }}
+              />
+              {isValidPortSecureCombination(formData.port, formData.secure) ? (
+                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              ) : (
+                <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Port hint message */}
+        <div className={`flex items-center gap-2 p-3 rounded-md text-sm ${
+          isValidPortSecureCombination(formData.port, formData.secure) 
+            ? 'bg-primary/10 text-primary' 
+            : 'bg-destructive/10 text-destructive'
+        }`}>
+          {isValidPortSecureCombination(formData.port, formData.secure) ? (
+            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          )}
+          <span>{getPortSecureConfig(formData.port).message}</span>
         </div>
 
         {/* TLS/SSL Switch */}
@@ -168,12 +212,17 @@ export function SmtpConfigForm() {
           <div className="space-y-0.5">
             <Label>Conexão Segura (TLS/SSL)</Label>
             <p className="text-sm text-muted-foreground">
-              Ativar criptografia TLS/SSL na conexão
+              {formData.port === 465 
+                ? "Obrigatório para porta 465" 
+                : formData.port === 587 
+                  ? "Desative para porta 587 (STARTTLS automático)" 
+                  : "Ativar criptografia TLS/SSL na conexão"}
             </p>
           </div>
           <Switch
             checked={formData.secure}
             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, secure: checked }))}
+            disabled={formData.port === 465}
           />
         </div>
 
