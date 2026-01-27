@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, UserMinus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -20,6 +20,8 @@ interface ImportResult {
   updated: number;
   created: number;
   skipped: number;
+  deactivated: number;
+  assetsReleased: number;
   errors: string[];
 }
 
@@ -92,6 +94,58 @@ const parseCsv = (text: string): CsvRow[] => {
   return rows;
 };
 
+// Helper function to release assets from a deactivated employee
+const releaseAssetsFromFuncionario = async (funcionarioId: string) => {
+  let releasedCount = 0;
+
+  // Release assets (notebooks, celulares)
+  const { data: assets } = await supabase
+    .from('assets')
+    .select('id')
+    .eq('funcionario_id', funcionarioId)
+    .eq('active', true);
+
+  if (assets && assets.length > 0) {
+    await supabase
+      .from('assets')
+      .update({ funcionario_id: null, status: 'disponivel' })
+      .eq('funcionario_id', funcionarioId);
+    releasedCount += assets.length;
+  }
+
+  // Release phone lines
+  const { data: linhas } = await supabase
+    .from('linhas_telefonicas')
+    .select('id')
+    .eq('funcionario_id', funcionarioId)
+    .eq('active', true);
+
+  if (linhas && linhas.length > 0) {
+    await supabase
+      .from('linhas_telefonicas')
+      .update({ funcionario_id: null })
+      .eq('funcionario_id', funcionarioId);
+    releasedCount += linhas.length;
+  }
+
+  // Release vehicles
+  const { data: veiculos } = await supabase
+    .from('veiculos')
+    .select('id')
+    .eq('funcionario_id', funcionarioId)
+    .eq('active', true);
+
+  if (veiculos && veiculos.length > 0) {
+    await supabase
+      .from('veiculos')
+      .update({ funcionario_id: null, status: 'disponivel' })
+      .eq('funcionario_id', funcionarioId);
+    releasedCount += veiculos.length;
+  }
+
+  return releasedCount;
+};
+
 export function ImportFuncionariosDialog() {
   const [open, setOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -132,6 +186,8 @@ export function ImportFuncionariosDialog() {
       updated: 0,
       created: 0,
       skipped: 0,
+      deactivated: 0,
+      assetsReleased: 0,
       errors: [],
     };
     
@@ -163,11 +219,41 @@ export function ImportFuncionariosDialog() {
         // Check if funcionario exists by CPF
         const { data: existing } = await supabase
           .from('funcionarios')
-          .select('id')
+          .select('id, active')
           .eq('cpf', cpf)
           .maybeSingle();
         
-        // Prepare update data
+        // Determine if CSV marks this employee as inactive
+        let isActiveInCsv = true;
+        if (row.ativo) {
+          const ativoLower = row.ativo.toLowerCase();
+          isActiveInCsv = ['sim', 'ativo', 'yes', 'true', '1', 's'].includes(ativoLower);
+        }
+        
+        // Handle inactive employee logic
+        if (!isActiveInCsv) {
+          if (existing) {
+            // Deactivate existing employee and release their assets
+            const { error } = await supabase
+              .from('funcionarios')
+              .update({ active: false })
+              .eq('id', existing.id);
+            
+            if (error) throw error;
+            
+            // Release all assets associated with this employee
+            const releasedCount = await releaseAssetsFromFuncionario(existing.id);
+            result.deactivated++;
+            result.assetsReleased += releasedCount;
+          } else {
+            // Don't create inactive employees - just skip
+            result.skipped++;
+          }
+          setProgress(((i + 1) / previewData.length) * 100);
+          continue;
+        }
+        
+        // Prepare update data for active employees
         const updateData: Record<string, any> = {};
         
         if (row.nome) updateData.nome = row.nome.toUpperCase();
@@ -188,11 +274,8 @@ export function ImportFuncionariosDialog() {
           if (equipeId) updateData.equipe_id = equipeId;
         }
         
-        // Parse active status
-        if (row.ativo) {
-          const ativoLower = row.ativo.toLowerCase();
-          updateData.active = ['sim', 'ativo', 'yes', 'true', '1', 's'].includes(ativoLower);
-        }
+        // Active status - already handled above, always true here
+        updateData.active = true;
         
         // Parse is_condutor
         if (row.is_condutor) {
@@ -222,7 +305,6 @@ export function ImportFuncionariosDialog() {
               cpf,
               nome: row.nome?.toUpperCase() || 'SEM NOME',
               ...updateData,
-              active: updateData.active ?? true,
             });
           
           if (error) throw error;
@@ -238,10 +320,19 @@ export function ImportFuncionariosDialog() {
     
     setResult(result);
     setIsProcessing(false);
+    
+    // Invalidate all related queries
     queryClient.invalidateQueries({ queryKey: ["funcionarios"] });
+    queryClient.invalidateQueries({ queryKey: ["ativos"] });
+    queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas"] });
+    queryClient.invalidateQueries({ queryKey: ["veiculos"] });
     
     if (result.errors.length === 0) {
-      toast.success(`Importação concluída: ${result.updated} atualizados, ${result.created} criados`);
+      const parts = [];
+      if (result.updated > 0) parts.push(`${result.updated} atualizados`);
+      if (result.created > 0) parts.push(`${result.created} criados`);
+      if (result.deactivated > 0) parts.push(`${result.deactivated} inativados`);
+      toast.success(`Importação concluída: ${parts.join(', ')}`);
     } else {
       toast.warning(`Importação concluída com ${result.errors.length} erros`);
     }
@@ -354,7 +445,7 @@ export function ImportFuncionariosDialog() {
           {/* Results */}
           {result && (
             <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-green-500/10 text-green-600 rounded-lg p-3 text-center">
                   <CheckCircle2 className="h-5 w-5 mx-auto mb-1" />
                   <p className="text-lg font-bold">{result.updated}</p>
@@ -364,6 +455,14 @@ export function ImportFuncionariosDialog() {
                   <CheckCircle2 className="h-5 w-5 mx-auto mb-1" />
                   <p className="text-lg font-bold">{result.created}</p>
                   <p className="text-xs">Criados</p>
+                </div>
+                <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-center">
+                  <UserMinus className="h-5 w-5 mx-auto mb-1" />
+                  <p className="text-lg font-bold">{result.deactivated}</p>
+                  <p className="text-xs">Inativados</p>
+                  {result.assetsReleased > 0 && (
+                    <p className="text-[10px] opacity-75">({result.assetsReleased} ativos liberados)</p>
+                  )}
                 </div>
                 <div className="bg-amber-500/10 text-amber-600 rounded-lg p-3 text-center">
                   <AlertCircle className="h-5 w-5 mx-auto mb-1" />
