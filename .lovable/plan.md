@@ -1,104 +1,214 @@
 
 
-## Plano: Corrigir Importação de Veículos
+## Plano: Dashboard de Veículos com Consulta FIPE em Massa
 
-### Problemas Identificados
+### Objetivo
 
-**Erro 1 - Datas Inválidas (Principal)**
-
-O banco retorna:
-```
-"date/time field value out of range: \"2025-21-01\""
-```
-
-O problema está na função `parseDate()`. Quando o Excel envia datas como números seriais, a conversão gera datas impossíveis (mês 21).
-
-**Erro 2 - Placas Duplicadas**
-
-Mesmo após desativar os veículos (`active=false`), a constraint `veiculos_placa_key` bloqueia novas inserções. O soft delete não funciona com constraints de unicidade globais.
+Criar um dashboard na página de veículos com:
+1. Total de veículos e estatísticas
+2. Filtro por empresa
+3. Botão para consultar tabela FIPE para todos os veículos
 
 ---
 
-### Correções Necessárias
+### 1. Cards de Estatísticas
 
-#### 1. Corrigir função `parseDate()`
+Exibir no topo da página:
 
-A função precisa:
-- Validar se a data gerada é válida antes de retornar
-- Tratar corretamente datas do Excel em formato serial
-- Detectar e corrigir inversão de mês/dia
+| Card | Métrica |
+|------|---------|
+| Total de Veículos | 137 |
+| Com Valor FIPE | 0 (atualmente) |
+| Sem Valor FIPE | 137 |
+| Valor Total da Frota | R$ 0,00 (atualiza conforme FIPE) |
+
+---
+
+### 2. Filtro por Empresa
+
+Empresas detectadas nos dados:
+- J. Arantes Transportes (64 veículos)
+- Chok Distribuidora (34 veículos)
+- Sem empresa/Particular (19 veículos)
+- G4 Arantes (10 veículos)
+- Chokdoce CD (10 veículos)
+
+O filtro permitirá:
+- Selecionar uma empresa específica
+- Opção "Todas as empresas"
+- Opção "Sem empresa (Particular)"
+
+---
+
+### 3. Botão Consulta FIPE em Massa
+
+Funcionalidades:
+- Abre um dialog de progresso
+- Processa veículos que têm código FIPE cadastrado
+- Para veículos sem código FIPE, ignora ou mostra aviso
+- Exibe barra de progresso durante a operação
+- Mostra resultado final (quantos atualizados, quantos falharam)
+
+---
+
+### 4. Interface Visual
+
+```text
++----------------------------------------------------------------------+
+| Veículos                                                              |
+| Gestão completa da frota                                              |
+|                                                                       |
+| [Lista] [Multas] [Histórico]                                          |
++----------------------------------------------------------------------+
+|                                                                       |
+| +----------+  +-----------+  +------------+  +----------------+       |
+| |   137    |  |     0     |  |    137     |  |   R$ 0,00      |       |
+| |  Total   |  | Com FIPE  |  | Sem FIPE   |  | Valor Frota    |       |
+| +----------+  +-----------+  +------------+  +----------------+       |
+|                                                                       |
+| Empresa: [Todas as empresas ▼]    [Consultar FIPE em Massa]           |
+|                                                                       |
++----------------------------------------------------------------------+
+| [Buscar...]                          [Importar] [+ Novo Veículo]      |
++----------------------------------------------------------------------+
+| Tabela de veículos...                                                 |
++----------------------------------------------------------------------+
+```
+
+---
+
+### 5. Dialog de Consulta FIPE em Massa
+
+```text
++----------------------------------------------------------+
+| Consultar FIPE em Massa                              [X] |
++----------------------------------------------------------+
+| Esta ação vai consultar o valor FIPE para todos os       |
+| veículos que possuem código FIPE cadastrado.             |
+|                                                          |
+| Veículos com código FIPE: 0 de 137                       |
+| Veículos sem código: 137                                 |
+|                                                          |
+| ⚠️ Veículos sem código FIPE serão ignorados.             |
+|                                                          |
+| [Cancelar]                    [Iniciar Consulta]         |
++----------------------------------------------------------+
+
+// Durante execução:
++----------------------------------------------------------+
+| Consultando FIPE...                                  [X] |
++----------------------------------------------------------+
+| Processando: ABC1234 - VW Gol 2020                       |
+|                                                          |
+| [████████████░░░░░░░░] 60%  (60/100)                      |
+|                                                          |
+| ✓ Atualizados: 55                                        |
+| ✗ Falhas: 5                                              |
+|                                                          |
+| [Cancelar]                                               |
++----------------------------------------------------------+
+```
+
+---
+
+### 6. Arquivos a Criar/Modificar
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/VeiculosDashboard.tsx` | **Criar** - Componente com cards e filtros |
+| `src/components/ConsultaFipeMassaDialog.tsx` | **Criar** - Dialog para consulta em massa |
+| `src/pages/Veiculos.tsx` | **Modificar** - Integrar dashboard e filtro |
+| `src/hooks/useVeiculos.ts` | **Modificar** - Adicionar filtro por empresa |
+
+---
+
+### 7. Detalhes Técnicos
+
+#### 7.1 VeiculosDashboard.tsx
 
 ```typescript
-const parseDate = (val: string | number | undefined): string | null => {
-  if (val === undefined || val === null || val === '') return null;
-  
-  let year: number, month: number, day: number;
-  
-  // Handle Excel serial date
-  if (typeof val === 'number') {
-    const date = XLSX.SSF.parse_date_code(val);
-    if (date) {
-      year = date.y;
-      month = date.m;
-      day = date.d;
-    } else {
-      return null;
-    }
-  } else {
-    const str = val.toString().trim();
-    
-    // DD/MM/YYYY ou D/M/YY (formato brasileiro)
-    const match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-    if (match) {
-      day = parseInt(match[1]);
-      month = parseInt(match[2]);
-      year = parseInt(match[3]);
-      if (year < 100) year = year > 50 ? 1900 + year : 2000 + year;
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-      return str; // Already ISO
-    } else {
-      return null;
-    }
-  }
-  
-  // Validar data
-  if (month < 1 || month > 12 || day < 1 || day > 31) {
-    return null; // Data inválida - ignorar
-  }
-  
-  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-};
+// Componente que exibe:
+// - 4 cards com estatísticas
+// - Select para filtrar por empresa
+// - Botão para abrir ConsultaFipeMassaDialog
+
+interface VeiculosDashboardProps {
+  veiculos: Veiculo[];
+  empresas: Empresa[];
+  empresaFilter: string | null;
+  onEmpresaFilterChange: (empresaId: string | null) => void;
+}
 ```
 
-#### 2. Deletar permanentemente veículos antigos
+#### 7.2 ConsultaFipeMassaDialog.tsx
 
-Para permitir reimportação das mesmas placas:
+```typescript
+// Dialog que:
+// 1. Lista quantos veículos têm código FIPE
+// 2. Inicia consultas em batch (com delay entre elas)
+// 3. Mostra progresso em tempo real
+// 4. Atualiza cada veículo via mutation
+// 5. Exibe resumo final
 
-```sql
--- Deletar PERMANENTEMENTE veículos inativos para liberar placas
-DELETE FROM veiculos WHERE active = false;
+interface ConsultaFipeMassaDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  veiculos: Veiculo[];
+}
 ```
 
-#### 3. Adicionar tratamento de erro melhorado
+#### 7.3 Filtro por Empresa
 
-Mostrar mensagem clara quando uma data for inválida, em vez de tentar inserir.
+```typescript
+// Adicionar ao Veiculos.tsx:
+const [empresaFilter, setEmpresaFilter] = useState<string | null>(null);
+
+// Modificar filtragem:
+const filteredVeiculos = veiculos.filter((v) => {
+  const matchesSearch = v.placa?.toLowerCase().includes(search) || ...;
+  const matchesEmpresa = !empresaFilter || 
+    (empresaFilter === "particular" ? !v.empresa_id : v.empresa_id === empresaFilter);
+  return matchesSearch && matchesEmpresa;
+});
+```
 
 ---
 
-### Arquivos a Modificar
+### 8. Fluxo da Consulta FIPE em Massa
 
-| Arquivo | Modificação |
-|---------|-------------|
-| `src/components/ImportVeiculosDialog.tsx` | Corrigir `parseDate()`, adicionar validação de data |
-| Migração SQL | Deletar veículos inativos para liberar placas |
+```text
+1. Usuário clica "Consultar FIPE em Massa"
+      ↓
+2. Dialog abre e lista veículos elegíveis
+      ↓
+3. Usuário confirma
+      ↓
+4. Para cada veículo com código_fipe:
+   - Chama useFipeConsultaPorCodigo
+   - Atualiza progresso
+   - Aguarda 500ms (rate limiting)
+      ↓
+5. Exibe resumo (X atualizados, Y falhas)
+      ↓
+6. Invalida query de veículos
+```
 
 ---
 
-### Resultado Esperado
+### 9. Limitações e Observações
 
-Após as correções:
-- Datas serão interpretadas corretamente no formato DD/MM/YYYY
-- Datas inválidas serão ignoradas (campo ficará null)
-- Placas antigas (inativas) serão removidas, liberando para reimportação
-- 137 veículos serão importados com sucesso
+- **Veículos sem código FIPE**: Não serão consultados automaticamente (requer seleção manual de marca/modelo)
+- **Rate Limiting**: Delay de 500ms entre consultas para não sobrecarregar a API FIPE
+- **Atualmente 0 veículos têm código FIPE**: O botão mostrará aviso sobre isso
+- **Para consultar todos**: Usuário precisará editar cada veículo e usar a consulta individual por marca/modelo/ano
+
+---
+
+### 10. Resultado Esperado
+
+Após implementação:
+- Dashboard visual com métricas da frota
+- Filtro funcional por empresa
+- Botão de consulta em massa (funcional para veículos com código FIPE)
+- Interface limpa seguindo o padrão Apple do sistema
 
