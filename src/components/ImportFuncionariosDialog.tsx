@@ -102,8 +102,31 @@ const consolidateByCpf = (rows: CsvRow[]): { consolidated: CsvRow[], info: Conso
   return { consolidated, info };
 };
 
-// Quote-aware CSV line parser - supports both single and double quotes
+// CSV line parser - handles special format with ',' as delimiter
 const parseCSVLine = (line: string): string[] => {
+  // Check if line uses ',' as delimiter pattern (common in some exports)
+  // Format: VALUE1','VALUE2','VALUE3',...
+  if (line.includes("','")) {
+    // Split by ',' pattern
+    const parts = line.split("','");
+    // Clean each element
+    return parts.map((v, idx) => {
+      let cleaned = v.trim();
+      // Remove trailing quote from first element (e.g., "NAME'" -> "NAME")
+      if (idx === 0 && cleaned.endsWith("'")) {
+        cleaned = cleaned.slice(0, -1);
+      }
+      // Remove leading quote from last element (e.g., "'Value" -> "Value")  
+      if (idx === parts.length - 1 && cleaned.startsWith("'")) {
+        cleaned = cleaned.slice(1);
+      }
+      // Remove any remaining surrounding quotes
+      cleaned = cleaned.replace(/^['"]|['"]$/g, '');
+      return cleaned.trim();
+    });
+  }
+  
+  // Standard CSV parsing with quote awareness
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
