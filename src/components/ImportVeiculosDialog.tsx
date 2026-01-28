@@ -103,41 +103,54 @@ const cleanCurrency = (val: string | number | undefined): number | null => {
 const parseDate = (val: string | number | undefined): string | null => {
   if (val === undefined || val === null || val === '') return null;
   
+  let year: number, month: number, day: number;
+  
   // Handle Excel serial date
   if (typeof val === 'number') {
     const date = XLSX.SSF.parse_date_code(val);
     if (date) {
-      const year = date.y;
-      const month = String(date.m).padStart(2, '0');
-      const day = String(date.d).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      year = date.y;
+      month = date.m;
+      day = date.d;
+    } else {
+      return null;
     }
+  } else {
+    const str = val.toString().trim();
+    
+    // Already ISO format - validate and return
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      const [y, m, d] = str.split('-').map(Number);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return str;
+      }
+      return null;
+    }
+    
+    // DD/MM/YYYY ou D/M/YY (formato brasileiro)
+    const match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (match) {
+      day = parseInt(match[1]);
+      month = parseInt(match[2]);
+      year = parseInt(match[3]);
+      if (year < 100) year = year > 50 ? 1900 + year : 2000 + year;
+    } else {
+      return null;
+    }
+  }
+  
+  // Validar data - se mês ou dia forem inválidos, retornar null
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
     return null;
   }
   
-  const str = val.toString().trim();
-  
-  // Try M/D/YY or M/D/YYYY format
-  const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-  if (slashMatch) {
-    const [, m, d, y] = slashMatch;
-    const year = y.length === 2 ? (parseInt(y) > 50 ? `19${y}` : `20${y}`) : y;
-    return `${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  // Validação adicional para dias do mês
+  const maxDays = new Date(year, month, 0).getDate();
+  if (day > maxDays) {
+    return null;
   }
   
-  // Try DD/MM/YYYY format
-  const brMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (brMatch) {
-    const [, d, m, y] = brMatch;
-    return `${y}-${m}-${d}`;
-  }
-  
-  // Already ISO format
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    return str;
-  }
-  
-  return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
 
 const parseAnoModelo = (val: string | number | undefined): number | null => {
