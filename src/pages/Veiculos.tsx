@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield, Upload } from "lucide-react";
+import { ImportVeiculosDialog } from "@/components/ImportVeiculosDialog";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
@@ -313,12 +314,15 @@ export default function Veiculos() {
               />
             </div>
             <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Veículo
-                </Button>
-              </DialogTrigger>
+              <div className="flex gap-2">
+                <ImportVeiculosDialog />
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Veículo
+                  </Button>
+                </DialogTrigger>
+              </div>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingId ? "Editar Veículo" : "Novo Veículo"}</DialogTitle>
