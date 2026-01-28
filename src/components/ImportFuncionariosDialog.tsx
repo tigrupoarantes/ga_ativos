@@ -43,48 +43,161 @@ interface CsvRow {
 
 const normalizeCpf = (cpf: string) => cpf?.replace(/\D/g, '') || '';
 
+// Quote-aware CSV line parser
+const parseCSVLine = (line: string): string[] => {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if ((char === ',' || char === ';') && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+};
+
+// Header mapping to normalize different column names
+const headerMappings: Record<string, keyof CsvRow> = {
+  // CPF
+  'cpf': 'cpf',
+  'cpffuncionario': 'cpf',
+  'cpf_funcionario': 'cpf',
+  
+  // Nome
+  'nome': 'nome',
+  'nomefuncionario': 'nome',
+  'nome_funcionario': 'nome',
+  'funcionario': 'nome',
+  
+  // Email
+  'email': 'email',
+  'e_mail': 'email',
+  'emailfuncionario': 'email',
+  
+  // Telefone
+  'telefone': 'telefone',
+  'tel': 'telefone',
+  'celular': 'telefone',
+  
+  // Cargo
+  'cargo': 'cargo',
+  'descricaocargo': 'cargo',
+  'descricao_cargo': 'cargo',
+  'funcao': 'cargo',
+  'posicao': 'cargo',
+  
+  // Departamento
+  'departamento': 'departamento',
+  'centrodecusto': 'departamento',
+  'centro_de_custo': 'departamento',
+  'depto': 'departamento',
+  'setor': 'departamento',
+  
+  // Empresa
+  'empresa': 'empresa',
+  'empresa_nome': 'empresa',
+  'companhia': 'empresa',
+  
+  // Equipe
+  'equipe': 'equipe',
+  'time': 'equipe',
+  'grupo': 'equipe',
+  
+  // Status/Ativo
+  'ativo': 'ativo',
+  'situacao': 'ativo',
+  'status': 'ativo',
+  
+  // Condutor
+  'is_condutor': 'is_condutor',
+  'condutor': 'is_condutor',
+  'motorista': 'is_condutor',
+  
+  // CNH
+  'cnh_numero': 'cnh_numero',
+  'cnh': 'cnh_numero',
+  'cnh_categoria': 'cnh_categoria',
+  'categoria_cnh': 'cnh_categoria',
+  'cnh_validade': 'cnh_validade',
+  'validade_cnh': 'cnh_validade',
+};
+
 const parseCsv = (text: string): CsvRow[] => {
   const lines = text.trim().split('\n');
   if (lines.length < 2) return [];
   
-  // Parse header (first line)
-  const headerLine = lines[0];
-  const headers = headerLine.split(/[,;]/).map(h => 
-    h.trim().toLowerCase()
+  // Find the real header line (skip malformed first line if needed)
+  let headerLineIndex = 0;
+  const firstLine = lines[0];
+  
+  // Detect malformed header (starts with quote+text or contains unusual patterns)
+  if (firstLine.startsWith("'") || firstLine.includes("\"'") || firstLine.includes("'\"")) {
+    headerLineIndex = 1;
+    if (lines.length < 3) return [];
+  }
+  
+  // Parse header using quote-aware parser
+  const headerLine = lines[headerLineIndex];
+  const rawHeaders = parseCSVLine(headerLine);
+  
+  // Normalize headers: lowercase, remove accents, remove underscores for matching
+  const headers = rawHeaders.map(h => {
+    const normalized = h.trim().toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents
-      .replace(/['"]/g, '')
-  );
+      .replace(/['"]/g, '');
+    return normalized;
+  });
   
   const rows: CsvRow[] = [];
   
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = headerLineIndex + 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     
-    // Split by comma or semicolon
-    const values = line.split(/[,;]/).map(v => v.trim().replace(/^["']|["']$/g, ''));
+    // Parse line using quote-aware parser
+    const values = parseCSVLine(line);
     
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index] || '';
-    });
-    
-    // Map common header variations
+    // Build row using header mappings
     const mappedRow: CsvRow = {
-      cpf: row.cpf || row.cpf_funcionario || '',
-      nome: row.nome || row.nome_funcionario || row.funcionario || '',
-      email: row.email || row.e_mail || '',
-      telefone: row.telefone || row.tel || row.celular || '',
-      cargo: row.cargo || row.funcao || row.posicao || '',
-      departamento: row.departamento || row.depto || row.setor || '',
-      empresa: row.empresa || row.empresa_nome || row.companhia || '',
-      equipe: row.equipe || row.time || row.grupo || '',
-      ativo: row.ativo || row.status || row.situacao || '',
-      is_condutor: row.is_condutor || row.condutor || row.motorista || '',
-      cnh_numero: row.cnh_numero || row.cnh || '',
-      cnh_categoria: row.cnh_categoria || row.categoria_cnh || '',
-      cnh_validade: row.cnh_validade || row.validade_cnh || '',
+      cpf: '',
+      nome: '',
+      email: '',
+      telefone: '',
+      cargo: '',
+      departamento: '',
+      empresa: '',
+      equipe: '',
+      ativo: '',
+      is_condutor: '',
+      cnh_numero: '',
+      cnh_categoria: '',
+      cnh_validade: '',
     };
+    
+    headers.forEach((header, index) => {
+      const value = values[index] || '';
+      
+      // Try exact match first
+      let targetField = headerMappings[header];
+      
+      // Try without underscores
+      if (!targetField) {
+        const headerNoUnderscore = header.replace(/_/g, '');
+        targetField = headerMappings[headerNoUnderscore];
+      }
+      
+      if (targetField) {
+        mappedRow[targetField] = value;
+      }
+    });
     
     if (mappedRow.cpf) {
       rows.push(mappedRow);
@@ -386,11 +499,11 @@ export function ImportFuncionariosDialog() {
           <div className="bg-muted/50 rounded-lg p-4 text-sm">
             <p className="font-medium mb-2">Formato esperado do CSV:</p>
             <code className="text-xs block bg-background p-2 rounded">
-              cpf;nome;email;cargo;empresa;ativo<br/>
-              12345678901;João Silva;joao@email.com;Gerente;Empresa X;sim
+              NOME_FUNCIONARIO,CPF,DESCRICAO_CARGO,CENTRO_DE_CUSTO,EMPRESA,SITUACAO<br/>
+              JOAO SILVA,12345678901,GERENTE,VENDAS,EMPRESA X,Ativo
             </code>
             <p className="text-xs text-muted-foreground mt-2">
-              Colunas suportadas: cpf, nome, email, telefone, cargo, departamento, empresa, equipe, ativo, is_condutor, cnh_numero, cnh_categoria, cnh_validade
+              Colunas suportadas: nome_funcionario, cpf, email, telefone, descricao_cargo, centro_de_custo, empresa, equipe, situacao, is_condutor, cnh_numero, cnh_categoria, cnh_validade
             </p>
           </div>
           
