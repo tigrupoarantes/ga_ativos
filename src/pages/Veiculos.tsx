@@ -74,6 +74,7 @@ export default function Veiculos() {
     placa: "",
     renavam: "",
     chassi: "",
+    codigo_fipe: "",
     tipo: "",
     marca: "",
     modelo: "",
@@ -156,6 +157,7 @@ export default function Veiculos() {
       placa: data.placa,
       renavam: data.renavam || null,
       chassi: data.chassi || null,
+      codigo_fipe: data.codigo_fipe || null,
       tipo: data.tipo || null,
       marca: data.marca,
       modelo: data.modelo,
@@ -234,6 +236,7 @@ export default function Veiculos() {
       placa: "",
       renavam: "",
       chassi: "",
+      codigo_fipe: "",
       tipo: "",
       marca: "",
       modelo: "",
@@ -268,6 +271,7 @@ export default function Veiculos() {
       placa: veiculo.placa || "",
       renavam: veiculo.renavam || "",
       chassi: veiculo.chassi || "",
+      codigo_fipe: (veiculo as any).codigo_fipe || "",
       tipo: veiculo.tipo || "",
       marca: veiculo.marca || "",
       modelo: veiculo.modelo || "",
@@ -409,7 +413,16 @@ export default function Veiculos() {
                           />
                         </div>
 
-                        {/* Linha 2: Tipo, Marca, Modelo */}
+                        {/* Linha 2: Tipo, Marca, Modelo, Código FIPE */}
+                        <div className="space-y-2">
+                          <Label htmlFor="codigo_fipe">Código FIPE</Label>
+                          <Input
+                            id="codigo_fipe"
+                            value={formData.codigo_fipe}
+                            onChange={(e) => setFormData({ ...formData, codigo_fipe: e.target.value })}
+                            placeholder="001234-5"
+                          />
+                        </div>
                         <div className="space-y-2">
                           <Label htmlFor="tipo">Tipo</Label>
                           <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
