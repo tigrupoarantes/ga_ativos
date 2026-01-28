@@ -26,6 +26,8 @@ import { ConsultaFipeDialog } from "@/components/ConsultaFipeDialog";
 import { VeiculoDocumentosSection } from "@/components/VeiculoDocumentosSection";
 import { VeiculoLicenciamentoTab } from "@/components/VeiculoLicenciamentoTab";
 import { VeiculoSegurosTab } from "@/components/VeiculoSegurosTab";
+import { VeiculosDashboard } from "@/components/VeiculosDashboard";
+import { ConsultaFipeMassaDialog } from "@/components/ConsultaFipeMassaDialog";
 import { format } from "date-fns";
 
 const statusColors: Record<string, string> = {
@@ -66,6 +68,8 @@ export default function Veiculos() {
   const [fipeVeiculoTipo, setFipeVeiculoTipo] = useState("carro");
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState("dados");
+  const [empresaFilter, setEmpresaFilter] = useState<string | null>(null);
+  const [fipeMassaDialogOpen, setFipeMassaDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     placa: "",
     renavam: "",
@@ -102,12 +106,18 @@ export default function Veiculos() {
   });
 
   // Filtragem client-side (para conjuntos pequenos, manteremos assim)
-  const filteredVeiculos = veiculos.filter(
-    (v) =>
+  const filteredVeiculos = veiculos.filter((v) => {
+    const matchesSearch =
       v.placa?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       v.marca?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      v.modelo?.toLowerCase().includes(debouncedSearch.toLowerCase())
-  );
+      v.modelo?.toLowerCase().includes(debouncedSearch.toLowerCase());
+    
+    const matchesEmpresa =
+      !empresaFilter ||
+      (empresaFilter === "particular" ? !v.empresa_id : v.empresa_id === empresaFilter);
+    
+    return matchesSearch && matchesEmpresa;
+  });
 
   // Paginação client-side
   const totalCount = filteredVeiculos.length;
@@ -300,6 +310,20 @@ export default function Veiculos() {
           title="Veículos"
           description="Gerencie a frota de veículos"
           icon={Car}
+        />
+
+        <VeiculosDashboard
+          veiculos={veiculos}
+          empresas={empresas}
+          empresaFilter={empresaFilter}
+          onEmpresaFilterChange={setEmpresaFilter}
+          onOpenFipeMassa={() => setFipeMassaDialogOpen(true)}
+        />
+
+        <ConsultaFipeMassaDialog
+          open={fipeMassaDialogOpen}
+          onOpenChange={setFipeMassaDialogOpen}
+          veiculos={filteredVeiculos}
         />
 
         <Card>
