@@ -94,10 +94,22 @@ serve(async (req) => {
           );
         }
 
-        console.log(`[consulta-fipe] Buscando anos para código FIPE: ${codigoFipe}`);
+        // Normalizar código FIPE para formato 000000-0 (6 dígitos antes do hífen)
+        let codigoNormalizado = codigoFipe.trim();
+        if (codigoNormalizado.includes("-")) {
+          const [prefixo, sufixo] = codigoNormalizado.split("-");
+          codigoNormalizado = prefixo.padStart(6, "0") + "-" + sufixo;
+        } else {
+          // Se não tem hífen, adicionar padding e assumir sufixo 0
+          codigoNormalizado = codigoFipe.padStart(6, "0") + "-0";
+        }
+
+        console.log(`[consulta-fipe] Código original: ${codigoFipe}, Normalizado: ${codigoNormalizado}`);
+
+        console.log(`[consulta-fipe] Buscando anos para código FIPE: ${codigoNormalizado}`);
 
         // 1. Buscar anos disponíveis para o código FIPE
-        const anosUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}/years`;
+        const anosUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoNormalizado}/years`;
         console.log(`[consulta-fipe] URL anos: ${anosUrl}`);
         
         const anosResponse = await fetch(anosUrl);
@@ -149,7 +161,7 @@ serve(async (req) => {
         }
 
         // 3. Consultar valor
-        const valorUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}/years/${anoEncontrado.code}`;
+        const valorUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoNormalizado}/years/${anoEncontrado.code}`;
         console.log(`[consulta-fipe] URL valor: ${valorUrl}`);
         
         const valorResponse = await fetch(valorUrl);
