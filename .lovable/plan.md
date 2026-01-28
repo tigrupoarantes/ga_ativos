@@ -1,92 +1,89 @@
 
-## Plano: Limpeza de Funcionários Duplicados
 
-### Diagnóstico Completo
+## Plano: Limpeza de Funcionários sem CPF e Mapeamento de Empresas
 
-| Situação Atual | Valor |
-|----------------|-------|
-| Total funcionários ativos | 1.286 |
-| Total esperado | ~850 |
-| Funcionários únicos por nome | 1.250 |
-| Nomes com duplicatas | 35 |
-| Registros duplicados | 71 (36 a remover) |
-| Duplicados com ativos atribuídos | 16 |
+### Ações a Executar
 
-### Causa Raiz
+#### 1. Desativar Funcionários sem CPF
 
-As duplicatas são causadas principalmente por **CPFs sem zero à esquerda**:
-- Exemplo: `4716454274` e `04716454274` são tratados como diferentes
-- Durante importações CSV, o sistema criou novos registros ao invés de atualizar
-
-### Solução em 3 Etapas
-
----
-
-#### Etapa 1: Normalizar CPFs Existentes
-
-Padronizar todos os CPFs para 11 dígitos com zeros à esquerda.
+Executar query SQL para desativar os **175 funcionários** que não possuem CPF cadastrado e liberar seus ativos associados.
 
 ```sql
--- Normalizar CPFs para 11 dígitos
-UPDATE funcionarios 
-SET cpf = LPAD(cpf, 11, '0')
-WHERE cpf IS NOT NULL 
-  AND cpf != '' 
-  AND LENGTH(cpf) < 11;
+-- Liberar ativos dos funcionários sem CPF
+UPDATE assets SET funcionario_id = NULL, status = 'disponivel' 
+WHERE funcionario_id IN (
+  SELECT id FROM funcionarios WHERE (cpf IS NULL OR cpf = '') AND active = true
+);
+
+-- Liberar veículos dos funcionários sem CPF
+UPDATE veiculos SET funcionario_id = NULL, status = 'disponivel'
+WHERE funcionario_id IN (
+  SELECT id FROM funcionarios WHERE (cpf IS NULL OR cpf = '') AND active = true
+);
+
+-- Liberar linhas telefônicas
+UPDATE linhas_telefonicas SET funcionario_id = NULL
+WHERE funcionario_id IN (
+  SELECT id FROM funcionarios WHERE (cpf IS NULL OR cpf = '') AND active = true
+);
+
+-- Desativar funcionários sem CPF
+UPDATE funcionarios SET active = false 
+WHERE (cpf IS NULL OR cpf = '') AND active = true;
 ```
 
 ---
 
-#### Etapa 2: Consolidar Duplicatas
+#### 2. Adicionar Mapeamento de Empresas
 
-Para cada grupo de funcionários duplicados:
-1. **Manter** o registro que tem atribuições (ativos, veículos, linhas)
-2. **Transferir** atribuições do duplicado para o registro principal (se houver)
-3. **Desativar** os registros duplicados
+Modificar a lógica de importação para reconhecer os nomes das empresas na planilha e mapear para as empresas corretas no sistema.
 
-```sql
--- Script de consolidação (a ser executado com cuidado)
--- 1. Primeiro, identificar qual registro manter por grupo
--- 2. Transferir atribuições para o registro principal
--- 3. Desativar duplicatas
-```
+| Nome na Planilha | Empresa no Sistema |
+|------------------|-------------------|
+| `CDF COM DE PRODUTOS ALIMENTICIOS LTDA` | CHOKDOCE LOJA 2 |
+| `JJGF COM DE PRODUTOS ALIMENTICIOS LTDA` | CHOKDOCE LOJA 3 |
 
 ---
 
-#### Etapa 3: Prevenir Futuras Duplicatas
-
-Modificar a lógica de importação para:
-1. Sempre normalizar CPF para 11 dígitos antes de buscar/inserir
-2. Usar `LPAD(cpf, 11, '0')` na comparação
-
----
-
-### Arquivos a Modificar
+### Arquivo a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/ImportFuncionariosDialog.tsx` | Normalizar CPF antes de comparar/inserir |
-
-### Scripts SQL a Executar
-
-Fornecerei os scripts SQL seguros para:
-1. Normalizar todos os CPFs
-2. Consolidar duplicatas preservando atribuições
-3. Desativar registros duplicados
+| `src/components/ImportFuncionariosDialog.tsx` | Adicionar dicionário de aliases de empresas |
 
 ---
 
-### Etapa Adicional: Verificar Diferença de ~400 Funcionários
+### Código a Adicionar
 
-Se após remover as 36 duplicatas ainda houver ~400 funcionários a mais:
-- Será necessário uma nova importação com a lista atualizada de funcionários ativos
-- A importação marcará automaticamente como inativos os que não constarem na planilha
+```typescript
+// Mapeamento de nomes alternativos de empresas para nomes cadastrados
+const empresaAliases: Record<string, string> = {
+  'cdf com de produtos alimenticios ltda': 'chokdoce loja 2',
+  'jjgf com de produtos alimenticios ltda': 'chokdoce loja 3',
+};
+
+// Na função processImport, antes de buscar empresa_id:
+const empresaNormalizada = row.empresa.toLowerCase();
+const empresaNomeFinal = empresaAliases[empresaNormalizada] || empresaNormalizada;
+const empresaId = empresasMap.get(empresaNomeFinal);
+```
 
 ---
 
-### Resumo das Ações
+### Resultado Esperado
 
-1. Executar script SQL para normalizar CPFs
-2. Executar script SQL para consolidar duplicatas (preservando atribuições)
-3. Atualizar código de importação para prevenir novas duplicatas
-4. (Opcional) Re-importar planilha atualizada para sincronizar inativos
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| Funcionários ativos | 1.255 | ~1.080 |
+| Funcionários sem CPF | 175 | 0 (inativos) |
+| Empresas reconhecidas | Erro em 2 | 100% |
+
+---
+
+### Próximo Passo Após Implementação
+
+Com o mapeamento funcionando, você poderá executar a importação da planilha que irá:
+- Sincronizar cargos e empresas
+- Desativar funcionários que não constam mais na lista ativa (~400)
+- Criar novos funcionários se houver
+
