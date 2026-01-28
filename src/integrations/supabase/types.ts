@@ -1099,12 +1099,25 @@ export type Database = {
           fotos: string[] | null
           funcionario_id: string | null
           id: string
+          ipva_situacao: string | null
+          ipva_valor: number | null
+          ipva_vencimento: string | null
           km_atual: number | null
+          licenciamento_situacao: string | null
+          licenciamento_valor: number | null
+          licenciamento_vencimento: string | null
           marca: string
           modelo: string
           observacoes: string | null
           placa: string
+          possui_seguro: boolean | null
+          propriedade: string | null
           renavam: string | null
+          restricao: boolean | null
+          restricao_descricao: string | null
+          seguro_apolice: string | null
+          seguro_valor: number | null
+          seguro_vencimento: string | null
           status: string | null
           tipo: string | null
           updated_at: string | null
@@ -1126,12 +1139,25 @@ export type Database = {
           fotos?: string[] | null
           funcionario_id?: string | null
           id?: string
+          ipva_situacao?: string | null
+          ipva_valor?: number | null
+          ipva_vencimento?: string | null
           km_atual?: number | null
+          licenciamento_situacao?: string | null
+          licenciamento_valor?: number | null
+          licenciamento_vencimento?: string | null
           marca: string
           modelo: string
           observacoes?: string | null
           placa: string
+          possui_seguro?: boolean | null
+          propriedade?: string | null
           renavam?: string | null
+          restricao?: boolean | null
+          restricao_descricao?: string | null
+          seguro_apolice?: string | null
+          seguro_valor?: number | null
+          seguro_vencimento?: string | null
           status?: string | null
           tipo?: string | null
           updated_at?: string | null
@@ -1153,12 +1179,25 @@ export type Database = {
           fotos?: string[] | null
           funcionario_id?: string | null
           id?: string
+          ipva_situacao?: string | null
+          ipva_valor?: number | null
+          ipva_vencimento?: string | null
           km_atual?: number | null
+          licenciamento_situacao?: string | null
+          licenciamento_valor?: number | null
+          licenciamento_vencimento?: string | null
           marca?: string
           modelo?: string
           observacoes?: string | null
           placa?: string
+          possui_seguro?: boolean | null
+          propriedade?: string | null
           renavam?: string | null
+          restricao?: boolean | null
+          restricao_descricao?: string | null
+          seguro_apolice?: string | null
+          seguro_valor?: number | null
+          seguro_vencimento?: string | null
           status?: string | null
           tipo?: string | null
           updated_at?: string | null

@@ -40,10 +40,16 @@ const tiposDocumento = [
 
 interface VeiculoDocumentosSectionProps {
   veiculoPlaca: string;
+  tipoFiltro?: string[];
 }
 
-export function VeiculoDocumentosSection({ veiculoPlaca }: VeiculoDocumentosSectionProps) {
-  const { documentos, isLoading, createDocumento, deleteDocumento } = useVeiculosDocumentos(veiculoPlaca);
+export function VeiculoDocumentosSection({ veiculoPlaca, tipoFiltro }: VeiculoDocumentosSectionProps) {
+  const { documentos: allDocumentos, isLoading, createDocumento, deleteDocumento } = useVeiculosDocumentos(veiculoPlaca);
+  
+  // Filtrar documentos por tipo se tipoFiltro for fornecido
+  const documentos = tipoFiltro 
+    ? allDocumentos.filter(doc => tipoFiltro.includes(doc.tipo_documento))
+    : allDocumentos;
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     tipo_documento: "",
