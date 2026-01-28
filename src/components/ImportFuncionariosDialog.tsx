@@ -596,9 +596,15 @@ export function ImportFuncionariosDialog() {
         if (row.cargo) updateData.cargo = row.cargo.toUpperCase();
         if (row.departamento) updateData.departamento = row.departamento.toUpperCase();
         
-        // Match empresa by name
+        // Match empresa by name (with aliases for alternative company names)
         if (row.empresa) {
-          const empresaId = empresasMap.get(row.empresa.toLowerCase());
+          const empresaAliases: Record<string, string> = {
+            'cdf com de produtos alimenticios ltda': 'chokdoce loja 2',
+            'jjgf com de produtos alimenticios ltda': 'chokdoce loja 3',
+          };
+          const empresaNormalizada = row.empresa.toLowerCase();
+          const empresaNomeFinal = empresaAliases[empresaNormalizada] || empresaNormalizada;
+          const empresaId = empresasMap.get(empresaNomeFinal);
           if (empresaId) updateData.empresa_id = empresaId;
         }
         
