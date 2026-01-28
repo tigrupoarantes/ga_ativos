@@ -9,7 +9,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
 import { EmpresasInlineManager } from "@/components/EmpresasInlineManager";
-import { EquipesInlineManager } from "@/components/EquipesInlineManager";
 
 export default function Configuracoes() {
   const { userRole } = useAuth();
@@ -62,13 +61,8 @@ export default function Configuracoes() {
               </CardContent>
             </Card>
 
-            {/* Inline Empresas and Equipes Management for Admins */}
-            {isAdmin && (
-              <>
-                <EmpresasInlineManager />
-                <EquipesInlineManager />
-              </>
-            )}
+            {/* Inline Empresas Management for Admins */}
+            {isAdmin && <EmpresasInlineManager />}
           </TabsContent>
 
           <TabsContent value="notificacoes" className="space-y-6">
