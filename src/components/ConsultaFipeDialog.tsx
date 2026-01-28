@@ -23,7 +23,7 @@ import {
   useFipeModelos,
   useFipeAnos,
   useFipeConsultaValor,
-  useFipeConsultaPorCodigo,
+  useFipeConsultaDireta,
 } from "@/hooks/useFipeConsulta";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +60,7 @@ export function ConsultaFipeDialog({
   const { data: anos = [], isLoading: loadingAnos } = useFipeAnos(tipo, marcaId, modeloId, open);
 
   const consultaValor = useFipeConsultaValor();
-  const consultaPorCodigo = useFipeConsultaPorCodigo();
+  const consultaPorCodigo = useFipeConsultaDireta();
 
   // Reset quando mudar tipo
   useEffect(() => {
@@ -118,6 +118,7 @@ export function ConsultaFipeDialog({
         veiculoId,
         codigoFipe: codigoFipe.trim(),
         tipo,
+        ano: new Date().getFullYear(), // Usar ano atual como fallback
       });
       setResultado({
         valor: data.valor,
