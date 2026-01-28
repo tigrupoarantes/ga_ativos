@@ -1,75 +1,109 @@
 
 
-## Plano: Corrigir Lógica do Parser para Formato CSV Específico
+## Plano: Adicionar Exportação de Modelo CSV para Importação de Funcionários
 
-### Problema Identificado
+### Objetivo
 
-Analisando o arquivo CSV real:
+Criar um botão para baixar um arquivo CSV modelo (template) que o sistema reconhece, permitindo que o usuário preencha os dados no formato correto e importe sem erros.
 
-```text
-ABNER FRANCISCO DA SILVA','47126691874','ANALISTA II','BRK DEPOSITO','J. ARANTES...','Ativo'
+### Funcionalidades
+
+1. **Botão "Baixar Modelo"** - Exporta um CSV vazio com headers corretos
+2. **Botão "Exportar Funcionários"** - Exporta os funcionários existentes no mesmo formato (para referência ou backup)
+
+### Formato do CSV Modelo
+
+O arquivo usará separador ponto-e-vírgula (`;`) que é padrão do Excel em português:
+
+```csv
+CPF;NOME;EMAIL;TELEFONE;CARGO;DEPARTAMENTO;EMPRESA;ATIVO
+12345678901;João da Silva;joao@email.com;11999999999;Analista;TI;Empresa ABC;Ativo
 ```
 
-**Formato real:**
-- Primeiro campo NÃO tem aspas no início
-- Campos separados por `','`
-- Último campo termina com `'`
+**Colunas do modelo:**
 
-Quando fazemos `split("','")`:
-
-```text
-[0] = "ABNER FRANCISCO DA SILVA"   ← Sem aspas (correto!)
-[1] = "47126691874"                ← Limpo
-[2] = "ANALISTA II"                ← Limpo
-[3] = "BRK DEPOSITO"               ← Limpo
-[4] = "J. ARANTES..."              ← Limpo
-[5] = "Ativo'"                     ← Tem aspas no final
-```
-
-O parser atual está tentando remover aspas do primeiro elemento quando não existem, e deveria remover apenas do último.
+| Coluna | Obrigatório | Descrição |
+|--------|-------------|-----------|
+| CPF | Sim | CPF sem pontuação (11 dígitos) |
+| NOME | Sim | Nome completo |
+| EMAIL | Não | E-mail do funcionário |
+| TELEFONE | Não | Telefone com DDD |
+| CARGO | Não | Cargo/função |
+| DEPARTAMENTO | Não | Departamento ou centro de custo |
+| EMPRESA | Não | Nome da empresa |
+| ATIVO | Não | "Ativo" ou "Inativo" (padrão: Ativo) |
 
 ### Mudanças no Código
 
 **Arquivo:** `src/components/ImportFuncionariosDialog.tsx`
 
-**Correção na função `parseCSVLine`:**
+1. **Adicionar função `downloadTemplate`:**
+   - Gera CSV com headers e 2 linhas de exemplo
+   - Usa BOM UTF-8 para caracteres especiais no Excel
+   - Usa `;` como separador (compatível com Excel BR)
+
+2. **Adicionar função `exportFuncionarios`:**
+   - Busca funcionários ativos do banco
+   - Exporta no mesmo formato do template
+
+3. **Atualizar interface do Dialog:**
+   - Adicionar seção "Baixar Modelo" antes do upload
+   - Botões: "Modelo Vazio" e "Exportar Atuais"
+
+### Interface do Dialog (Atualizada)
+
+```text
+┌─────────────────────────────────────────────────────┐
+│  Importar Funcionários                              │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  📥 Baixar Modelo CSV                               │
+│  ┌─────────────────┐  ┌─────────────────────┐      │
+│  │ Modelo Vazio    │  │ Exportar Atuais     │      │
+│  └─────────────────┘  └─────────────────────┘      │
+│                                                     │
+│  Formato esperado: CPF;NOME;EMAIL;TELEFONE;...     │
+│                                                     │
+│  ─────────────────────────────────────────────     │
+│                                                     │
+│  📤 Selecionar Arquivo CSV                         │
+│  [         Selecionar arquivo...           ]       │
+│                                                     │
+│  (Preview e botão importar aparecem aqui)          │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+### Código da Função de Download
 
 ```typescript
-const parseCSVLine = (line: string): string[] => {
-  // Check if line uses ',' as delimiter pattern
-  if (line.includes("','")) {
-    const parts = line.split("','");
-    return parts.map((v, idx) => {
-      let cleaned = v.trim();
-      // Only the LAST element has a trailing quote to remove
-      if (idx === parts.length - 1) {
-        // Remove trailing quote: "Ativo'" -> "Ativo"
-        cleaned = cleaned.replace(/'$/, '');
-      }
-      // Clean any remaining surrounding quotes (safety)
-      cleaned = cleaned.replace(/^['"]|['"]$/g, '');
-      return cleaned.trim();
-    });
-  }
+const downloadTemplate = () => {
+  const headers = ['CPF', 'NOME', 'EMAIL', 'TELEFONE', 'CARGO', 'DEPARTAMENTO', 'EMPRESA', 'ATIVO'];
+  const exampleRows = [
+    ['12345678901', 'Maria da Silva', 'maria@email.com', '11999999999', 'Analista', 'Financeiro', 'Empresa ABC', 'Ativo'],
+    ['98765432100', 'João Santos', 'joao@email.com', '11988888888', 'Gerente', 'TI', 'Empresa XYZ', 'Ativo'],
+  ];
   
-  // ... existing standard CSV parsing
+  const csvContent = [
+    headers.join(';'),
+    ...exampleRows.map(row => row.join(';'))
+  ].join('\n');
+  
+  // BOM for UTF-8 Excel compatibility
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'modelo_funcionarios.csv';
+  link.click();
 };
 ```
 
-### Lógica Corrigida
-
-| Índice | Valor Após Split | Após Limpeza |
-|--------|------------------|--------------|
-| 0 | ABNER FRANCISCO DA SILVA | ABNER FRANCISCO DA SILVA |
-| 1 | 47126691874 | 47126691874 |
-| 2 | ANALISTA II | ANALISTA II |
-| 3 | BRK DEPOSITO | BRK DEPOSITO |
-| 4 | J. ARANTES... | J. ARANTES... |
-| 5 | Ativo' | Ativo |
-
 ### Resultado Esperado
 
-1. Os 4.403 registros serão parseados corretamente
-2. Preview mostrará os dados consolidados
-3. Importação funcionará com a lógica de CPFs duplicados
+1. Usuário baixa o modelo CSV
+2. Preenche no Excel com seus dados
+3. Salva como CSV (separado por ponto-e-vírgula)
+4. Importa no sistema sem erros
 
