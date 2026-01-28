@@ -32,6 +32,7 @@ import Oficina from "./pages/Oficina";
 import OrdensServico from "./pages/OrdensServico";
 import Pecas from "./pages/Pecas";
 import Preventivas from "./pages/Preventivas";
+import Relatorios from "./pages/Relatorios";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/linhas-telefonicas" element={<ProtectedRoute><LinhasTelefonicas /></ProtectedRoute>} />
             <Route path="/contratos" element={<ProtectedRoute><Contratos /></ProtectedRoute>} />
             <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
+            <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
             
             {/* Configurações */}
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />

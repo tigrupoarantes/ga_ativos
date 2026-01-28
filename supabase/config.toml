@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.test-smtp]
 verify_jwt = false
+
+[functions.password-reset-request]
+verify_jwt = false
+
+[functions.password-reset-confirm]
+verify_jwt = false
+
+[functions.reports-chat]
+verify_jwt = false
