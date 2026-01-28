@@ -43,6 +43,65 @@ interface CsvRow {
 
 const normalizeCpf = (cpf: string) => cpf?.replace(/\D/g, '') || '';
 
+interface ConsolidationInfo {
+  originalCount: number;
+  uniqueCount: number;
+  duplicatesConsolidated: number;
+}
+
+// Consolidate duplicate CPFs before processing
+// If ANY record for a CPF is active -> employee stays ACTIVE
+// If ALL records for a CPF are inactive -> employee is DEACTIVATED
+const consolidateByCpf = (rows: CsvRow[]): { consolidated: CsvRow[], info: ConsolidationInfo } => {
+  const cpfMap = new Map<string, CsvRow[]>();
+  
+  // Group all rows by normalized CPF
+  rows.forEach(row => {
+    const cpf = normalizeCpf(row.cpf);
+    if (!cpf || cpf.length !== 11) return;
+    
+    if (!cpfMap.has(cpf)) {
+      cpfMap.set(cpf, []);
+    }
+    cpfMap.get(cpf)!.push(row);
+  });
+  
+  // Consolidate each CPF group
+  const consolidated: CsvRow[] = [];
+  
+  cpfMap.forEach((cpfRows) => {
+    // Check if ANY record is active
+    const hasActiveRecord = cpfRows.some(row => {
+      if (!row.ativo) return true; // No status = assume active
+      const ativoLower = row.ativo.toLowerCase();
+      return ['sim', 'ativo', 'yes', 'true', '1', 's'].includes(ativoLower);
+    });
+    
+    // Use the first active record, or the first record if all inactive
+    const baseRow = cpfRows.find(row => {
+      if (!row.ativo) return true;
+      const ativoLower = row.ativo.toLowerCase();
+      return ['sim', 'ativo', 'yes', 'true', '1', 's'].includes(ativoLower);
+    }) || cpfRows[0];
+    
+    // Create consolidated record
+    const consolidatedRow: CsvRow = {
+      ...baseRow,
+      ativo: hasActiveRecord ? 'Ativo' : 'Inativo',
+    };
+    
+    consolidated.push(consolidatedRow);
+  });
+  
+  const info: ConsolidationInfo = {
+    originalCount: rows.length,
+    uniqueCount: consolidated.length,
+    duplicatesConsolidated: rows.length - consolidated.length,
+  };
+  
+  return { consolidated, info };
+};
+
 // Quote-aware CSV line parser
 const parseCSVLine = (line: string): string[] => {
   const result: string[] = [];
@@ -265,6 +324,7 @@ export function ImportFuncionariosDialog() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [previewData, setPreviewData] = useState<CsvRow[]>([]);
+  const [consolidationInfo, setConsolidationInfo] = useState<ConsolidationInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -281,7 +341,11 @@ export function ImportFuncionariosDialog() {
         return;
       }
       
-      setPreviewData(rows);
+      // Consolidate duplicate CPFs before processing
+      const { consolidated, info } = consolidateByCpf(rows);
+      
+      setPreviewData(consolidated);
+      setConsolidationInfo(info);
       setResult(null);
     } catch (error) {
       toast.error("Erro ao ler arquivo CSV");
@@ -454,6 +518,7 @@ export function ImportFuncionariosDialog() {
   const handleClose = () => {
     setOpen(false);
     setPreviewData([]);
+    setConsolidationInfo(null);
     setResult(null);
     setProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -510,9 +575,14 @@ export function ImportFuncionariosDialog() {
           {/* Preview */}
           {previewData.length > 0 && !result && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">
-                Prévia: {previewData.length} registros encontrados
-              </p>
+              <div className="text-sm font-medium">
+                <p>Prévia: {previewData.length} funcionários únicos</p>
+                {consolidationInfo && consolidationInfo.duplicatesConsolidated > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    ({consolidationInfo.originalCount} linhas no CSV → {consolidationInfo.duplicatesConsolidated} CPFs duplicados consolidados)
+                  </p>
+                )}
+              </div>
               <div className="max-h-40 overflow-y-auto border rounded">
                 <table className="w-full text-xs">
                   <thead className="bg-muted sticky top-0">
