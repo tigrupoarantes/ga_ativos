@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { useVeiculos } from "@/hooks/useVeiculos";
 import { useEmpresasSelect, useFuncionariosCombobox } from "@/hooks/useSelectOptions";
 import { useVeiculosHistoricoResponsavel } from "@/hooks/useVeiculosHistoricoResponsavel";
-import { useVeiculosDocumentos } from "@/hooks/useVeiculosDocumentos";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
@@ -24,6 +23,8 @@ import { HistoricoVeiculoDialog } from "@/components/HistoricoVeiculoDialog";
 import { ConfirmResponsavelDialog } from "@/components/ConfirmResponsavelDialog";
 import { ConsultaFipeDialog } from "@/components/ConsultaFipeDialog";
 import { VeiculoDocumentosSection } from "@/components/VeiculoDocumentosSection";
+import { VeiculoLicenciamentoTab } from "@/components/VeiculoLicenciamentoTab";
+import { VeiculoSegurosTab } from "@/components/VeiculoSegurosTab";
 import { format } from "date-fns";
 
 const statusColors: Record<string, string> = {
@@ -32,6 +33,16 @@ const statusColors: Record<string, string> = {
   manutencao: "bg-status-warning/10 text-status-warning",
   baixado: "bg-status-error/10 text-status-error",
 };
+
+const tiposVeiculo = [
+  { value: "carro", label: "Carro" },
+  { value: "caminhao", label: "Caminhão" },
+  { value: "caminhonete", label: "Caminhonete" },
+  { value: "furgao", label: "Furgão" },
+  { value: "moto", label: "Moto" },
+  { value: "pickup", label: "Pickup" },
+  { value: "van", label: "Van" },
+];
 
 const PAGE_SIZE = 25;
 
@@ -56,24 +67,40 @@ export default function Veiculos() {
   const [activeTab, setActiveTab] = useState("dados");
   const [formData, setFormData] = useState({
     placa: "",
+    renavam: "",
+    chassi: "",
+    tipo: "",
     marca: "",
     modelo: "",
-    ano_fabricacao: "",
     ano_modelo: "",
+    ano_fabricacao: "",
+    propriedade: "empresa",
+    empresa_id: "",
     cor: "",
     combustivel: "",
-    tipo: "",
-    chassi: "",
-    renavam: "",
     status: "disponivel",
     funcionario_id: "",
-    empresa_id: "",
-    valor_aquisicao: "",
     data_aquisicao: "",
+    valor_aquisicao: "",
+    // Licenciamento
+    licenciamento_valor: "",
+    licenciamento_vencimento: "",
+    licenciamento_situacao: "nao_pago",
+    // IPVA
+    ipva_valor: "",
+    ipva_vencimento: "",
+    ipva_situacao: "nao_pago",
+    // Restrição
+    restricao: false,
+    restricao_descricao: "",
+    // Seguro
+    possui_seguro: false,
+    seguro_vencimento: "",
+    seguro_valor: "",
+    seguro_apolice: "",
   });
 
   // Filtragem client-side (para conjuntos pequenos, manteremos assim)
-  // Para conjuntos maiores, usar usePaginatedQuery
   const filteredVeiculos = veiculos.filter(
     (v) =>
       v.placa?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -115,13 +142,38 @@ export default function Veiculos() {
 
   const saveVeiculo = async (data: typeof formData, observacoes: string | null) => {
     const veiculoData = {
-      ...data,
-      ano_fabricacao: data.ano_fabricacao ? parseInt(data.ano_fabricacao) : null,
+      placa: data.placa,
+      renavam: data.renavam || null,
+      chassi: data.chassi || null,
+      tipo: data.tipo || null,
+      marca: data.marca,
+      modelo: data.modelo,
       ano_modelo: data.ano_modelo ? parseInt(data.ano_modelo) : null,
-      valor_aquisicao: data.valor_aquisicao ? parseFloat(data.valor_aquisicao) : null,
-      data_aquisicao: data.data_aquisicao || null,
+      ano_fabricacao: data.ano_fabricacao ? parseInt(data.ano_fabricacao) : null,
+      propriedade: data.propriedade || "empresa",
+      empresa_id: data.propriedade === "empresa" && data.empresa_id ? data.empresa_id : null,
+      cor: data.cor || null,
+      combustivel: data.combustivel || null,
+      status: data.status || "disponivel",
       funcionario_id: data.funcionario_id || null,
-      empresa_id: data.empresa_id || null,
+      data_aquisicao: data.data_aquisicao || null,
+      valor_aquisicao: data.valor_aquisicao ? parseFloat(data.valor_aquisicao) : null,
+      // Licenciamento
+      licenciamento_valor: data.licenciamento_valor ? parseFloat(data.licenciamento_valor) : null,
+      licenciamento_vencimento: data.licenciamento_vencimento || null,
+      licenciamento_situacao: data.licenciamento_situacao || "nao_pago",
+      // IPVA
+      ipva_valor: data.ipva_valor ? parseFloat(data.ipva_valor) : null,
+      ipva_vencimento: data.ipva_vencimento || null,
+      ipva_situacao: data.ipva_situacao || "nao_pago",
+      // Restrição
+      restricao: data.restricao,
+      restricao_descricao: data.restricao ? data.restricao_descricao : null,
+      // Seguro
+      possui_seguro: data.possui_seguro,
+      seguro_vencimento: data.possui_seguro && data.seguro_vencimento ? data.seguro_vencimento : null,
+      seguro_valor: data.possui_seguro && data.seguro_valor ? parseFloat(data.seguro_valor) : null,
+      seguro_apolice: data.possui_seguro ? data.seguro_apolice : null,
     };
     
     if (editingId) {
@@ -169,20 +221,33 @@ export default function Veiculos() {
     setActiveTab("dados");
     setFormData({
       placa: "",
+      renavam: "",
+      chassi: "",
+      tipo: "",
       marca: "",
       modelo: "",
-      ano_fabricacao: "",
       ano_modelo: "",
+      ano_fabricacao: "",
+      propriedade: "empresa",
+      empresa_id: "",
       cor: "",
       combustivel: "",
-      tipo: "",
-      chassi: "",
-      renavam: "",
       status: "disponivel",
       funcionario_id: "",
-      empresa_id: "",
-      valor_aquisicao: "",
       data_aquisicao: "",
+      valor_aquisicao: "",
+      licenciamento_valor: "",
+      licenciamento_vencimento: "",
+      licenciamento_situacao: "nao_pago",
+      ipva_valor: "",
+      ipva_vencimento: "",
+      ipva_situacao: "nao_pago",
+      restricao: false,
+      restricao_descricao: "",
+      possui_seguro: false,
+      seguro_vencimento: "",
+      seguro_valor: "",
+      seguro_apolice: "",
     });
   };
 
@@ -190,20 +255,33 @@ export default function Veiculos() {
     setEditingId(veiculo.id);
     setFormData({
       placa: veiculo.placa || "",
+      renavam: veiculo.renavam || "",
+      chassi: veiculo.chassi || "",
+      tipo: veiculo.tipo || "",
       marca: veiculo.marca || "",
       modelo: veiculo.modelo || "",
-      ano_fabricacao: veiculo.ano_fabricacao?.toString() || "",
       ano_modelo: veiculo.ano_modelo?.toString() || "",
+      ano_fabricacao: veiculo.ano_fabricacao?.toString() || "",
+      propriedade: (veiculo as any).propriedade || "empresa",
+      empresa_id: veiculo.empresa_id || "",
       cor: veiculo.cor || "",
       combustivel: veiculo.combustivel || "",
-      tipo: veiculo.tipo || "",
-      chassi: veiculo.chassi || "",
-      renavam: veiculo.renavam || "",
       status: veiculo.status || "disponivel",
       funcionario_id: veiculo.funcionario_id || "",
-      empresa_id: veiculo.empresa_id || "",
-      valor_aquisicao: veiculo.valor_aquisicao?.toString() || "",
       data_aquisicao: veiculo.data_aquisicao || "",
+      valor_aquisicao: veiculo.valor_aquisicao?.toString() || "",
+      licenciamento_valor: (veiculo as any).licenciamento_valor?.toString() || "",
+      licenciamento_vencimento: (veiculo as any).licenciamento_vencimento || "",
+      licenciamento_situacao: (veiculo as any).licenciamento_situacao || "nao_pago",
+      ipva_valor: (veiculo as any).ipva_valor?.toString() || "",
+      ipva_vencimento: (veiculo as any).ipva_vencimento || "",
+      ipva_situacao: (veiculo as any).ipva_situacao || "nao_pago",
+      restricao: (veiculo as any).restricao || false,
+      restricao_descricao: (veiculo as any).restricao_descricao || "",
+      possui_seguro: (veiculo as any).possui_seguro || false,
+      seguro_vencimento: (veiculo as any).seguro_vencimento || "",
+      seguro_valor: (veiculo as any).seguro_valor?.toString() || "",
+      seguro_apolice: (veiculo as any).seguro_apolice || "",
     });
     setIsDialogOpen(true);
   };
@@ -241,16 +319,24 @@ export default function Veiculos() {
                   Novo Veículo
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingId ? "Editar Veículo" : "Novo Veículo"}</DialogTitle>
                 </DialogHeader>
                 
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="dados">
                       <Car className="h-4 w-4 mr-2" />
-                      Dados do Veículo
+                      Dados
+                    </TabsTrigger>
+                    <TabsTrigger value="licenciamento">
+                      <ClipboardList className="h-4 w-4 mr-2" />
+                      Licenc./IPVA
+                    </TabsTrigger>
+                    <TabsTrigger value="seguros">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Seguros
                     </TabsTrigger>
                     {editingId && formData.placa && (
                       <TabsTrigger value="documentos">
@@ -263,6 +349,7 @@ export default function Veiculos() {
                   <TabsContent value="dados">
                     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                       <div className="grid grid-cols-3 gap-4">
+                        {/* Linha 1: Placa, Renavam, Chassi */}
                         <div className="space-y-2">
                           <Label htmlFor="placa">Placa *</Label>
                           <Input
@@ -270,7 +357,43 @@ export default function Veiculos() {
                             value={formData.placa}
                             onChange={(e) => setFormData({ ...formData, placa: e.target.value.toUpperCase() })}
                             required
+                            placeholder="ABC1D23"
                           />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="renavam">Renavam</Label>
+                          <Input
+                            id="renavam"
+                            value={formData.renavam}
+                            onChange={(e) => setFormData({ ...formData, renavam: e.target.value })}
+                            maxLength={11}
+                            placeholder="00000000000"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="chassi">Chassi</Label>
+                          <Input
+                            id="chassi"
+                            value={formData.chassi}
+                            onChange={(e) => setFormData({ ...formData, chassi: e.target.value.toUpperCase() })}
+                            maxLength={17}
+                            placeholder="9BWZZZ377VT004251"
+                          />
+                        </div>
+
+                        {/* Linha 2: Tipo, Marca, Modelo */}
+                        <div className="space-y-2">
+                          <Label htmlFor="tipo">Tipo</Label>
+                          <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tiposVeiculo.map((t) => (
+                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="marca">Marca *</Label>
@@ -290,8 +413,19 @@ export default function Veiculos() {
                             required
                           />
                         </div>
+
+                        {/* Linha 3: Ano Modelo, Ano Fab, Propriedade */}
                         <div className="space-y-2">
-                          <Label htmlFor="ano_fabricacao">Ano Fab.</Label>
+                          <Label htmlFor="ano_modelo">Ano Modelo</Label>
+                          <Input
+                            id="ano_modelo"
+                            type="number"
+                            value={formData.ano_modelo}
+                            onChange={(e) => setFormData({ ...formData, ano_modelo: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="ano_fabricacao">Ano Fabricação</Label>
                           <Input
                             id="ano_fabricacao"
                             type="number"
@@ -300,14 +434,37 @@ export default function Veiculos() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="ano_modelo">Ano Mod.</Label>
-                          <Input
-                            id="ano_modelo"
-                            type="number"
-                            value={formData.ano_modelo}
-                            onChange={(e) => setFormData({ ...formData, ano_modelo: e.target.value })}
-                          />
+                          <Label htmlFor="propriedade">Propriedade</Label>
+                          <Select 
+                            value={formData.propriedade} 
+                            onValueChange={(v) => setFormData({ ...formData, propriedade: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="empresa">Empresa</SelectItem>
+                              <SelectItem value="particular">Particular</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
+
+                        {/* Linha 4: Empresa (condicional), Cor, Combustível */}
+                        {formData.propriedade === "empresa" && (
+                          <div className="space-y-2">
+                            <Label htmlFor="empresa_id">Empresa</Label>
+                            <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {empresas.map((e) => (
+                                  <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <Label htmlFor="cor">Cor</Label>
                           <Input
@@ -332,21 +489,8 @@ export default function Veiculos() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tipo">Tipo</Label>
-                          <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="carro">Carro</SelectItem>
-                              <SelectItem value="moto">Moto</SelectItem>
-                              <SelectItem value="caminhao">Caminhão</SelectItem>
-                              <SelectItem value="van">Van</SelectItem>
-                              <SelectItem value="utilitario">Utilitário</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+
+                        {/* Linha 5: Status, Responsável, Data Aquisição, Valor */}
                         <div className="space-y-2">
                           <Label htmlFor="status">Status</Label>
                           <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
@@ -362,26 +506,6 @@ export default function Veiculos() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="renavam">Renavam</Label>
-                          <Input
-                            id="renavam"
-                            value={formData.renavam}
-                            onChange={(e) => setFormData({ ...formData, renavam: e.target.value })}
-                            maxLength={11}
-                            placeholder="00000000000"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="chassi">Chassi</Label>
-                          <Input
-                            id="chassi"
-                            value={formData.chassi}
-                            onChange={(e) => setFormData({ ...formData, chassi: e.target.value.toUpperCase() })}
-                            maxLength={17}
-                            placeholder="9BWZZZ377VT004251"
-                          />
-                        </div>
-                        <div className="space-y-2">
                           <Label htmlFor="funcionario_id">Responsável</Label>
                           <FuncionarioCombobox
                             value={formData.funcionario_id}
@@ -389,19 +513,6 @@ export default function Veiculos() {
                             funcionarios={funcionariosCombobox}
                             placeholder="Buscar por nome ou CPF"
                           />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="empresa_id">Empresa</Label>
-                          <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {empresas.map((e) => (
-                                <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="data_aquisicao">Data Aquisição</Label>
@@ -432,6 +543,55 @@ export default function Veiculos() {
                         </Button>
                       </DialogFooter>
                     </form>
+                  </TabsContent>
+                  
+                  <TabsContent value="licenciamento">
+                    <VeiculoLicenciamentoTab
+                      data={{
+                        licenciamento_valor: formData.licenciamento_valor,
+                        licenciamento_vencimento: formData.licenciamento_vencimento,
+                        licenciamento_situacao: formData.licenciamento_situacao,
+                        ipva_valor: formData.ipva_valor,
+                        ipva_vencimento: formData.ipva_vencimento,
+                        ipva_situacao: formData.ipva_situacao,
+                        restricao: formData.restricao,
+                        restricao_descricao: formData.restricao_descricao,
+                        ano_fabricacao: formData.ano_fabricacao,
+                      }}
+                      onChange={(updates) => setFormData({ ...formData, ...updates })}
+                    />
+                    <DialogFooter className="mt-6">
+                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                      <Button 
+                        onClick={handleSubmit} 
+                        disabled={createVeiculo.isPending || updateVeiculo.isPending}
+                      >
+                        {editingId ? "Salvar" : "Criar"}
+                      </Button>
+                    </DialogFooter>
+                  </TabsContent>
+                  
+                  <TabsContent value="seguros">
+                    <VeiculoSegurosTab
+                      data={{
+                        possui_seguro: formData.possui_seguro,
+                        seguro_vencimento: formData.seguro_vencimento,
+                        seguro_valor: formData.seguro_valor,
+                        seguro_apolice: formData.seguro_apolice,
+                      }}
+                      onChange={(updates) => setFormData({ ...formData, ...updates })}
+                      veiculoPlaca={editingId ? formData.placa : null}
+                      isEditing={!!editingId}
+                    />
+                    <DialogFooter className="mt-6">
+                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                      <Button 
+                        onClick={handleSubmit} 
+                        disabled={createVeiculo.isPending || updateVeiculo.isPending}
+                      >
+                        {editingId ? "Salvar" : "Criar"}
+                      </Button>
+                    </DialogFooter>
                   </TabsContent>
                   
                   {editingId && formData.placa && (
