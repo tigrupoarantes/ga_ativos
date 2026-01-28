@@ -41,6 +41,7 @@ import { usePreventivas, PreventivaInsert } from "@/hooks/usePreventivas";
 import { useVeiculos } from "@/hooks/useVeiculos";
 import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 const statusColors: Record<string, string> = {
   pendente: "bg-blue-500",
@@ -65,6 +66,8 @@ export default function Preventivas() {
   const [editingPreventiva, setEditingPreventiva] = useState<typeof preventivas[0] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; tipo: string } | null>(null);
 
   const [formData, setFormData] = useState<PreventivaInsert>({
     veiculo_id: null,
@@ -154,9 +157,16 @@ export default function Preventivas() {
     setIsDialogOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta preventiva?")) {
-      await deletePreventiva.mutateAsync(id);
+  const handleDeleteClick = (preventiva: typeof preventivas[0]) => {
+    setItemToDelete({ id: preventiva.id, tipo: preventiva.tipo_manutencao });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deletePreventiva.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -362,7 +372,7 @@ export default function Preventivas() {
                                 Editar
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleDelete(preventiva.id)}
+                                onClick={() => handleDeleteClick(preventiva)}
                                 className="text-destructive"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -527,6 +537,15 @@ export default function Preventivas() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.tipo || ""}
+        itemType="preventiva"
+        isLoading={deletePreventiva.isPending}
+      />
     </OficinaLayout>
   );
 }

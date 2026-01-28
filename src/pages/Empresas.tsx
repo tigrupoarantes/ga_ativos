@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Trash2, Building2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 export default function Empresas() {
   const { userRole } = useAuth();
@@ -27,6 +28,8 @@ export default function Empresas() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; nome: string } | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     razao_social: "",
@@ -78,9 +81,16 @@ export default function Empresas() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta empresa?")) {
-      await deleteEmpresa.mutateAsync(id);
+  const handleDeleteClick = (empresa: typeof empresas[0]) => {
+    setItemToDelete({ id: empresa.id, nome: empresa.nome });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteEmpresa.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -207,7 +217,7 @@ export default function Empresas() {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(empresa)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(empresa.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(empresa)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -226,6 +236,15 @@ export default function Empresas() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.nome || ""}
+        itemType="empresa"
+        isLoading={deleteEmpresa.isPending}
+      />
     </AppLayout>
   );
 }

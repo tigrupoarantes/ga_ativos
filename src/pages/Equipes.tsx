@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Trash2, UsersRound } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 export default function Equipes() {
   const { equipes, isLoading, createEquipe, updateEquipe, deleteEquipe } = useEquipes();
@@ -21,6 +22,8 @@ export default function Equipes() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; nome: string } | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
@@ -64,9 +67,16 @@ export default function Equipes() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta equipe?")) {
-      await deleteEquipe.mutateAsync(id);
+  const handleDeleteClick = (equipe: typeof equipes[0]) => {
+    setItemToDelete({ id: equipe.id, nome: equipe.nome });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteEquipe.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -184,7 +194,7 @@ export default function Equipes() {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(equipe)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(equipe.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(equipe)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -203,6 +213,15 @@ export default function Equipes() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.nome || ""}
+        itemType="equipe"
+        isLoading={deleteEquipe.isPending}
+      />
     </AppLayout>
   );
 }

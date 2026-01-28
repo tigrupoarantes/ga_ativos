@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Package, Plus, MoreHorizontal, Search, Pencil, Trash2, AlertCircle, ArrowUp, ArrowDown } from "lucide-react";
 import { usePecas, PecaInsert } from "@/hooks/usePecas";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 export default function Pecas() {
   const { pecas, pecasEstoqueBaixo, isLoading, createPeca, updatePeca, deletePeca, ajustarEstoque } = usePecas();
@@ -45,6 +46,8 @@ export default function Pecas() {
   const [isAjusteDialogOpen, setIsAjusteDialogOpen] = useState(false);
   const [editingPeca, setEditingPeca] = useState<typeof pecas[0] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; nome: string } | null>(null);
 
   const [formData, setFormData] = useState<PecaInsert>({
     nome: "",
@@ -117,9 +120,16 @@ export default function Pecas() {
     setIsDialogOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta peça?")) {
-      await deletePeca.mutateAsync(id);
+  const handleDeleteClick = (peca: typeof pecas[0]) => {
+    setItemToDelete({ id: peca.id, nome: peca.nome });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deletePeca.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -258,7 +268,7 @@ export default function Pecas() {
                                 Editar
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleDelete(peca.id)}
+                                onClick={() => handleDeleteClick(peca)}
                                 className="text-destructive"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -446,6 +456,15 @@ export default function Pecas() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.nome || ""}
+        itemType="peça"
+        isLoading={deletePeca.isPending}
+      />
     </OficinaLayout>
   );
 }

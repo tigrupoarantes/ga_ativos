@@ -19,6 +19,7 @@ import { Plus, Search, Edit, Trash2, Users, Car } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ImportFuncionariosDialog } from "@/components/ImportFuncionariosDialog";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 // Função para normalizar CPF (apenas números)
 const normalizeCpf = (cpf: string) => cpf.replace(/\D/g, '');
@@ -77,6 +78,8 @@ export default function Funcionarios() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; nome: string } | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -183,9 +186,16 @@ export default function Funcionarios() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este funcionário?")) {
-      await deleteFuncionario.mutateAsync(id);
+  const handleDeleteClick = (funcionario: typeof funcionarios[0]) => {
+    setItemToDelete({ id: funcionario.id, nome: funcionario.nome });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteFuncionario.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -394,12 +404,12 @@ export default function Funcionarios() {
                           ) : "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(funcionario)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(funcionario.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(funcionario)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(funcionario)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -429,6 +439,15 @@ export default function Funcionarios() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.nome || ""}
+        itemType="funcionário"
+        isLoading={deleteFuncionario.isPending}
+      />
     </AppLayout>
   );
 }

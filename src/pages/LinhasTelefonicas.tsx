@@ -43,6 +43,7 @@ import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { ImportLinhasDialog } from "@/components/ImportLinhasDialog";
 import { useDebounce } from "@/hooks/useDebounce";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 const OPERADORAS = ["Vivo", "Claro", "TIM", "Oi", "Outras"];
 
@@ -68,6 +69,8 @@ export default function LinhasTelefonicas() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; numero: string } | null>(null);
 
   const { linhas, isLoading, createLinha, updateLinha, deleteLinha, bulkCreateLinhas, stats } =
     useLinhasTelefonicas(debouncedSearch);
@@ -129,9 +132,16 @@ export default function LinhasTelefonicas() {
     setDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Tem certeza que deseja remover esta linha?")) {
-      deleteLinha.mutate(id);
+  const handleDeleteClick = (linha: any) => {
+    setItemToDelete({ id: linha.id, numero: linha.numero });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      deleteLinha.mutate(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -372,7 +382,7 @@ export default function LinhasTelefonicas() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(linha.id)}
+                          onClick={() => handleDeleteClick(linha)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -385,6 +395,15 @@ export default function LinhasTelefonicas() {
           </Table>
         </div>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.numero || ""}
+        itemType="linha telefônica"
+        isLoading={deleteLinha.isPending}
+      />
     </AppLayout>
   );
 }

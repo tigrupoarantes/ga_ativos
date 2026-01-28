@@ -31,6 +31,7 @@ import { VeiculosDashboard } from "@/components/VeiculosDashboard";
 import { ConsultaFipeMassaDialog } from "@/components/ConsultaFipeMassaDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -74,6 +75,8 @@ export default function Veiculos() {
   const [activeTab, setActiveTab] = useState("dados");
   const [empresaFilter, setEmpresaFilter] = useState<string | null>(null);
   const [fipeMassaDialogOpen, setFipeMassaDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; placa: string } | null>(null);
 
   // Handler para consulta FIPE direta ou abrir dialog
   const handleConsultaFipe = async (veiculo: (typeof veiculos)[0]) => {
@@ -338,9 +341,16 @@ export default function Veiculos() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este veículo?")) {
-      await deleteVeiculo.mutateAsync(id);
+  const handleDeleteClick = (veiculo: (typeof veiculos)[0]) => {
+    setItemToDelete({ id: veiculo.id, placa: veiculo.placa });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteVeiculo.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -763,7 +773,7 @@ export default function Veiculos() {
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(veiculo)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(veiculo.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(veiculo)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
@@ -842,6 +852,15 @@ export default function Veiculos() {
             tipoInicial={fipeVeiculoTipo}
           />
         )}
+
+        <ConfirmDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleConfirmDelete}
+          itemName={itemToDelete?.placa || ""}
+          itemType="veículo"
+          isLoading={deleteVeiculo.isPending}
+        />
       </div>
     </VehicleLayout>
   );
