@@ -1,42 +1,44 @@
 
 
-## Plano: Atualizar Condutores com Dados de CNH
+## Plano: Atualizar Condutores com Dados de CNH (Arquivo Corrigido)
 
-### Resumo dos Dados
+### Dados da Planilha
 
-A planilha contém **103 funcionários** que são condutores, com as seguintes informações:
+O arquivo atualizado contém **103 registros** de condutores com CPFs já formatados (sem pontos/traços):
 
-| Coluna | Descrição |
-|--------|-----------|
-| CPF | Identificador único do funcionário |
-| NOME | Nome completo |
-| EMAIL | E-mail (pode ser usado para atualização) |
+| Campo | Descrição |
+|-------|-----------|
+| CPF | Número limpo (ex: 21901369897) |
+| NOME | Nome completo do funcionário |
+| EMAIL | E-mail do funcionário |
 | CNH | Número da CNH |
 | CATEGORIA | Categoria da CNH (A, B, AB, AC, AD, AE) |
-| VENCIMENTO CNH | Data de vencimento (DD/MM/YYYY) |
+| VENCIMENTO CNH | Data no formato DD/MM/YYYY |
 
-### Ação Necessária
+### Ações a Executar
 
-Para cada CPF da planilha, atualizar o funcionário correspondente no banco de dados:
+Para cada CPF da planilha, atualizar o registro correspondente na tabela `funcionarios`:
 
-1. **Marcar como condutor**: `is_condutor = true`
-2. **Número da CNH**: `cnh_numero`
-3. **Categoria da CNH**: `cnh_categoria`
-4. **Validade da CNH**: `cnh_validade` (converter DD/MM/YYYY para YYYY-MM-DD)
+1. Definir `is_condutor = true`
+2. Preencher `cnh_numero` com o número da CNH
+3. Preencher `cnh_categoria` com a categoria
+4. Converter e preencher `cnh_validade` (DD/MM/YYYY → YYYY-MM-DD)
 
-### Tratamento de Dados Especiais
+### Tratamento de Casos Especiais
 
-Alguns registros têm dados ausentes ou inválidos que serão tratados:
-- CPFs como "039.439.998-66" (Antonio Carlos Pereira) - sem dados de CNH
-- CPFs como "145.541.908-70" (Antonio Jose Limeira) - CNH = "-"
-- Categorias vazias ou "-" serão ignoradas
+Serão ignorados dados inválidos:
+- Antonio Carlos Pereira (03943999866) - sem dados de CNH
+- Antonio Jose Limeira (14554190870) - CNH = "-"
+- José Caetano Neto (12158569620) - CNH = "-"
+- Kaio Stafussi Fernandes (36709345882) - categoria = "-"
+- Registros com categoria vazia serão atualizados apenas com `is_condutor`, `cnh_numero` e `cnh_validade`
 
 ### Execução
 
-Serão executados **103 comandos UPDATE** no banco de dados, atualizando os funcionários pelo CPF (sem pontuação).
+Serão executados comandos UPDATE em lote no banco de dados:
 
-**Exemplo de atualização:**
 ```sql
+-- Exemplo de atualização
 UPDATE funcionarios SET 
   is_condutor = true,
   cnh_numero = '1209387626',
@@ -47,8 +49,14 @@ WHERE cpf = '21901369897' AND active = true;
 
 ### Resultado Esperado
 
-- Todos os funcionários listados serão marcados como condutores
-- Dados de CNH (número, categoria, validade) serão preenchidos
-- Funcionários que já são condutores terão seus dados atualizados
-- CPFs não encontrados serão ignorados (registro pode não existir ou CPF diferente)
+- 103 funcionários serão marcados como condutores
+- Dados de CNH preenchidos para quem possui informações válidas
+- Registros não encontrados pelo CPF serão ignorados (sem erro)
+
+### Resumo Técnico
+
+- **Tabela**: `funcionarios`
+- **Campos atualizados**: `is_condutor`, `cnh_numero`, `cnh_categoria`, `cnh_validade`
+- **Chave de busca**: CPF (campo `cpf`)
+- **Filtro adicional**: `active = true`
 
