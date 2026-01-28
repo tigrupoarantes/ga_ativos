@@ -106,29 +106,49 @@ serve(async (req) => {
 
         console.log(`[consulta-fipe] Código original: ${codigoFipe}, Normalizado: ${codigoNormalizado}`);
 
-        console.log(`[consulta-fipe] Buscando anos para código FIPE: ${codigoNormalizado}`);
+        // Lista de tipos para tentar (começa com o tipo informado, depois tenta outros)
+        const tiposParaTentar = [tipoApi];
+        if (tipoApi !== "cars") tiposParaTentar.push("cars");
+        if (tipoApi !== "trucks") tiposParaTentar.push("trucks");
+        if (tipoApi !== "motorcycles") tiposParaTentar.push("motorcycles");
 
-        // 1. Buscar anos disponíveis para o código FIPE
-        const anosUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoNormalizado}/years`;
-        console.log(`[consulta-fipe] URL anos: ${anosUrl}`);
-        
-        const anosResponse = await fetch(anosUrl);
-        
-        if (!anosResponse.ok) {
-          const errorText = await anosResponse.text();
-          console.error(`[consulta-fipe] Erro ao buscar anos: ${anosResponse.status} - ${errorText}`);
+        let anosData: Array<{ code: string; name: string }> | null = null;
+        let tipoEncontrado = tipoApi;
+
+        // Tentar cada tipo até encontrar um que funcione
+        for (const tipoTentativa of tiposParaTentar) {
+          console.log(`[consulta-fipe] Tentando tipo: ${tipoTentativa} para código: ${codigoNormalizado}`);
           
-          // Verificar se é erro da API FIPE (424, 503, etc.) ou código inválido (404)
-          if (anosResponse.status === 424 || anosResponse.status === 503 || anosResponse.status === 502) {
-            return new Response(
-              JSON.stringify({ 
-                error: "API FIPE temporariamente indisponível",
-                details: "Tente novamente em alguns segundos"
-              }),
-              { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+          const anosUrl = `${FIPE_API_BASE}/${tipoTentativa}/${codigoNormalizado}/years`;
+          console.log(`[consulta-fipe] URL anos: ${anosUrl}`);
+          
+          const anosResponse = await fetch(anosUrl);
+          
+          if (anosResponse.ok) {
+            anosData = await anosResponse.json() as Array<{ code: string; name: string }>;
+            if (anosData && anosData.length > 0) {
+              tipoEncontrado = tipoTentativa;
+              console.log(`[consulta-fipe] Encontrado no tipo: ${tipoEncontrado}, Anos: ${anosData.length}`);
+              break;
+            }
+          } else {
+            const errorText = await anosResponse.text();
+            console.log(`[consulta-fipe] Tipo ${tipoTentativa} não encontrado: ${anosResponse.status} - ${errorText}`);
+            
+            // Se for erro de API indisponível, parar de tentar
+            if (anosResponse.status === 424 || anosResponse.status === 503 || anosResponse.status === 502) {
+              return new Response(
+                JSON.stringify({ 
+                  error: "API FIPE temporariamente indisponível",
+                  details: "Tente novamente em alguns segundos"
+                }),
+                { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
           }
-          
+        }
+
+        if (!anosData || anosData.length === 0) {
           return new Response(
             JSON.stringify({ 
               error: "Código FIPE inválido ou não encontrado",
@@ -138,27 +158,16 @@ serve(async (req) => {
           );
         }
 
-        const anos = await anosResponse.json() as Array<{ code: string; name: string }>;
-        console.log(`[consulta-fipe] Anos disponíveis:`, anos);
-
-        if (!anos || anos.length === 0) {
-          return new Response(
-            JSON.stringify({ 
-              error: "Nenhum ano disponível para este código FIPE",
-              details: `Código ${codigoFipe} não possui anos cadastrados`
-            }),
-            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+        console.log(`[consulta-fipe] Anos disponíveis:`, anosData);
 
         // 2. Encontrar yearId que corresponde ao ano do veículo
         // Anos vêm como: [{ code: "2015-1", name: "2015 Gasolina" }, ...]
-        let anoEncontrado = anos.find(a => a.code.startsWith(`${ano}-`));
+        let anoEncontrado = anosData.find(a => a.code.startsWith(`${ano}-`));
         
         // Se não encontrou o ano exato, tentar encontrar o mais próximo ou usar o primeiro
         if (!anoEncontrado && ano) {
           // Ordenar por proximidade ao ano desejado
-          const anosComDiff = anos.map(a => {
+          const anosComDiff = anosData.map(a => {
             const anoCode = parseInt(a.code.split('-')[0]);
             return { ...a, diff: Math.abs(anoCode - ano) };
           });
@@ -168,12 +177,12 @@ serve(async (req) => {
         }
         
         if (!anoEncontrado) {
-          anoEncontrado = anos[0];
+          anoEncontrado = anosData[0];
           console.log(`[consulta-fipe] Usando primeiro ano disponível: ${anoEncontrado.code}`);
         }
 
         // 3. Consultar valor
-        const valorUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoNormalizado}/years/${anoEncontrado.code}`;
+        const valorUrl = `${FIPE_API_BASE}/${tipoEncontrado}/${codigoNormalizado}/years/${anoEncontrado.code}`;
         console.log(`[consulta-fipe] URL valor: ${valorUrl}`);
         
         const valorResponse = await fetch(valorUrl);
