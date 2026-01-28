@@ -10,8 +10,11 @@ const FIPE_API_BASE = "https://fipe.parallelum.com.br/api/v2";
 // Mapeamento de tipos
 const tipoMap: Record<string, string> = {
   carro: "cars",
+  carros: "cars",
   moto: "motorcycles",
+  motos: "motorcycles",
   caminhao: "trucks",
+  caminhoes: "trucks",
   cars: "cars",
   motorcycles: "motorcycles",
   trucks: "trucks",
@@ -78,23 +81,27 @@ serve(async (req) => {
         break;
 
       case "valor-por-codigo":
+        // A API Parallelum NÃO suporta busca direta por código FIPE
+        // Retornamos erro explicativo para o usuário
         if (!codigoFipe) {
           return new Response(
             JSON.stringify({ error: "codigoFipe é obrigatório para consultar por código" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        // Buscar referência atual (mês/ano)
-        const refResponse = await fetch(`${FIPE_API_BASE}/references`);
-        const references = await refResponse.json();
-        const currentRef = references[0]?.code;
 
-        // Buscar valor pelo código FIPE
-        url = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}${anoId ? `/years/${anoId}` : ""}`;
-        if (currentRef) {
-          url += `?reference=${currentRef}`;
-        }
-        break;
+        // Tentativa: usar API alternativa via webscraping ou API que suporte código FIPE
+        // Como não há API pública gratuita confiável, informamos o usuário
+        console.log(`[consulta-fipe] Busca por código FIPE não suportada diretamente pela API Parallelum`);
+        
+        return new Response(
+          JSON.stringify({ 
+            error: "Busca por código FIPE não disponível",
+            details: "A API FIPE (Parallelum) não suporta busca direta por código. Use a consulta por Marca/Modelo/Ano no cadastro do veículo.",
+            suggestion: "Abra o cadastro do veículo e use o botão 'Consultar FIPE' para selecionar marca, modelo e ano."
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
 
       default:
         return new Response(
@@ -119,7 +126,7 @@ serve(async (req) => {
     data = await response.json();
 
     // Para ação de valor, processar e formatar resposta
-    if (action === "valor" || action === "valor-por-codigo") {
+    if (action === "valor") {
       const valorData = data as {
         brand?: string;
         model?: string;
