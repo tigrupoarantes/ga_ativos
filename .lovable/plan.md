@@ -1,56 +1,160 @@
 
 
-## Plano: Adicionar Campo Código FIPE ao Cadastro de Veículos
+## Plano: Simplificar Consulta FIPE - Consulta Direta por Código
 
-### Análise
+### Problema Atual
 
-Após verificar a planilha e o banco de dados:
-- A coluna `codigo_fipe` **já existe** na tabela `veiculos`
-- Os códigos FIPE da planilha **já foram importados** (ex: AYH7F87 → 5228-0)
-- O que falta é apenas **adicionar o campo no formulário** de cadastro/edição
+Quando o usuário clica no botão de consulta FIPE ($):
+- Abre um dialog com abas e formulários complexos
+- Não utiliza o código FIPE já cadastrado no veículo
+- O usuário precisa selecionar marca/modelo/ano manualmente
 
----
-
-### O Que Será Feito
-
-#### 1. Modificar `src/pages/Veiculos.tsx`
-
-Adicionar o campo `codigo_fipe` no formulário:
-
-| Localização | Descrição |
-|-------------|-----------|
-| State `formData` | Adicionar campo `codigo_fipe: ""` |
-| Função `resetForm()` | Incluir reset do `codigo_fipe` |
-| Função `handleEdit()` | Carregar valor existente |
-| Função `saveVeiculo()` | Incluir no objeto de salvamento |
-| JSX do formulário | Adicionar input ao lado do campo Chassi |
+**O que deveria acontecer:**
+- Ler o código FIPE já cadastrado no veículo
+- Consultar automaticamente o valor na API FIPE
+- Mostrar o resultado diretamente (ou erro se não encontrar)
 
 ---
 
-### 2. Layout do Formulário (Nova Linha)
+### Descoberta da API
 
-O campo será adicionado na aba "Dados", após a linha de Placa/Renavam/Chassi:
+A API Parallelum **suporta sim** busca por código FIPE:
 
 ```text
-Placa *     | Renavam      | Chassi         | Código FIPE
-[ABC1D23]   | [00000000000] | [9BWZ...251]   | [5228-0]
+GET /{vehicleType}/{fipeCode}/years
+  → Retorna os anos disponíveis para o código FIPE
+
+GET /{vehicleType}/{fipeCode}/years/{yearId}
+  → Retorna o valor FIPE para o ano específico
+```
+
+Exemplo:
+- Código FIPE: `5228-0`
+- Ano do veículo: `2015`
+- Combustível: Gasolina (código 1)
+- URL: `GET /cars/5228-0/years/2015-1`
+
+---
+
+### Solução
+
+#### 1. Modificar Edge Function `consulta-fipe`
+
+Adicionar nova action `valor-por-codigo-ano`:
+- Recebe: `codigoFipe`, `tipo`, `ano`
+- Primeiro consulta anos disponíveis: `/{tipo}/{codigoFipe}/years`
+- Encontra o yearId que corresponde ao ano do veículo
+- Consulta o valor: `/{tipo}/{codigoFipe}/years/{yearId}`
+- Retorna o resultado formatado
+
+#### 2. Modificar `useFipeConsulta.ts`
+
+Adicionar mutation `useFipeConsultaDireta`:
+```typescript
+useFipeConsultaDireta({
+  veiculoId: string,
+  codigoFipe: string,
+  tipo: string,
+  ano: number
+})
+```
+
+#### 3. Modificar Comportamento do Botão FIPE
+
+Em `Veiculos.tsx`, ao clicar no botão de consulta FIPE:
+
+**SE o veículo tem código FIPE cadastrado:**
+- Mostrar loading no botão
+- Consultar diretamente a API
+- Exibir toast com resultado (sucesso ou erro)
+- Não abrir dialog
+
+**SE o veículo NÃO tem código FIPE:**
+- Abrir o dialog atual para seleção manual de marca/modelo/ano
+
+---
+
+### Arquivos a Modificar
+
+| Arquivo | Ação |
+|---------|------|
+| `supabase/functions/consulta-fipe/index.ts` | Adicionar action `valor-por-codigo-ano` |
+| `src/hooks/useFipeConsulta.ts` | Adicionar `useFipeConsultaDireta` |
+| `src/pages/Veiculos.tsx` | Modificar lógica do botão FIPE |
+
+---
+
+### Fluxo da Consulta Direta
+
+```text
+Usuário clica no botão $ (FIPE)
+           ↓
+    Veículo tem código FIPE?
+       ↓         ↓
+      SIM       NÃO
+       ↓         ↓
+  Consulta      Abre dialog
+  direta        manual
+       ↓
+  Loading no botão
+       ↓
+  Edge function busca anos
+  do código FIPE
+       ↓
+  Encontra ano correspondente
+  ao ano_modelo do veículo
+       ↓
+  Consulta valor FIPE
+       ↓
+  Atualiza banco de dados
+       ↓
+  Toast: "R$ XX.XXX,XX"
 ```
 
 ---
 
-### 3. Arquivo a Modificar
+### Detalhes Técnicos da Edge Function
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/Veiculos.tsx` | Adicionar campo `codigo_fipe` ao formulário |
+```typescript
+case "valor-por-codigo-ano":
+  // 1. Buscar anos disponíveis para o código FIPE
+  const anosUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}/years`;
+  const anosResponse = await fetch(anosUrl);
+  const anos = await anosResponse.json();
+  
+  // 2. Encontrar yearId que corresponde ao ano
+  // Anos vêm como: [{ code: "2015-1", name: "2015 Gasolina" }, ...]
+  const anoEncontrado = anos.find(a => a.code.startsWith(`${ano}-`));
+  
+  if (!anoEncontrado) {
+    // Tentar primeiro ano disponível
+    anoEncontrado = anos[0];
+  }
+  
+  // 3. Consultar valor
+  const valorUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}/years/${anoEncontrado.code}`;
+  const valorResponse = await fetch(valorUrl);
+  // ... processar e retornar
+```
+
+---
+
+### Tratamento de Erros
+
+| Cenário | Comportamento |
+|---------|---------------|
+| Código FIPE inválido | Toast: "Código FIPE inválido ou não encontrado" |
+| Ano não disponível | Usar primeiro ano disponível e informar |
+| Erro de rede | Toast: "Erro ao consultar FIPE" |
+| Sem código FIPE | Abre dialog manual |
 
 ---
 
 ### Resultado Esperado
 
-Após a implementação:
-- Campo "Código FIPE" visível no cadastro de veículos
-- Ao editar um veículo, o código FIPE existente será carregado
-- Possibilidade de inserir/editar o código FIPE manualmente
-- Integração mantida com a consulta FIPE existente
+Após implementação:
+- **Um clique** no botão $ já consulta e atualiza o valor FIPE
+- Sem dialogs desnecessários para veículos com código FIPE
+- Fallback para dialog manual quando não há código
+- Experiência mais rápida e direta
 
