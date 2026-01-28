@@ -111,7 +111,12 @@ interface CsvRow {
   cnh_validade?: string;
 }
 
-const normalizeCpf = (cpf: string) => cpf?.replace(/\D/g, '') || '';
+// Normalize CPF: remove non-digits and pad to 11 digits with leading zeros
+const normalizeCpf = (cpf: string) => {
+  const digits = cpf?.replace(/\D/g, '') || '';
+  if (!digits) return '';
+  return digits.padStart(11, '0');
+};
 
 interface ConsolidationInfo {
   originalCount: number;
