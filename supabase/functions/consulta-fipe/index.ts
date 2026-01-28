@@ -87,9 +87,12 @@ serve(async (req) => {
 
       case "valor-por-codigo-ano": {
         // Consulta direta por código FIPE e ano do veículo
-        if (!codigoFipe) {
+        if (!codigoFipe || codigoFipe.trim() === "" || codigoFipe.trim() === "-") {
           return new Response(
-            JSON.stringify({ error: "codigoFipe é obrigatório" }),
+            JSON.stringify({ 
+              error: "Código FIPE não informado",
+              details: "O veículo não possui código FIPE cadastrado. Cadastre o código FIPE antes de consultar o valor."
+            }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
