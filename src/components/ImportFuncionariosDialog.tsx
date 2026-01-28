@@ -105,22 +105,19 @@ const consolidateByCpf = (rows: CsvRow[]): { consolidated: CsvRow[], info: Conso
 // CSV line parser - handles special format with ',' as delimiter
 const parseCSVLine = (line: string): string[] => {
   // Check if line uses ',' as delimiter pattern (common in some exports)
-  // Format: VALUE1','VALUE2','VALUE3',...
+  // Format: NOME','CPF','CARGO','DEPTO','EMPRESA','Ativo'
+  // First field has NO leading quote, last field has trailing quote
   if (line.includes("','")) {
     // Split by ',' pattern
     const parts = line.split("','");
     // Clean each element
     return parts.map((v, idx) => {
       let cleaned = v.trim();
-      // Remove trailing quote from first element (e.g., "NAME'" -> "NAME")
-      if (idx === 0 && cleaned.endsWith("'")) {
-        cleaned = cleaned.slice(0, -1);
+      // Only the LAST element has a trailing quote to remove: "Ativo'" -> "Ativo"
+      if (idx === parts.length - 1) {
+        cleaned = cleaned.replace(/'$/, '');
       }
-      // Remove leading quote from last element (e.g., "'Value" -> "Value")  
-      if (idx === parts.length - 1 && cleaned.startsWith("'")) {
-        cleaned = cleaned.slice(1);
-      }
-      // Remove any remaining surrounding quotes
+      // Clean any remaining surrounding quotes (safety)
       cleaned = cleaned.replace(/^['"]|['"]$/g, '');
       return cleaned.trim();
     });
