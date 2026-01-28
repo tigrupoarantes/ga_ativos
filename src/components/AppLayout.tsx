@@ -109,6 +109,7 @@ const navStructure: NavEntry[] = [
     module: "funcionarios",
     children: [
       { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
+      { icon: UsersRound, label: "Equipes", path: "/equipes", module: "funcionarios" },
     ],
   },
   {
