@@ -1,160 +1,234 @@
 
+## Plano: Página de Relatórios com Chat de IA
 
-## Plano: Simplificar Consulta FIPE - Consulta Direta por Código
+### Objetivo
 
-### Problema Atual
-
-Quando o usuário clica no botão de consulta FIPE ($):
-- Abre um dialog com abas e formulários complexos
-- Não utiliza o código FIPE já cadastrado no veículo
-- O usuário precisa selecionar marca/modelo/ano manualmente
-
-**O que deveria acontecer:**
-- Ler o código FIPE já cadastrado no veículo
-- Consultar automaticamente o valor na API FIPE
-- Mostrar o resultado diretamente (ou erro se não encontrar)
+Criar uma nova página `/relatorios` com uma interface de chat onde os usuários podem fazer perguntas em linguagem natural sobre os dados do sistema. A IA irá consultar o banco de dados e retornar respostas personalizadas.
 
 ---
 
-### Descoberta da API
+### Exemplos de Perguntas que o Usuário Poderá Fazer
 
-A API Parallelum **suporta sim** busca por código FIPE:
+- "Quantos veículos estão em manutenção?"
+- "Qual o valor total da frota FIPE?"
+- "Quais funcionários têm CNH vencida?"
+- "Liste os contratos que vencem este mês"
+- "Qual veículo teve mais ordens de serviço?"
+- "Quanto gastamos em peças nos últimos 3 meses?"
+
+---
+
+### Arquitetura da Solução
 
 ```text
-GET /{vehicleType}/{fipeCode}/years
-  → Retorna os anos disponíveis para o código FIPE
-
-GET /{vehicleType}/{fipeCode}/years/{yearId}
-  → Retorna o valor FIPE para o ano específico
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (React)                         │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Página de Relatórios (/relatorios)                 │   │
+│  │  ┌───────────────────────────────────────────────┐  │   │
+│  │  │  Chat Interface                               │  │   │
+│  │  │  - Input de mensagem                          │  │   │
+│  │  │  - Lista de mensagens (user/assistant)        │  │   │
+│  │  │  - Renderização com Markdown                  │  │   │
+│  │  └───────────────────────────────────────────────┘  │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Edge Function (reports-chat)                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  1. Recebe pergunta do usuário                      │   │
+│  │  2. Consulta dados relevantes no Supabase           │   │
+│  │  3. Monta contexto com dados reais                  │   │
+│  │  4. Envia para Lovable AI (Gemini Flash)            │   │
+│  │  5. Retorna resposta formatada (streaming)          │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Lovable AI Gateway                             │
+│  - Modelo: google/gemini-3-flash-preview                   │
+│  - Streaming habilitado                                     │
+│  - Resposta em Português                                    │
+└─────────────────────────────────────────────────────────────┘
 ```
-
-Exemplo:
-- Código FIPE: `5228-0`
-- Ano do veículo: `2015`
-- Combustível: Gasolina (código 1)
-- URL: `GET /cars/5228-0/years/2015-1`
 
 ---
 
-### Solução
+### Arquivos a Criar
 
-#### 1. Modificar Edge Function `consulta-fipe`
-
-Adicionar nova action `valor-por-codigo-ano`:
-- Recebe: `codigoFipe`, `tipo`, `ano`
-- Primeiro consulta anos disponíveis: `/{tipo}/{codigoFipe}/years`
-- Encontra o yearId que corresponde ao ano do veículo
-- Consulta o valor: `/{tipo}/{codigoFipe}/years/{yearId}`
-- Retorna o resultado formatado
-
-#### 2. Modificar `useFipeConsulta.ts`
-
-Adicionar mutation `useFipeConsultaDireta`:
-```typescript
-useFipeConsultaDireta({
-  veiculoId: string,
-  codigoFipe: string,
-  tipo: string,
-  ano: number
-})
-```
-
-#### 3. Modificar Comportamento do Botão FIPE
-
-Em `Veiculos.tsx`, ao clicar no botão de consulta FIPE:
-
-**SE o veículo tem código FIPE cadastrado:**
-- Mostrar loading no botão
-- Consultar diretamente a API
-- Exibir toast com resultado (sucesso ou erro)
-- Não abrir dialog
-
-**SE o veículo NÃO tem código FIPE:**
-- Abrir o dialog atual para seleção manual de marca/modelo/ano
-
----
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/pages/Relatorios.tsx` | Página com interface de chat |
+| `src/components/ReportsChat.tsx` | Componente do chat |
+| `src/hooks/useReportsChat.ts` | Hook para gerenciar streaming |
+| `supabase/functions/reports-chat/index.ts` | Edge function para IA |
 
 ### Arquivos a Modificar
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/consulta-fipe/index.ts` | Adicionar action `valor-por-codigo-ano` |
-| `src/hooks/useFipeConsulta.ts` | Adicionar `useFipeConsultaDireta` |
-| `src/pages/Veiculos.tsx` | Modificar lógica do botão FIPE |
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/App.tsx` | Adicionar rota `/relatorios` |
+| `src/components/AppLayout.tsx` | Adicionar item no menu |
+| `supabase/config.toml` | Registrar edge function |
 
 ---
 
-### Fluxo da Consulta Direta
+### Detalhes Técnicos
 
-```text
-Usuário clica no botão $ (FIPE)
-           ↓
-    Veículo tem código FIPE?
-       ↓         ↓
-      SIM       NÃO
-       ↓         ↓
-  Consulta      Abre dialog
-  direta        manual
-       ↓
-  Loading no botão
-       ↓
-  Edge function busca anos
-  do código FIPE
-       ↓
-  Encontra ano correspondente
-  ao ano_modelo do veículo
-       ↓
-  Consulta valor FIPE
-       ↓
-  Atualiza banco de dados
-       ↓
-  Toast: "R$ XX.XXX,XX"
-```
+#### 1. Edge Function `reports-chat`
 
----
-
-### Detalhes Técnicos da Edge Function
+A function irá:
+1. Receber a pergunta do usuário
+2. Consultar TODOS os dados relevantes do banco antes de chamar a IA
+3. Montar um contexto rico com estatísticas e dados
+4. Enviar para o Lovable AI com streaming
 
 ```typescript
-case "valor-por-codigo-ano":
-  // 1. Buscar anos disponíveis para o código FIPE
-  const anosUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}/years`;
-  const anosResponse = await fetch(anosUrl);
-  const anos = await anosResponse.json();
-  
-  // 2. Encontrar yearId que corresponde ao ano
-  // Anos vêm como: [{ code: "2015-1", name: "2015 Gasolina" }, ...]
-  const anoEncontrado = anos.find(a => a.code.startsWith(`${ano}-`));
-  
-  if (!anoEncontrado) {
-    // Tentar primeiro ano disponível
-    anoEncontrado = anos[0];
-  }
-  
-  // 3. Consultar valor
-  const valorUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}/years/${anoEncontrado.code}`;
-  const valorResponse = await fetch(valorUrl);
-  // ... processar e retornar
+// Consultas executadas na edge function:
+const queries = {
+  veiculos: supabase.from("veiculos").select("*").eq("active", true),
+  funcionarios: supabase.from("funcionarios").select("*").eq("active", true),
+  assets: supabase.from("assets").select("*").eq("active", true),
+  contratos: supabase.from("contratos").select("*").eq("active", true),
+  ordens_servico: supabase.from("ordens_servico").select("*"),
+  pecas: supabase.from("pecas").select("*").eq("active", true),
+  preventivas: supabase.from("preventivas").select("*"),
+};
+
+// Monta contexto para a IA
+const context = `
+Você é um assistente de relatórios do sistema de gestão de ativos.
+
+DADOS DO SISTEMA:
+- Total de veículos: ${veiculos.length}
+- Veículos por status: ${JSON.stringify(statusCount)}
+- Valor total FIPE da frota: R$ ${totalFipe}
+...
+`;
+```
+
+#### 2. Interface do Chat
+
+- Design limpo e moderno
+- Input fixo na parte inferior
+- Mensagens com scroll automático
+- Suporte a Markdown nas respostas
+- Indicador de "digitando..."
+- Botões de sugestões de perguntas iniciais
+
+#### 3. Streaming de Respostas
+
+Implementar streaming para UX fluida:
+- Token a token
+- Sem buffering
+- Cancelamento de request
+
+---
+
+### Layout da Página
+
+```text
+┌────────────────────────────────────────────────────────┐
+│  Header: Relatórios IA                                 │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │  [Sugestões iniciais - botões clicáveis]         │ │
+│  │  "Quantos veículos temos?"                       │ │
+│  │  "Qual o valor total da frota?"                  │ │
+│  │  "CNHs vencendo este mês?"                       │ │
+│  └──────────────────────────────────────────────────┘ │
+│                                                        │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │  Área de mensagens (scroll)                      │ │
+│  │                                                  │ │
+│  │  👤 Quantos veículos estão em manutenção?        │ │
+│  │                                                  │ │
+│  │  🤖 Atualmente, você possui **3 veículos** em    │ │
+│  │     manutenção:                                  │ │
+│  │     - ABC-1234 (Fiat Strada)                     │ │
+│  │     - XYZ-5678 (VW Gol)                          │ │
+│  │     - DEF-9012 (Ford Ka)                         │ │
+│  │                                                  │ │
+│  └──────────────────────────────────────────────────┘ │
+│                                                        │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │  [Input] Digite sua pergunta...        [Enviar]  │ │
+│  └──────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Tratamento de Erros
+### Prompt do Sistema para a IA
 
-| Cenário | Comportamento |
-|---------|---------------|
-| Código FIPE inválido | Toast: "Código FIPE inválido ou não encontrado" |
-| Ano não disponível | Usar primeiro ano disponível e informar |
-| Erro de rede | Toast: "Erro ao consultar FIPE" |
-| Sem código FIPE | Abre dialog manual |
+```text
+Você é um assistente de relatórios do Sistema de Gestão de Ativos.
+Responda APENAS com base nos dados fornecidos no contexto.
+Suas respostas devem ser:
+- Em português brasileiro
+- Claras e objetivas
+- Formatadas em Markdown quando apropriado
+- Com números precisos baseados nos dados
+
+Se não tiver dados suficientes para responder, informe educadamente.
+
+DADOS ATUAIS DO SISTEMA:
+[contexto dinâmico com dados do banco]
+```
 
 ---
 
-### Resultado Esperado
+### Segurança
 
-Após implementação:
-- **Um clique** no botão $ já consulta e atualiza o valor FIPE
-- Sem dialogs desnecessários para veículos com código FIPE
-- Fallback para dialog manual quando não há código
-- Experiência mais rápida e direta
+- A edge function usa `verify_jwt = true` (requer autenticação)
+- Dados são filtrados por `active = true`
+- Não expõe informações sensíveis (senhas, tokens)
+- Rate limiting via Lovable AI Gateway
 
+---
+
+### Dependências
+
+Será necessário instalar `react-markdown` para renderizar as respostas:
+
+```bash
+npm install react-markdown
+```
+
+---
+
+### Menu de Navegação
+
+Adicionar no menu lateral:
+- Ícone: `MessageSquare` (lucide-react)
+- Label: "Relatórios IA"
+- Path: `/relatorios`
+- Module: `relatorios` (para permissões)
+
+---
+
+### Fluxo Completo
+
+```text
+1. Usuário acessa /relatorios
+           ↓
+2. Vê sugestões de perguntas
+           ↓
+3. Clica ou digita pergunta
+           ↓
+4. Frontend envia para edge function
+           ↓
+5. Edge function consulta banco
+           ↓
+6. Monta contexto com dados reais
+           ↓
+7. Envia para Lovable AI (streaming)
+           ↓
+8. Frontend renderiza token a token
+           ↓
+9. Usuário vê resposta completa
+```
