@@ -658,6 +658,48 @@ export function ImportFuncionariosDialog() {
       setProgress(((i + 1) / previewData.length) * 100);
     }
     
+    // STEP 2: Deactivate employees whose CPFs are NOT in the spreadsheet
+    // Build set of all valid CPFs from the import file
+    const importedCpfs = new Set<string>();
+    previewData.forEach(row => {
+      const cpf = normalizeCpf(row.cpf);
+      if (cpf && cpf.length === 11) {
+        importedCpfs.add(cpf);
+      }
+    });
+    
+    // Fetch all active employees with CPF from database
+    const { data: activeEmployees } = await supabase
+      .from('funcionarios')
+      .select('id, cpf, nome')
+      .eq('active', true)
+      .not('cpf', 'is', null)
+      .neq('cpf', '');
+    
+    if (activeEmployees && activeEmployees.length > 0) {
+      // Find employees NOT in the imported list
+      const toDeactivate = activeEmployees.filter(emp => {
+        const normalizedCpf = normalizeCpf(emp.cpf || '');
+        return normalizedCpf && !importedCpfs.has(normalizedCpf);
+      });
+      
+      // Deactivate each employee and release their assets
+      for (const emp of toDeactivate) {
+        try {
+          await supabase
+            .from('funcionarios')
+            .update({ active: false })
+            .eq('id', emp.id);
+          
+          const releasedCount = await releaseAssetsFromFuncionario(emp.id);
+          result.deactivated++;
+          result.assetsReleased += releasedCount;
+        } catch (error: any) {
+          result.errors.push(`Erro ao desativar ${emp.nome}: ${error.message}`);
+        }
+      }
+    }
+    
     setResult(result);
     setIsProcessing(false);
     
