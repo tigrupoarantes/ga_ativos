@@ -1,89 +1,237 @@
 
 
-## Plano: Limpeza de Funcionários sem CPF e Mapeamento de Empresas
+# Redesign UX/UI Completo - Filosofia Steve Jobs
 
-### Ações a Executar
+## Diagnostico: Pontos de Fricção Identificados
 
-#### 1. Desativar Funcionários sem CPF
+### 1. Navegação Fragmentada
+| Problema | Impacto |
+|----------|---------|
+| 9 itens no menu principal + 2 admin | Sobrecarga cognitiva |
+| Empresas escondida em Sistema > Card | 4 cliques para cadastrar |
+| Tipos de Ativos como item separado | Fragmenta o contexto |
+| Equipes sem acesso direto | Difícil de encontrar |
 
-Executar query SQL para desativar os **175 funcionários** que não possuem CPF cadastrado e liberar seus ativos associados.
+### 2. Interações Primitivas
+| Problema | Ocorrências |
+|----------|-------------|
+| `confirm()` nativo do browser | 12 páginas |
+| Sem feedback visual de loading | Vários botões |
+| Switches decorativos (não persistem) | Configurações |
 
-```sql
--- Liberar ativos dos funcionários sem CPF
-UPDATE assets SET funcionario_id = NULL, status = 'disponivel' 
-WHERE funcionario_id IN (
-  SELECT id FROM funcionarios WHERE (cpf IS NULL OR cpf = '') AND active = true
-);
+### 3. Inconsistências Visuais
+- Tabelas sem paginação padronizada em algumas páginas
+- Botões de ação sem posicionamento consistente
+- Cards clicáveis misturados com switches
 
--- Liberar veículos dos funcionários sem CPF
-UPDATE veiculos SET funcionario_id = NULL, status = 'disponivel'
-WHERE funcionario_id IN (
-  SELECT id FROM funcionarios WHERE (cpf IS NULL OR cpf = '') AND active = true
-);
+---
 
--- Liberar linhas telefônicas
-UPDATE linhas_telefonicas SET funcionario_id = NULL
-WHERE funcionario_id IN (
-  SELECT id FROM funcionarios WHERE (cpf IS NULL OR cpf = '') AND active = true
-);
+## Solução: Arquitetura de 3 Camadas
 
--- Desativar funcionários sem CPF
-UPDATE funcionarios SET active = false 
-WHERE (cpf IS NULL OR cpf = '') AND active = true;
+```text
+CAMADA 1: NAVEGAÇÃO INTELIGENTE
+    Menu → Agrupa contextos relacionados
+    
+CAMADA 2: AÇÕES EM CONTEXTO  
+    Gestão inline → Sem navegação desnecessária
+    
+CAMADA 3: FEEDBACK ELEGANTE
+    Diálogos → Substituem confirm() nativo
 ```
 
 ---
 
-#### 2. Adicionar Mapeamento de Empresas
+## Fase 1: Menu Simplificado + Gestão Inline (Prioridade Alta)
 
-Modificar a lógica de importação para reconhecer os nomes das empresas na planilha e mapear para as empresas corretas no sistema.
+### 1.1 Reorganização do Menu Lateral
 
-| Nome na Planilha | Empresa no Sistema |
-|------------------|-------------------|
-| `CDF COM DE PRODUTOS ALIMENTICIOS LTDA` | CHOKDOCE LOJA 2 |
-| `JJGF COM DE PRODUTOS ALIMENTICIOS LTDA` | CHOKDOCE LOJA 3 |
+```text
+ANTES (11 itens)              DEPOIS (7 grupos)
+---------------------------------------------
+Dashboard                      Dashboard
+Ativos                         
+Tipos de Ativos        →       Patrimonio (expandível)
+                                  └─ Ativos
+                                  └─ Tipos de Ativos
+Funcionários           →       Pessoas (expandível)  
+                                  └─ Funcionários
+                                  └─ Equipes
+Veículos                       Frota
+Linhas Telefônicas             Telefonia
+Relatórios IA                  Relatórios
+Histórico                      Histórico
+Configurações                  Configurações
+---------------------------------------------
+Admin:                         (Mantém igual)
+  Usuários
+  Permissões
+```
+
+**Benefício**: Menos itens visíveis = menor carga cognitiva
+
+### 1.2 Gestão Inline de Empresas e Equipes
+
+Mover para a aba **Geral** de Configurações com tabela inline:
+
+```text
+┌─────────────────────────────────────────────────────┐
+│ Configurações                                        │
+├──────────────────────────────────────────────────────┤
+│ [Geral] [Notificações] [Segurança] [Sistema]         │
+├──────────────────────────────────────────────────────┤
+│  ┌────────────────────────────────────────────────┐  │
+│  │ Preferências Gerais                            │  │
+│  │ ○ Tema Escuro        [─────○]                  │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │ Empresas                    [+ Nova Empresa]   │  │
+│  ├────────────────────────────────────────────────┤  │
+│  │ CHOKDOCE CD   │ 12.345.678/.. │ ✏️ 🗑️          │  │
+│  │ CHOKDOCE L2   │ 98.765.432/.. │ ✏️ 🗑️          │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │ Equipes                      [+ Nova Equipe]   │  │
+│  ├────────────────────────────────────────────────┤  │
+│  │ Logística     │ CHOKDOCE CD  │ ✏️ 🗑️           │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+**Redução**: 4 cliques → 2 cliques para gerenciar empresas
 
 ---
 
-### Arquivo a Modificar
+## Fase 2: Dialogo de Confirmação Elegante
+
+### Componente: ConfirmDeleteDialog
+
+Substituir `confirm()` nativo por um AlertDialog estilizado:
+
+```text
+┌─────────────────────────────────────────┐
+│ ⚠️  Excluir Funcionário                 │
+│                                         │
+│ Tem certeza que deseja excluir          │
+│ "João Silva"?                           │
+│                                         │
+│ Esta ação não pode ser desfeita.        │
+│                                         │
+│        [Cancelar]    [Excluir]          │
+└─────────────────────────────────────────┘
+```
+
+**Uso Padronizado**:
+```typescript
+<ConfirmDeleteDialog
+  open={deleteDialogOpen}
+  onConfirm={() => handleDelete(id)}
+  onCancel={() => setDeleteDialogOpen(false)}
+  itemName="João Silva"
+  itemType="funcionário"
+/>
+```
+
+**Impacto**: 12 páginas usando confirm() nativo → 0
+
+---
+
+## Fase 3: Persistência de Preferências
+
+### 3.1 Tema Escuro
+Conectar ao `next-themes` (já instalado):
+
+```typescript
+const { theme, setTheme } = useTheme();
+<Switch 
+  checked={theme === 'dark'} 
+  onCheckedChange={(v) => setTheme(v ? 'dark' : 'light')} 
+/>
+```
+
+### 3.2 Preferências do Usuário
+Criar tabela `user_preferences` ou usar localStorage:
+- Exibição Compacta
+- Notificações por Email
+- Alertas específicos
+
+---
+
+## Fase 4: Tipos de Ativos Inline (Opcional)
+
+Mover gestão de Tipos para dentro da página Ativos como aba secundária:
+
+```text
+┌─────────────────────────────────────────────────────┐
+│ Ativos                                               │
+├──────────────────────────────────────────────────────┤
+│ [Lista de Ativos] [Configurar Tipos]                 │
+├──────────────────────────────────────────────────────┤
+│  Tabela de ativos ou configuração de tipos...        │
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## Arquivos a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/ImportFuncionariosDialog.tsx` | Adicionar dicionário de aliases de empresas |
+| `src/components/AppLayout.tsx` | Menu com grupos colapsáveis |
+| `src/pages/Configuracoes.tsx` | Gestão inline de Empresas e Equipes |
+| `src/components/ConfirmDeleteDialog.tsx` | NOVO - Componente de confirmação |
+| `src/pages/Funcionarios.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/Veiculos.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/Ativos.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/Empresas.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/Equipes.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/Pecas.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/Contratos.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/LinhasTelefonicas.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/OrdensServico.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/Preventivas.tsx` | Usar ConfirmDeleteDialog |
+| `src/pages/TiposAtivos.tsx` | Usar ConfirmDeleteDialog |
+| `src/App.tsx` | Remover/redirect rotas desnecessárias |
 
 ---
 
-### Código a Adicionar
+## Metricas de Sucesso
 
-```typescript
-// Mapeamento de nomes alternativos de empresas para nomes cadastrados
-const empresaAliases: Record<string, string> = {
-  'cdf com de produtos alimenticios ltda': 'chokdoce loja 2',
-  'jjgf com de produtos alimenticios ltda': 'chokdoce loja 3',
-};
-
-// Na função processImport, antes de buscar empresa_id:
-const empresaNormalizada = row.empresa.toLowerCase();
-const empresaNomeFinal = empresaAliases[empresaNormalizada] || empresaNormalizada;
-const empresaId = empresasMap.get(empresaNomeFinal);
-```
-
----
-
-### Resultado Esperado
-
-| Métrica | Antes | Depois |
+| Metrica | Antes | Depois |
 |---------|-------|--------|
-| Funcionários ativos | 1.255 | ~1.080 |
-| Funcionários sem CPF | 175 | 0 (inativos) |
-| Empresas reconhecidas | Erro em 2 | 100% |
+| Itens visíveis no menu | 11 | 7 grupos |
+| Cliques para cadastrar empresa | 4 | 2 |
+| Páginas com confirm() nativo | 12 | 0 |
+| Preferências que funcionam | 0 | 3+ |
+| Páginas separadas desnecessárias | 3 | 0 |
 
 ---
 
-### Próximo Passo Após Implementação
+## Principios Steve Jobs Aplicados
 
-Com o mapeamento funcionando, você poderá executar a importação da planilha que irá:
-- Sincronizar cargos e empresas
-- Desativar funcionários que não constam mais na lista ativa (~400)
-- Criar novos funcionários se houver
+1. **"Simplicidade e a sofisticação máxima"** 
+   - Menos itens no menu = menos decisões
+   
+2. **"Design não é só como parece, é como funciona"** 
+   - Switches que realmente salvam preferências
+   
+3. **"Foco significa dizer não a centenas de boas ideias"** 
+   - Consolidar páginas fragmentadas
+   
+4. **"Detalhes fazem o produto"** 
+   - Diálogos elegantes ao invés de alerts do browser
+
+---
+
+## Ordem de Implementação Recomendada
+
+1. Criar `ConfirmDeleteDialog` (base para todas as páginas)
+2. Atualizar Configurações com gestão inline de Empresas
+3. Adicionar gestão inline de Equipes
+4. Substituir confirm() em todas as 12 páginas
+5. Reorganizar menu lateral com grupos colapsáveis
+6. Conectar tema escuro ao next-themes
+7. Limpar rotas desnecessárias
 
