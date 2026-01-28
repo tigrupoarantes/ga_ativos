@@ -102,16 +102,25 @@ const consolidateByCpf = (rows: CsvRow[]): { consolidated: CsvRow[], info: Conso
   return { consolidated, info };
 };
 
-// Quote-aware CSV line parser
+// Quote-aware CSV line parser - supports both single and double quotes
 const parseCSVLine = (line: string): string[] => {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
+  let quoteChar = '';
   
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-    if (char === '"') {
-      inQuotes = !inQuotes;
+    
+    // Handle both single and double quotes
+    if ((char === '"' || char === "'") && (!inQuotes || char === quoteChar)) {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+      } else {
+        inQuotes = false;
+        quoteChar = '';
+      }
     } else if ((char === ',' || char === ';') && !inQuotes) {
       result.push(current.trim());
       current = '';
@@ -120,7 +129,9 @@ const parseCSVLine = (line: string): string[] => {
     }
   }
   result.push(current.trim());
-  return result;
+  
+  // Clean remaining quotes from values
+  return result.map(v => v.replace(/^['"]|['"]$/g, ''));
 };
 
 // Header mapping to normalize different column names
@@ -189,21 +200,43 @@ const headerMappings: Record<string, keyof CsvRow> = {
   'validade_cnh': 'cnh_validade',
 };
 
-const parseCsv = (text: string): CsvRow[] => {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
+// Parse CSV with fixed column positions (no header)
+const parseWithFixedColumns = (lines: string[]): CsvRow[] => {
+  // Fixed column order: NOME, CPF, CARGO, DEPARTAMENTO, EMPRESA, SITUACAO
+  const rows: CsvRow[] = [];
   
-  // Find the real header line (skip malformed first line if needed)
-  let headerLineIndex = 0;
-  const firstLine = lines[0];
-  
-  // Detect malformed header (starts with quote+text or contains unusual patterns)
-  if (firstLine.startsWith("'") || firstLine.includes("\"'") || firstLine.includes("'\"")) {
-    headerLineIndex = 1;
-    if (lines.length < 3) return [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    
+    const values = parseCSVLine(line);
+    if (values.length < 2) continue; // At least name and CPF required
+    
+    const row: CsvRow = {
+      nome: values[0] || '',
+      cpf: values[1] || '',
+      cargo: values[2] || '',
+      departamento: values[3] || '',
+      empresa: values[4] || '',
+      ativo: values[5] || 'Ativo',
+      email: '',
+      telefone: '',
+      equipe: '',
+      is_condutor: '',
+      cnh_numero: '',
+      cnh_categoria: '',
+      cnh_validade: '',
+    };
+    
+    if (row.cpf) {
+      rows.push(row);
+    }
   }
   
-  // Parse header using quote-aware parser
+  return rows;
+};
+
+// Parse CSV with header mapping
+const parseWithHeader = (lines: string[], headerLineIndex: number): CsvRow[] => {
   const headerLine = lines[headerLineIndex];
   const rawHeaders = parseCSVLine(headerLine);
   
@@ -264,6 +297,35 @@ const parseCsv = (text: string): CsvRow[] => {
   }
   
   return rows;
+};
+
+const parseCsv = (text: string): CsvRow[] => {
+  const lines = text.trim().split('\n');
+  if (lines.length < 1) return [];
+  
+  const firstLine = lines[0];
+  const firstValues = parseCSVLine(firstLine);
+  
+  // Check if this looks like a header or data
+  // Headers usually have keywords like "CPF", "NOME", "CARGO", etc.
+  const looksLikeHeader = firstValues.some(v => {
+    const lower = v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return ['cpf', 'nome', 'cargo', 'empresa', 'situacao', 'ativo', 'funcionario', 
+            'centro', 'departamento', 'email', 'telefone'].some(h => lower.includes(h));
+  });
+  
+  if (looksLikeHeader) {
+    // Check if first line is malformed and we should use line 2 as header
+    let headerLineIndex = 0;
+    if (firstLine.startsWith("'") || firstLine.includes("\"'") || firstLine.includes("'\"")) {
+      headerLineIndex = 1;
+      if (lines.length < 3) return [];
+    }
+    return parseWithHeader(lines, headerLineIndex);
+  } else {
+    // Process with fixed column positions (no header)
+    return parseWithFixedColumns(lines);
+  }
 };
 
 // Helper function to release assets from a deactivated employee
