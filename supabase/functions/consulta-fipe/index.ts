@@ -117,6 +117,18 @@ serve(async (req) => {
         if (!anosResponse.ok) {
           const errorText = await anosResponse.text();
           console.error(`[consulta-fipe] Erro ao buscar anos: ${anosResponse.status} - ${errorText}`);
+          
+          // Verificar se é erro da API FIPE (424, 503, etc.) ou código inválido (404)
+          if (anosResponse.status === 424 || anosResponse.status === 503 || anosResponse.status === 502) {
+            return new Response(
+              JSON.stringify({ 
+                error: "API FIPE temporariamente indisponível",
+                details: "Tente novamente em alguns segundos"
+              }),
+              { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
           return new Response(
             JSON.stringify({ 
               error: "Código FIPE inválido ou não encontrado",
