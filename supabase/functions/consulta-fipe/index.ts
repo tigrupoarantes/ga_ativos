@@ -15,18 +15,23 @@ const tipoMap: Record<string, string> = {
   motos: "motorcycles",
   caminhao: "trucks",
   caminhoes: "trucks",
+  caminhonete: "trucks",
+  furgao: "trucks",
+  van: "trucks",
+  pickup: "trucks",
   cars: "cars",
   motorcycles: "motorcycles",
   trucks: "trucks",
 };
 
 interface FipeRequest {
-  action: "marcas" | "modelos" | "anos" | "valor" | "valor-por-codigo";
+  action: "marcas" | "modelos" | "anos" | "valor" | "valor-por-codigo-ano";
   tipo?: string;
   marcaId?: number | string;
   modeloId?: number | string;
   anoId?: string;
   codigoFipe?: string;
+  ano?: number;
 }
 
 serve(async (req) => {
@@ -37,13 +42,13 @@ serve(async (req) => {
 
   try {
     const body: FipeRequest = await req.json();
-    const { action, tipo = "cars", marcaId, modeloId, anoId, codigoFipe } = body;
+    const { action, tipo = "cars", marcaId, modeloId, anoId, codigoFipe, ano } = body;
 
     const tipoApi = tipoMap[tipo.toLowerCase()] || "cars";
     let url = "";
     let data: unknown;
 
-    console.log(`[consulta-fipe] Action: ${action}, Tipo: ${tipoApi}, Marca: ${marcaId}, Modelo: ${modeloId}, Ano: ${anoId}, Codigo: ${codigoFipe}`);
+    console.log(`[consulta-fipe] Action: ${action}, Tipo: ${tipoApi}, Marca: ${marcaId}, Modelo: ${modeloId}, Ano: ${anoId}, Codigo: ${codigoFipe}, AnoVeiculo: ${ano}`);
 
     switch (action) {
       case "marcas":
@@ -80,28 +85,123 @@ serve(async (req) => {
         url = `${FIPE_API_BASE}/${tipoApi}/brands/${marcaId}/models/${modeloId}/years/${anoId}`;
         break;
 
-      case "valor-por-codigo":
-        // A API Parallelum NÃO suporta busca direta por código FIPE
-        // Retornamos erro explicativo para o usuário
+      case "valor-por-codigo-ano": {
+        // Consulta direta por código FIPE e ano do veículo
         if (!codigoFipe) {
           return new Response(
-            JSON.stringify({ error: "codigoFipe é obrigatório para consultar por código" }),
+            JSON.stringify({ error: "codigoFipe é obrigatório" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // Tentativa: usar API alternativa via webscraping ou API que suporte código FIPE
-        // Como não há API pública gratuita confiável, informamos o usuário
-        console.log(`[consulta-fipe] Busca por código FIPE não suportada diretamente pela API Parallelum`);
+        console.log(`[consulta-fipe] Buscando anos para código FIPE: ${codigoFipe}`);
+
+        // 1. Buscar anos disponíveis para o código FIPE
+        const anosUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}/years`;
+        console.log(`[consulta-fipe] URL anos: ${anosUrl}`);
         
-        return new Response(
-          JSON.stringify({ 
-            error: "Busca por código FIPE não disponível",
-            details: "A API FIPE (Parallelum) não suporta busca direta por código. Use a consulta por Marca/Modelo/Ano no cadastro do veículo.",
-            suggestion: "Abra o cadastro do veículo e use o botão 'Consultar FIPE' para selecionar marca, modelo e ano."
-          }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        const anosResponse = await fetch(anosUrl);
+        
+        if (!anosResponse.ok) {
+          const errorText = await anosResponse.text();
+          console.error(`[consulta-fipe] Erro ao buscar anos: ${anosResponse.status} - ${errorText}`);
+          return new Response(
+            JSON.stringify({ 
+              error: "Código FIPE inválido ou não encontrado",
+              details: `Código ${codigoFipe} não foi encontrado na tabela FIPE`
+            }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const anos = await anosResponse.json() as Array<{ code: string; name: string }>;
+        console.log(`[consulta-fipe] Anos disponíveis:`, anos);
+
+        if (!anos || anos.length === 0) {
+          return new Response(
+            JSON.stringify({ 
+              error: "Nenhum ano disponível para este código FIPE",
+              details: `Código ${codigoFipe} não possui anos cadastrados`
+            }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // 2. Encontrar yearId que corresponde ao ano do veículo
+        // Anos vêm como: [{ code: "2015-1", name: "2015 Gasolina" }, ...]
+        let anoEncontrado = anos.find(a => a.code.startsWith(`${ano}-`));
+        
+        // Se não encontrou o ano exato, tentar encontrar o mais próximo ou usar o primeiro
+        if (!anoEncontrado && ano) {
+          // Ordenar por proximidade ao ano desejado
+          const anosComDiff = anos.map(a => {
+            const anoCode = parseInt(a.code.split('-')[0]);
+            return { ...a, diff: Math.abs(anoCode - ano) };
+          });
+          anosComDiff.sort((a, b) => a.diff - b.diff);
+          anoEncontrado = anosComDiff[0];
+          console.log(`[consulta-fipe] Ano ${ano} não encontrado, usando ${anoEncontrado.code}`);
+        }
+        
+        if (!anoEncontrado) {
+          anoEncontrado = anos[0];
+          console.log(`[consulta-fipe] Usando primeiro ano disponível: ${anoEncontrado.code}`);
+        }
+
+        // 3. Consultar valor
+        const valorUrl = `${FIPE_API_BASE}/${tipoApi}/${codigoFipe}/years/${anoEncontrado.code}`;
+        console.log(`[consulta-fipe] URL valor: ${valorUrl}`);
+        
+        const valorResponse = await fetch(valorUrl);
+        
+        if (!valorResponse.ok) {
+          const errorText = await valorResponse.text();
+          console.error(`[consulta-fipe] Erro ao buscar valor: ${valorResponse.status} - ${errorText}`);
+          return new Response(
+            JSON.stringify({ 
+              error: "Erro ao consultar valor FIPE",
+              details: errorText
+            }),
+            { status: valorResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const valorData = await valorResponse.json() as {
+          brand?: string;
+          model?: string;
+          modelYear?: number;
+          fuel?: string;
+          codeFipe?: string;
+          price?: string;
+          referenceMonth?: string;
+        };
+
+        console.log(`[consulta-fipe] Valor obtido:`, valorData);
+
+        // Extrair valor numérico
+        const valorStr = valorData.price || "";
+        const valorNumerico = parseFloat(
+          valorStr.replace("R$", "").replace(/\./g, "").replace(",", ".").trim()
         );
+
+        data = {
+          marca: valorData.brand,
+          modelo: valorData.model,
+          anoModelo: valorData.modelYear,
+          combustivel: valorData.fuel,
+          codigoFipe: valorData.codeFipe,
+          valor: valorData.price,
+          valorNumerico: isNaN(valorNumerico) ? null : valorNumerico,
+          mesReferencia: valorData.referenceMonth,
+          anoConsultado: anoEncontrado.code,
+        };
+
+        console.log(`[consulta-fipe] Retornando:`, data);
+
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       default:
         return new Response(

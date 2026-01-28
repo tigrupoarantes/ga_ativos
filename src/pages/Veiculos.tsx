@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useVeiculos } from "@/hooks/useVeiculos";
 import { useEmpresasSelect, useFuncionariosCombobox } from "@/hooks/useSelectOptions";
 import { useVeiculosHistoricoResponsavel } from "@/hooks/useVeiculosHistoricoResponsavel";
+import { useFipeConsultaDireta } from "@/hooks/useFipeConsulta";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield, Upload } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield, Upload, Loader2 } from "lucide-react";
 import { ImportVeiculosDialog } from "@/components/ImportVeiculosDialog";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/DataTablePagination";
@@ -28,6 +29,7 @@ import { VeiculoLicenciamentoTab } from "@/components/VeiculoLicenciamentoTab";
 import { VeiculoSegurosTab } from "@/components/VeiculoSegurosTab";
 import { VeiculosDashboard } from "@/components/VeiculosDashboard";
 import { ConsultaFipeMassaDialog } from "@/components/ConsultaFipeMassaDialog";
+import { toast } from "sonner";
 import { format } from "date-fns";
 
 const statusColors: Record<string, string> = {
@@ -54,6 +56,7 @@ export default function Veiculos() {
   const { funcionarios: funcionariosCombobox } = useFuncionariosCombobox();
   const { empresas } = useEmpresasSelect();
   const { registrarAlteracaoResponsavel } = useVeiculosHistoricoResponsavel();
+  const fipeConsultaDireta = useFipeConsultaDireta();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -66,10 +69,44 @@ export default function Veiculos() {
   const [fipeVeiculoId, setFipeVeiculoId] = useState<string | null>(null);
   const [fipeVeiculoInfo, setFipeVeiculoInfo] = useState("");
   const [fipeVeiculoTipo, setFipeVeiculoTipo] = useState("carro");
+  const [consultandoFipeId, setConsultandoFipeId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState("dados");
   const [empresaFilter, setEmpresaFilter] = useState<string | null>(null);
   const [fipeMassaDialogOpen, setFipeMassaDialogOpen] = useState(false);
+
+  // Handler para consulta FIPE direta ou abrir dialog
+  const handleConsultaFipe = async (veiculo: (typeof veiculos)[0]) => {
+    const codigoFipe = (veiculo as any).codigo_fipe;
+    const anoModelo = veiculo.ano_modelo;
+
+    // Se tem código FIPE e ano, consulta direto
+    if (codigoFipe && anoModelo) {
+      setConsultandoFipeId(veiculo.id);
+      try {
+        await fipeConsultaDireta.mutateAsync({
+          veiculoId: veiculo.id,
+          codigoFipe,
+          tipo: veiculo.tipo || "carro",
+          ano: anoModelo,
+        });
+      } catch (error) {
+        // Erro já é tratado no hook
+        console.error("Erro na consulta FIPE direta:", error);
+      } finally {
+        setConsultandoFipeId(null);
+      }
+    } else {
+      // Sem código FIPE, abre dialog manual
+      if (!codigoFipe) {
+        toast.info("Veículo sem código FIPE. Use a consulta manual para buscar por marca/modelo.");
+      }
+      setFipeVeiculoId(veiculo.id);
+      setFipeVeiculoInfo(`${veiculo.placa} - ${veiculo.marca} ${veiculo.modelo}`);
+      setFipeVeiculoTipo(veiculo.tipo || "carro");
+      setFipeDialogOpen(true);
+    }
+  };
   const [formData, setFormData] = useState({
     placa: "",
     renavam: "",
@@ -702,15 +739,15 @@ export default function Veiculos() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            title="Consultar FIPE"
-                            onClick={() => {
-                              setFipeVeiculoId(veiculo.id);
-                              setFipeVeiculoInfo(`${veiculo.placa} - ${veiculo.marca} ${veiculo.modelo}`);
-                              setFipeVeiculoTipo(veiculo.tipo || "carro");
-                              setFipeDialogOpen(true);
-                            }}
+                            title={(veiculo as any).codigo_fipe ? "Consultar FIPE (automático)" : "Consultar FIPE (manual)"}
+                            onClick={() => handleConsultaFipe(veiculo)}
+                            disabled={consultandoFipeId === veiculo.id}
                           >
-                            <DollarSign className="h-4 w-4 text-primary" />
+                            {consultandoFipeId === veiculo.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            ) : (
+                              <DollarSign className="h-4 w-4 text-primary" />
+                            )}
                           </Button>
                           <Button
                             variant="ghost"

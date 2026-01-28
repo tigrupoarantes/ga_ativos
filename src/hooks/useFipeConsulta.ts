@@ -114,7 +114,7 @@ export function useFipeConsultaValor() {
   });
 }
 
-export function useFipeConsultaPorCodigo() {
+export function useFipeConsultaDireta() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -122,19 +122,21 @@ export function useFipeConsultaPorCodigo() {
       veiculoId: string;
       codigoFipe: string;
       tipo: string;
-      anoId?: string;
+      ano: number;
     }) => {
-      const valorData = await consultaFipe<FipeValor>({
-        action: "valor-por-codigo",
+      // Consulta direta por código FIPE e ano
+      const valorData = await consultaFipe<FipeValor & { anoConsultado?: string }>({
+        action: "valor-por-codigo-ano",
         codigoFipe: params.codigoFipe,
         tipo: params.tipo,
-        anoId: params.anoId,
+        ano: params.ano,
       });
 
       if (!valorData.valorNumerico) {
         throw new Error("Não foi possível obter o valor FIPE");
       }
 
+      // Atualizar veículo com o valor
       const { error } = await supabase
         .from("veiculos")
         .update({
