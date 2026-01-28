@@ -10,10 +10,80 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, UserMinus } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, UserMinus, Download, FileDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { Separator } from "@/components/ui/separator";
+
+// CSV Template headers and example data
+const CSV_HEADERS = ['CPF', 'NOME', 'EMAIL', 'TELEFONE', 'CARGO', 'DEPARTAMENTO', 'EMPRESA', 'ATIVO'];
+const CSV_EXAMPLE_ROWS = [
+  ['12345678901', 'Maria da Silva', 'maria@email.com', '11999999999', 'Analista', 'Financeiro', 'Empresa ABC', 'Ativo'],
+  ['98765432100', 'João Santos', 'joao@email.com', '11988888888', 'Gerente', 'TI', 'Empresa XYZ', 'Ativo'],
+];
+
+// Generate and download CSV file
+const downloadCsv = (content: string, filename: string) => {
+  // BOM for UTF-8 Excel compatibility
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' });
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+// Download empty template with example rows
+const downloadTemplate = () => {
+  const csvContent = [
+    CSV_HEADERS.join(';'),
+    ...CSV_EXAMPLE_ROWS.map(row => row.join(';'))
+  ].join('\n');
+  
+  downloadCsv(csvContent, 'modelo_funcionarios.csv');
+  toast.success('Modelo CSV baixado!');
+};
+
+// Export current employees
+const exportFuncionarios = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('funcionarios')
+      .select(`
+        cpf, nome, email, telefone, cargo, departamento,
+        empresa:empresas!funcionarios_empresa_id_fkey(nome)
+      `)
+      .eq('active', true)
+      .order('nome');
+    
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      toast.warning('Não há funcionários ativos para exportar');
+      return;
+    }
+    
+    const rows = data.map(f => [
+      f.cpf || '',
+      f.nome || '',
+      f.email || '',
+      f.telefone || '',
+      f.cargo || '',
+      f.departamento || '',
+      (f.empresa as any)?.nome || '',
+      'Ativo'
+    ].join(';'));
+    
+    const csvContent = [CSV_HEADERS.join(';'), ...rows].join('\n');
+    downloadCsv(csvContent, `funcionarios_${new Date().toISOString().split('T')[0]}.csv`);
+    toast.success(`${data.length} funcionários exportados!`);
+  } catch (error: any) {
+    toast.error('Erro ao exportar: ' + error.message);
+  }
+};
 
 interface ImportResult {
   total: number;
@@ -624,6 +694,29 @@ export function ImportFuncionariosDialog() {
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* Download Template Section */}
+          <div className="bg-muted/50 rounded-lg p-4">
+            <p className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Baixar Modelo CSV
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={downloadTemplate}>
+                <FileDown className="h-4 w-4 mr-2" />
+                Modelo Vazio
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportFuncionarios}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Exportar Atuais
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Formato: CPF;NOME;EMAIL;TELEFONE;CARGO;DEPARTAMENTO;EMPRESA;ATIVO
+            </p>
+          </div>
+          
+          <Separator />
+          
           {/* File Input */}
           <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
             <input
@@ -635,23 +728,11 @@ export function ImportFuncionariosDialog() {
               id="csv-upload"
             />
             <label htmlFor="csv-upload" className="cursor-pointer">
-              <FileSpreadsheet className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
+              <Upload className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 Clique para selecionar um arquivo CSV
               </p>
             </label>
-          </div>
-          
-          {/* Expected Format */}
-          <div className="bg-muted/50 rounded-lg p-4 text-sm">
-            <p className="font-medium mb-2">Formato esperado do CSV:</p>
-            <code className="text-xs block bg-background p-2 rounded">
-              NOME_FUNCIONARIO,CPF,DESCRICAO_CARGO,CENTRO_DE_CUSTO,EMPRESA,SITUACAO<br/>
-              JOAO SILVA,12345678901,GERENTE,VENDAS,EMPRESA X,Ativo
-            </code>
-            <p className="text-xs text-muted-foreground mt-2">
-              Colunas suportadas: nome_funcionario, cpf, email, telefone, descricao_cargo, centro_de_custo, empresa, equipe, situacao, is_condutor, cnh_numero, cnh_categoria, cnh_validade
-            </p>
           </div>
           
           {/* Preview */}
