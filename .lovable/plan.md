@@ -1,62 +1,65 @@
 
 
-## Plano: Atualizar Condutores com Dados de CNH (Arquivo Corrigido)
+## Plano: Atualizar E-mails dos Condutores
 
-### Dados da Planilha
+### Objetivo
 
-O arquivo atualizado contém **103 registros** de condutores com CPFs já formatados (sem pontos/traços):
+Aproveitar os dados da planilha para também atualizar o campo `email` dos funcionários que possuem e-mail cadastrado.
 
-| Campo | Descrição |
-|-------|-----------|
-| CPF | Número limpo (ex: 21901369897) |
-| NOME | Nome completo do funcionário |
-| EMAIL | E-mail do funcionário |
-| CNH | Número da CNH |
-| CATEGORIA | Categoria da CNH (A, B, AB, AC, AD, AE) |
-| VENCIMENTO CNH | Data no formato DD/MM/YYYY |
+### Dados Disponíveis
 
-### Ações a Executar
+A planilha contém **103 registros** com a coluna EMAIL. Destes:
+- **~90 funcionários** possuem e-mail válido
+- **~13 funcionários** não possuem e-mail (campo vazio ou "-")
 
-Para cada CPF da planilha, atualizar o registro correspondente na tabela `funcionarios`:
+### Ação
 
-1. Definir `is_condutor = true`
-2. Preencher `cnh_numero` com o número da CNH
-3. Preencher `cnh_categoria` com a categoria
-4. Converter e preencher `cnh_validade` (DD/MM/YYYY → YYYY-MM-DD)
+Para cada CPF da planilha que possua e-mail válido (não vazio e diferente de "-"), executar:
 
-### Tratamento de Casos Especiais
+```sql
+UPDATE funcionarios SET 
+  email = 'email@dominio.com'
+WHERE cpf = 'XXXXXXXXXXX' AND active = true;
+```
 
-Serão ignorados dados inválidos:
-- Antonio Carlos Pereira (03943999866) - sem dados de CNH
-- Antonio Jose Limeira (14554190870) - CNH = "-"
-- José Caetano Neto (12158569620) - CNH = "-"
-- Kaio Stafussi Fernandes (36709345882) - categoria = "-"
-- Registros com categoria vazia serão atualizados apenas com `is_condutor`, `cnh_numero` e `cnh_validade`
+### Lista de E-mails a Atualizar
+
+| CPF | Nome | E-mail |
+|-----|------|--------|
+| 21901369897 | Adriana Gaiba Lopes Madeira | brkarantes272009@gmail.com |
+| 27544791807 | Adriana Maila Martins | adriana@chokdistribuidora.com.br |
+| 36448116877 | Alan Nascimento Muchiut | alan@brkarantes.com.br |
+| 13258414807 | Alexandro Benedito de Oliveira | Alexandro.oliveira@brkarantes.com.br |
+| ... | *(demais 85+ registros)* | ... |
+
+### Registros sem E-mail (serão ignorados)
+
+- 26837829858 - Adriano Rodrigo Previatto (vazio)
+- 03943999866 - Antonio Carlos Pereira (vazio)
+- 14554190870 - Antonio Jose Limeira (vazio)
+- 66614620644 - Jose Aparecido Alves (vazio)
+- 12158569620 - José Caetano Neto ("-")
+- 04370489857 - Emanuel Martins ("-")
+- 07178770864 - Laercio ("-")
+- 44012784889 - Maria Laura Arantes ("-")
 
 ### Execução
 
-Serão executados comandos UPDATE em lote no banco de dados:
-
-```sql
--- Exemplo de atualização
-UPDATE funcionarios SET 
-  is_condutor = true,
-  cnh_numero = '1209387626',
-  cnh_categoria = 'AB',
-  cnh_validade = '2035-02-11'
-WHERE cpf = '21901369897' AND active = true;
-```
+Serão executados comandos UPDATE em lote, atualizando apenas o campo `email` para funcionários que:
+1. Tenham CPF correspondente na base
+2. Estejam ativos (`active = true`)
+3. Possuam e-mail válido na planilha
 
 ### Resultado Esperado
 
-- 103 funcionários serão marcados como condutores
-- Dados de CNH preenchidos para quem possui informações válidas
-- Registros não encontrados pelo CPF serão ignorados (sem erro)
+- ~90 funcionários terão seus e-mails atualizados/preenchidos
+- Funcionários sem e-mail na planilha permanecerão inalterados
+- CPFs não encontrados serão ignorados
 
 ### Resumo Técnico
 
 - **Tabela**: `funcionarios`
-- **Campos atualizados**: `is_condutor`, `cnh_numero`, `cnh_categoria`, `cnh_validade`
+- **Campo atualizado**: `email`
 - **Chave de busca**: CPF (campo `cpf`)
-- **Filtro adicional**: `active = true`
+- **Filtro**: `active = true` e e-mail válido na planilha
 
