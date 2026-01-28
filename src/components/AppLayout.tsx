@@ -1,4 +1,4 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -13,10 +13,15 @@ import {
   UserCog,
   Car,
   ChevronLeft,
+  ChevronDown,
   Home,
   Rocket,
   Phone,
   MessageSquare,
+  Wrench,
+  FileText,
+  Boxes,
+  UsersRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +36,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 // Mapeamento de rotas para labels e hierarquia
 const routeConfig: Record<string, { label: string; parent?: string }> = {
@@ -39,7 +49,6 @@ const routeConfig: Record<string, { label: string; parent?: string }> = {
   "/tipos-ativos": { label: "Tipos de Ativos", parent: "/" },
   "/funcionarios": { label: "Funcionários", parent: "/" },
   "/veiculos": { label: "Veículos", parent: "/" },
-  
   "/historico": { label: "Histórico", parent: "/" },
   "/configuracoes": { label: "Configurações", parent: "/" },
   "/usuarios": { label: "Usuários", parent: "/" },
@@ -60,21 +69,65 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-// Menu reorganizado conforme PRD - Sistema de Gestão de Ativos
-const navItems = [
+// Single nav items (no group)
+interface NavItem {
+  icon: any;
+  label: string;
+  path: string;
+  module: string;
+}
+
+// Collapsible group with children
+interface NavGroup {
+  icon: any;
+  label: string;
+  module: string;
+  children: NavItem[];
+}
+
+type NavEntry = NavItem | NavGroup;
+
+const isNavGroup = (entry: NavEntry): entry is NavGroup => {
+  return "children" in entry;
+};
+
+// Reorganized menu with collapsible groups
+const navStructure: NavEntry[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", module: "dashboard" },
-  { icon: Package, label: "Ativos", path: "/ativos", module: "ativos" },
-  { icon: FolderKanban, label: "Tipos de Ativos", path: "/tipos-ativos", module: "tipos_ativos" },
-  { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
-  { icon: Car, label: "Veículos", path: "/veiculos", module: "veiculos" },
-  { icon: Phone, label: "Linhas Telefônicas", path: "/linhas-telefonicas", module: "telefonia" },
+  {
+    icon: Boxes,
+    label: "Patrimônio",
+    module: "ativos",
+    children: [
+      { icon: Package, label: "Ativos", path: "/ativos", module: "ativos" },
+      { icon: FolderKanban, label: "Tipos de Ativos", path: "/tipos-ativos", module: "tipos_ativos" },
+    ],
+  },
+  {
+    icon: UsersRound,
+    label: "Pessoas",
+    module: "funcionarios",
+    children: [
+      { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
+    ],
+  },
+  {
+    icon: Car,
+    label: "Frota",
+    module: "veiculos",
+    children: [
+      { icon: Car, label: "Veículos", path: "/veiculos", module: "veiculos" },
+      { icon: Wrench, label: "Oficina", path: "/oficina", module: "veiculos" },
+    ],
+  },
+  { icon: Phone, label: "Telefonia", path: "/linhas-telefonicas", module: "telefonia" },
   { icon: MessageSquare, label: "Relatórios IA", path: "/relatorios", module: "relatorios" },
   { icon: History, label: "Histórico", path: "/historico", module: "historico" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "configuracoes" },
 ];
 
-// Menu administrativo - apenas para admins
-const adminItems = [
+// Admin items
+const adminItems: NavItem[] = [
   { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
   { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
 ];
@@ -84,26 +137,116 @@ function NavContent() {
   const { user, userRole, signOut } = useAuth();
   const { allowedModules, isAdmin, isLoading } = useCurrentUserPermissions();
 
-  const getRoleLabel = (role: string | null) => {
-    const labels = {
-      assistente: 'Assistente',
-      coordenador: 'Coordenador',
-      diretor: 'Diretor',
-      admin: 'Administrador',
-    };
-    return role ? labels[role as keyof typeof labels] : 'Usuário';
+  // Track which groups are open - auto-open based on current path
+  const getInitialOpenGroups = () => {
+    const openGroups: Record<string, boolean> = {};
+    navStructure.forEach((entry) => {
+      if (isNavGroup(entry)) {
+        const isChildActive = entry.children.some(
+          (child) => location.pathname === child.path || location.pathname.startsWith(child.path + "/")
+        );
+        if (isChildActive) {
+          openGroups[entry.label] = true;
+        }
+      }
+    });
+    return openGroups;
   };
 
-  // Filter navigation items based on user permissions
-  const filteredNavItems = navItems.filter(item => {
-    // Admins see everything
-    if (isAdmin) return true;
-    // Filter by allowed modules
-    return allowedModules.includes(item.module);
-  });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(getInitialOpenGroups);
 
-  // Show admin items only for admins
-  const filteredAdminItems = isAdmin ? adminItems : [];
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  const getRoleLabel = (role: string | null) => {
+    const labels = {
+      assistente: "Assistente",
+      coordenador: "Coordenador",
+      diretor: "Diretor",
+      admin: "Administrador",
+    };
+    return role ? labels[role as keyof typeof labels] : "Usuário";
+  };
+
+  // Check if user can see a module
+  const canSeeModule = (module: string) => {
+    if (isAdmin) return true;
+    return allowedModules.includes(module);
+  };
+
+  // Check if user can see an entry (item or group)
+  const canSeeEntry = (entry: NavEntry): boolean => {
+    if (isNavGroup(entry)) {
+      return entry.children.some((child) => canSeeModule(child.module));
+    }
+    return canSeeModule(entry.module);
+  };
+
+  // Filter visible entries
+  const visibleEntries = navStructure.filter(canSeeEntry);
+  const visibleAdminItems = isAdmin ? adminItems : [];
+
+  const renderNavItem = (item: NavItem, isNested = false) => {
+    const Icon = item.icon;
+    const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        className={cn(
+          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+          isNested && "pl-10",
+          isActive
+            ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+            : "text-sidebar-foreground/70 hover:bg-sidebar-border hover:text-sidebar-foreground"
+        )}
+      >
+        <Icon className="h-5 w-5 flex-shrink-0" />
+        <span className="truncate">{item.label}</span>
+      </Link>
+    );
+  };
+
+  const renderNavGroup = (group: NavGroup) => {
+    const Icon = group.icon;
+    const isOpen = openGroups[group.label] ?? false;
+    const hasActiveChild = group.children.some(
+      (child) => location.pathname === child.path || location.pathname.startsWith(child.path + "/")
+    );
+
+    // Filter children by permission
+    const visibleChildren = group.children.filter((child) => canSeeModule(child.module));
+    if (visibleChildren.length === 0) return null;
+
+    return (
+      <Collapsible key={group.label} open={isOpen} onOpenChange={() => toggleGroup(group.label)}>
+        <CollapsibleTrigger asChild>
+          <button
+            className={cn(
+              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+              hasActiveChild
+                ? "text-sidebar-primary"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-border hover:text-sidebar-foreground"
+            )}
+          >
+            <Icon className="h-5 w-5 flex-shrink-0" />
+            <span className="flex-1 truncate text-left">{group.label}</span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                isOpen && "rotate-180"
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-1 pt-1">
+          {visibleChildren.map((child) => renderNavItem(child, true))}
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  };
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
@@ -125,59 +268,19 @@ function NavContent() {
           </div>
         ) : (
           <>
-            {filteredNavItems.map((item, index) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                    "animate-fade-in",
-                    isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-border hover:text-sidebar-foreground"
-                  )}
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                </Link>
-              );
-            })}
+            {visibleEntries.map((entry) =>
+              isNavGroup(entry) ? renderNavGroup(entry) : renderNavItem(entry as NavItem)
+            )}
 
             {/* Admin Section */}
-            {filteredAdminItems.length > 0 && (
+            {visibleAdminItems.length > 0 && (
               <>
                 <div className="pt-4 pb-2 px-3">
                   <span className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
                     Administração
                   </span>
                 </div>
-                {filteredAdminItems.map((item, index) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={cn(
-                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                        "animate-fade-in",
-                        isActive
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-border hover:text-sidebar-foreground"
-                      )}
-                      style={{ animationDelay: `${(navItems.length + index) * 30}ms` }}
-                    >
-                      <Icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  );
-                })}
+                {visibleAdminItems.map((item) => renderNavItem(item))}
               </>
             )}
           </>
@@ -192,7 +295,7 @@ function NavContent() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
-              {user?.email?.split('@')[0]}
+              {user?.email?.split("@")[0]}
             </p>
             <p className="text-xs text-sidebar-foreground/60">{getRoleLabel(userRole)}</p>
           </div>
@@ -214,7 +317,7 @@ function NavContent() {
 export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Não mostrar botão voltar na página inicial (dashboard)
   const showBackButton = location.pathname !== "/";
 
@@ -222,16 +325,16 @@ export function AppLayout({ children }: AppLayoutProps) {
   const breadcrumbs = useMemo(() => {
     const path = location.pathname;
     const crumbs: { path: string; label: string }[] = [];
-    
+
     // Encontra a rota atual ou a mais próxima
     let currentPath = path;
     let config = routeConfig[currentPath];
-    
+
     // Se não encontrar exatamente, tenta encontrar a rota pai
     if (!config) {
-      const segments = path.split('/').filter(Boolean);
+      const segments = path.split("/").filter(Boolean);
       for (let i = segments.length; i >= 0; i--) {
-        const testPath = '/' + segments.slice(0, i).join('/');
+        const testPath = "/" + segments.slice(0, i).join("/");
         if (routeConfig[testPath]) {
           currentPath = testPath;
           config = routeConfig[testPath];
@@ -239,7 +342,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         }
       }
     }
-    
+
     // Constrói a hierarquia de breadcrumbs
     while (config) {
       crumbs.unshift({ path: currentPath, label: config.label });
@@ -250,7 +353,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         break;
       }
     }
-    
+
     return crumbs;
   }, [location.pathname]);
 
@@ -283,7 +386,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             )}
-            
+
             {/* Breadcrumb */}
             <Breadcrumb className="hidden sm:flex">
               <BreadcrumbList>
@@ -320,9 +423,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         {/* Main content */}
         <main className="flex-1 overflow-auto">
-          <div className="mx-auto max-w-7xl p-6 lg:p-8">
-            {children}
-          </div>
+          <div className="mx-auto max-w-7xl p-6 lg:p-8">{children}</div>
         </main>
       </div>
     </div>
