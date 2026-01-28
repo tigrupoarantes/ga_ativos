@@ -42,6 +42,7 @@ import { useVeiculos } from "@/hooks/useVeiculos";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 const statusColors: Record<string, string> = {
   aberta: "bg-blue-500",
@@ -82,6 +83,8 @@ export default function OrdensServico() {
   const [editingOrdem, setEditingOrdem] = useState<typeof ordensServico[0] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; numero: string } | null>(null);
 
   const [formData, setFormData] = useState<OrdemServicoInsert>({
     veiculo_id: null,
@@ -183,9 +186,16 @@ export default function OrdensServico() {
     setIsDialogOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta ordem de serviço?")) {
-      await deleteOrdem.mutateAsync(id);
+  const handleDeleteClick = (ordem: typeof ordensServico[0]) => {
+    setItemToDelete({ id: ordem.id, numero: ordem.numero || "" });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteOrdem.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -320,7 +330,7 @@ export default function OrdensServico() {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
-                              onClick={() => handleDelete(ordem.id)}
+                              onClick={() => handleDeleteClick(ordem)}
                               className="text-destructive"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -527,6 +537,15 @@ export default function OrdensServico() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.numero || ""}
+        itemType="ordem de serviço"
+        isLoading={deleteOrdem.isPending}
+      />
     </OficinaLayout>
   );
 }

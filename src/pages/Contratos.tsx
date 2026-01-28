@@ -16,6 +16,7 @@ import { Plus, Search, Edit, Trash2, FileText, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 const statusColors: Record<string, string> = {
   ativo: "bg-status-success/10 text-status-success",
@@ -29,6 +30,8 @@ export default function Contratos() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; numero: string } | null>(null);
   const [formData, setFormData] = useState({
     numero: "",
     descricao: "",
@@ -98,9 +101,16 @@ export default function Contratos() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este contrato?")) {
-      await deleteContrato.mutateAsync(id);
+  const handleDeleteClick = (contrato: typeof contratos[0]) => {
+    setItemToDelete({ id: contrato.id, numero: contrato.numero });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteContrato.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -303,7 +313,7 @@ export default function Contratos() {
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(contrato)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(contrato.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(contrato)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
@@ -323,6 +333,15 @@ export default function Contratos() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.numero || ""}
+        itemType="contrato"
+        isLoading={deleteContrato.isPending}
+      />
     </AppLayout>
   );
 }

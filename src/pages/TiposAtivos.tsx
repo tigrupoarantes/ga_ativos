@@ -12,12 +12,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Trash2, FolderKanban } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 export default function TiposAtivos() {
   const { tipos, isLoading, createTipo, updateTipo, deleteTipo } = useTiposAtivos();
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -75,9 +78,16 @@ export default function TiposAtivos() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este tipo?")) {
-      await deleteTipo.mutateAsync(id);
+  const handleDeleteClick = (tipo: typeof tipos[0]) => {
+    setItemToDelete({ id: tipo.id, name: tipo.name });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteTipo.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -223,7 +233,7 @@ export default function TiposAtivos() {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(tipo)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(tipo.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(tipo)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -242,6 +252,15 @@ export default function TiposAtivos() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.name || ""}
+        itemType="tipo de ativo"
+        isLoading={deleteTipo.isPending}
+      />
     </AppLayout>
   );
 }

@@ -18,6 +18,7 @@ import { Plus, Search, Edit, Trash2, Package, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotebookForm } from "@/components/NotebookForm";
 import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { useQueryClient } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
@@ -38,6 +39,8 @@ export default function Ativos() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [historicoAtivoId, setHistoricoAtivoId] = useState<string | null>(null);
   const [historicoAtivoNome, setHistoricoAtivoNome] = useState<string | undefined>(undefined);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; nome: string } | null>(null);
   const [formData, setFormData] = useState({
     patrimonio: "",
     nome: "",
@@ -108,9 +111,16 @@ export default function Ativos() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este ativo?")) {
-      await deleteAtivo.mutateAsync(id);
+  const handleDeleteClick = (ativo: typeof ativos[0]) => {
+    setItemToDelete({ id: ativo.id, nome: ativo.nome });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteAtivo.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -331,7 +341,7 @@ export default function Ativos() {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(ativo)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(ativo.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(ativo)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -361,6 +371,15 @@ export default function Ativos() {
             setHistoricoAtivoNome(undefined);
           }
         }}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.nome || ""}
+        itemType="ativo"
+        isLoading={deleteAtivo.isPending}
       />
     </AppLayout>
   );
