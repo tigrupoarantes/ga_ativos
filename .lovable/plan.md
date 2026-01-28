@@ -1,106 +1,75 @@
 
 
-## Plano: Corrigir Parser para CSV com Formato Especial
+## Plano: Corrigir Lógica do Parser para Formato CSV Específico
 
 ### Problema Identificado
 
-O arquivo CSV tem um formato incomum onde:
+Analisando o arquivo CSV real:
 
 ```text
-ABNER FRANCISCO DA SILVA','47126691874','ANALISTA II','BRK DEPOSITO','EMPRESA X','Ativo'
+ABNER FRANCISCO DA SILVA','47126691874','ANALISTA II','BRK DEPOSITO','J. ARANTES...','Ativo'
 ```
 
-**Estrutura:**
-- Campos separados por `','` (aspas simples + virgula + aspas simples)
-- Primeiro campo **nao comeca** com aspas
-- Ultimo campo termina com aspas simples
+**Formato real:**
+- Primeiro campo NÃO tem aspas no início
+- Campos separados por `','`
+- Último campo termina com `'`
 
-**Por que o parser atual falha:**
-
-O parser trata `'` como delimitador de quote. Quando encontra a primeira `'` (apos o nome), entra em modo "inQuotes" e trata todo o resto como um unico campo.
+Quando fazemos `split("','")`:
 
 ```text
-Linha: ABNER FRANCISCO DA SILVA','47126691874','...
-       ↑ campo 1                ↑ parser pensa que começa quote aqui
+[0] = "ABNER FRANCISCO DA SILVA"   ← Sem aspas (correto!)
+[1] = "47126691874"                ← Limpo
+[2] = "ANALISTA II"                ← Limpo
+[3] = "BRK DEPOSITO"               ← Limpo
+[4] = "J. ARANTES..."              ← Limpo
+[5] = "Ativo'"                     ← Tem aspas no final
 ```
 
-### Solucao
+O parser atual está tentando remover aspas do primeiro elemento quando não existem, e deveria remover apenas do último.
 
-Mudar a estrategia: em vez de tratar aspas como delimitadores de campo, usar **regex ou split direto** no separador `','`:
-
-1. Detectar se a linha usa o padrao `','` como separador
-2. Se sim, fazer split direto por `','`
-3. Limpar aspas residuais do primeiro e ultimo campos
-
-### Mudancas no Codigo
+### Mudanças no Código
 
 **Arquivo:** `src/components/ImportFuncionariosDialog.tsx`
 
-**1. Atualizar parseCSVLine para detectar formato especial**
+**Correção na função `parseCSVLine`:**
 
 ```typescript
 const parseCSVLine = (line: string): string[] => {
-  // Check if line uses ',' as delimiter pattern (common in some exports)
+  // Check if line uses ',' as delimiter pattern
   if (line.includes("','")) {
-    // Split by ',' pattern
     const parts = line.split("','");
-    // Clean first and last elements
     return parts.map((v, idx) => {
       let cleaned = v.trim();
-      // Remove leading quote from first element
-      if (idx === 0 && cleaned.endsWith("'")) {
-        cleaned = cleaned.slice(0, -1);
+      // Only the LAST element has a trailing quote to remove
+      if (idx === parts.length - 1) {
+        // Remove trailing quote: "Ativo'" -> "Ativo"
+        cleaned = cleaned.replace(/'$/, '');
       }
-      // Remove trailing quote from last element
-      if (idx === parts.length - 1 && cleaned.startsWith("'")) {
-        cleaned = cleaned.slice(1);
-      }
-      // Remove any remaining quotes
+      // Clean any remaining surrounding quotes (safety)
       cleaned = cleaned.replace(/^['"]|['"]$/g, '');
       return cleaned.trim();
     });
   }
   
-  // ... existing quote-aware parsing logic for standard CSVs
+  // ... existing standard CSV parsing
 };
 ```
 
-**2. Simplificar deteccao de header**
+### Lógica Corrigida
 
-O arquivo nao tem header, entao a funcao `parseCsv` deve detectar isso corretamente:
-
-- Se primeira linha contem `','` mas nao tem palavras-chave de header -> usar colunas fixas
-- Se primeira linha tem palavras-chave (CPF, NOME, etc.) -> usar mapeamento de headers
-
-### Logica de Parsing Atualizada
-
-```text
-Entrada: ABNER FRANCISCO DA SILVA','47126691874','ANALISTA II','BRK DEPOSITO','EMPRESA X','Ativo'
-
-Split por "','":
-[0] "ABNER FRANCISCO DA SILVA'" -> "ABNER FRANCISCO DA SILVA"
-[1] "47126691874"
-[2] "ANALISTA II"
-[3] "BRK DEPOSITO"
-[4] "EMPRESA X"
-[5] "Ativo'" -> "Ativo"
-```
-
-### Mapeamento de Colunas (Sem Header)
-
-| Posicao | Campo |
-|---------|-------|
-| 0 | nome |
-| 1 | cpf |
-| 2 | cargo |
-| 3 | departamento |
-| 4 | empresa |
-| 5 | ativo |
+| Índice | Valor Após Split | Após Limpeza |
+|--------|------------------|--------------|
+| 0 | ABNER FRANCISCO DA SILVA | ABNER FRANCISCO DA SILVA |
+| 1 | 47126691874 | 47126691874 |
+| 2 | ANALISTA II | ANALISTA II |
+| 3 | BRK DEPOSITO | BRK DEPOSITO |
+| 4 | J. ARANTES... | J. ARANTES... |
+| 5 | Ativo' | Ativo |
 
 ### Resultado Esperado
 
-1. Os 4.403 registros serao parseados corretamente
-2. CPFs duplicados serao consolidados (logica existente)
-3. Funcionarios ativos criados/atualizados
-4. Funcionarios inativos desativados com liberacao de ativos
+1. Os 4.403 registros serão parseados corretamente
+2. Preview mostrará os dados consolidados
+3. Importação funcionará com a lógica de CPFs duplicados
 
