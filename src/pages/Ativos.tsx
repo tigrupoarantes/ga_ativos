@@ -55,6 +55,8 @@ export default function Ativos() {
     status: "disponivel",
     funcionario_id: "",
     empresa_id: "",
+    data_aquisicao: "",
+    valor_aquisicao: "",
   });
 
   const filteredAtivos = ativos.filter(
@@ -71,10 +73,21 @@ export default function Ativos() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Sanitizar campos UUID vazios para null e converter tipos
+    const sanitizedData = {
+      ...formData,
+      funcionario_id: formData.funcionario_id || null,
+      empresa_id: formData.empresa_id || null,
+      tipo_id: formData.tipo_id || null,
+      valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
+      data_aquisicao: formData.data_aquisicao || null,
+    };
+    
     if (editingId) {
-      await updateAtivo.mutateAsync({ id: editingId, ...formData });
+      await updateAtivo.mutateAsync({ id: editingId, ...sanitizedData });
     } else {
-      await createAtivo.mutateAsync(formData);
+      await createAtivo.mutateAsync(sanitizedData);
     }
     setIsDialogOpen(false);
     resetForm();
@@ -96,6 +109,8 @@ export default function Ativos() {
       status: "disponivel",
       funcionario_id: "",
       empresa_id: "",
+      data_aquisicao: "",
+      valor_aquisicao: "",
     });
   };
 
@@ -114,6 +129,8 @@ export default function Ativos() {
       status: ativo.status || "disponivel",
       funcionario_id: ativo.funcionario_id || "",
       empresa_id: ativo.empresa_id || "",
+      data_aquisicao: ativo.data_aquisicao || "",
+      valor_aquisicao: ativo.valor_aquisicao?.toString() || "",
     });
     setIsDialogOpen(true);
   };
@@ -236,6 +253,26 @@ export default function Ativos() {
                   id="imei"
                   value={formData.imei}
                   onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="data_aquisicao">Data de Aquisição</Label>
+                <Input
+                  id="data_aquisicao"
+                  type="date"
+                  value={formData.data_aquisicao}
+                  onChange={(e) => setFormData({ ...formData, data_aquisicao: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valor_aquisicao">Valor de Aquisição (R$)</Label>
+                <Input
+                  id="valor_aquisicao"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.valor_aquisicao}
+                  onChange={(e) => setFormData({ ...formData, valor_aquisicao: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
