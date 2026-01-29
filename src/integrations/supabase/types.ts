@@ -1179,6 +1179,60 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_odometer_reports: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          employee_id: string
+          id: string
+          raw_message: string | null
+          reported_at: string | null
+          reported_km: number
+          source: string
+          validation_status: string | null
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          raw_message?: string | null
+          reported_at?: string | null
+          reported_km: number
+          source?: string
+          validation_status?: string | null
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          raw_message?: string | null
+          reported_at?: string | null
+          reported_km?: number
+          source?: string
+          validation_status?: string | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_odometer_reports_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_odometer_reports_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       veiculos: {
         Row: {
           active: boolean | null
@@ -1199,6 +1253,8 @@ export type Database = {
           ipva_valor: number | null
           ipva_vencimento: string | null
           km_atual: number | null
+          last_km_report_at: string | null
+          last_km_report_by_employee_id: string | null
           licenciamento_situacao: string | null
           licenciamento_valor: number | null
           licenciamento_vencimento: string | null
@@ -1239,6 +1295,8 @@ export type Database = {
           ipva_valor?: number | null
           ipva_vencimento?: string | null
           km_atual?: number | null
+          last_km_report_at?: string | null
+          last_km_report_by_employee_id?: string | null
           licenciamento_situacao?: string | null
           licenciamento_valor?: number | null
           licenciamento_vencimento?: string | null
@@ -1279,6 +1337,8 @@ export type Database = {
           ipva_valor?: number | null
           ipva_vencimento?: string | null
           km_atual?: number | null
+          last_km_report_at?: string | null
+          last_km_report_by_employee_id?: string | null
           licenciamento_situacao?: string | null
           licenciamento_valor?: number | null
           licenciamento_vencimento?: string | null
@@ -1311,6 +1371,13 @@ export type Database = {
           {
             foreignKeyName: "veiculos_funcionario_id_fkey"
             columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "veiculos_last_km_report_by_employee_id_fkey"
+            columns: ["last_km_report_by_employee_id"]
             isOneToOne: false
             referencedRelation: "funcionarios"
             referencedColumns: ["id"]

@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Wrench, Gauge, ClipboardList, Package, ShieldCheck, Droplets, CalendarDays } from "lucide-react";
+import { Wrench, Gauge, ClipboardList, Package, ShieldCheck, Droplets, CalendarDays, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/AppLayout";
 
@@ -15,6 +15,7 @@ const subNavItems = [
   { icon: Package, label: "Peças e Estoque", shortLabel: "Peças", path: "/oficina/pecas" },
   { icon: ShieldCheck, label: "Preventivas", shortLabel: "Prev.", path: "/oficina/preventivas" },
   { icon: Droplets, label: "Lavagem", shortLabel: "Lav.", path: "/oficina/lavagem" },
+  { icon: Activity, label: "Coletas KM", shortLabel: "KM", path: "/oficina/km" },
 ];
 
 export function OficinaLayout({ children }: OficinaLayoutProps) {
@@ -47,7 +48,8 @@ export function OficinaLayout({ children }: OficinaLayoutProps) {
               (item.path === "/oficina/agenda" && location.pathname.startsWith("/oficina/agenda")) ||
               (item.path === "/oficina/pecas" && location.pathname.startsWith("/oficina/pecas")) ||
               (item.path === "/oficina/preventivas" && location.pathname.startsWith("/oficina/preventivas")) ||
-              (item.path === "/oficina/lavagem" && location.pathname.startsWith("/oficina/lavagem"));
+              (item.path === "/oficina/lavagem" && location.pathname.startsWith("/oficina/lavagem")) ||
+              (item.path === "/oficina/km" && location.pathname.startsWith("/oficina/km"));
 
             return (
               <Link
