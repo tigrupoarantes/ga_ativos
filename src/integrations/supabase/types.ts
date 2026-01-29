@@ -1633,6 +1633,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_asset_with_patrimonio: {
+        Args: {
+          p_chip_linha?: string
+          p_data_aquisicao?: string
+          p_descricao?: string
+          p_empresa_id?: string
+          p_funcionario_id?: string
+          p_imei?: string
+          p_marca?: string
+          p_modelo?: string
+          p_nome: string
+          p_numero_serie?: string
+          p_status?: string
+          p_tipo_id: string
+          p_valor_aquisicao?: number
+        }
+        Returns: {
+          id: string
+          patrimonio: string
+        }[]
+      }
       generate_patrimonio: { Args: { p_tipo_id: string }; Returns: string }
       get_current_user_role: { Args: never; Returns: string }
       get_dashboard_alerts: { Args: { limit_count?: number }; Returns: Json }
