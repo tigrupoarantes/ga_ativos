@@ -74,6 +74,9 @@ export default function Ativos() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Determinar status automaticamente baseado no funcionário
+    const autoStatus = formData.funcionario_id ? "em_uso" : "disponivel";
+    
     // Sanitizar campos UUID vazios para null e converter tipos
     const sanitizedData = {
       ...formData,
@@ -82,6 +85,7 @@ export default function Ativos() {
       tipo_id: formData.tipo_id || null,
       valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
       data_aquisicao: formData.data_aquisicao || null,
+      status: autoStatus,
     };
     
     if (editingId) {
