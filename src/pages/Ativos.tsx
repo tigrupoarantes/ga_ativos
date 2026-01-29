@@ -5,18 +5,18 @@ import { useAtivos, useTiposAtivos } from "@/hooks/useAtivos";
 import { useFuncionariosCombobox } from "@/hooks/useSelectOptions";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
+import { DynamicAssetForm, FormFieldConfig } from "@/components/DynamicAssetForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Package, History } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NotebookForm } from "@/components/NotebookForm";
 import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,7 @@ export default function Ativos() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedTipoId, setSelectedTipoId] = useState<string | null>(null);
   const [historicoAtivoId, setHistoricoAtivoId] = useState<string | null>(null);
   const [historicoAtivoNome, setHistoricoAtivoNome] = useState<string | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -63,6 +64,11 @@ export default function Ativos() {
       a.marca?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Obter tipo selecionado e seus campos de formulário
+  const tipoSelecionado = tipos.find((t) => t.id === selectedTipoId);
+  const rawFormFields = (tipoSelecionado as any)?.form_fields;
+  const formFields: FormFieldConfig[] = Array.isArray(rawFormFields) ? rawFormFields : [];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
@@ -76,6 +82,7 @@ export default function Ativos() {
 
   const resetForm = () => {
     setEditingId(null);
+    setSelectedTipoId(null);
     setFormData({
       patrimonio: "",
       nome: "",
@@ -135,9 +142,203 @@ export default function Ativos() {
     setHistoricoAtivoNome(ativo.nome);
   };
 
-  // Verificar se o tipo selecionado é Notebook
-  const tipoSelecionado = tipos.find((t) => t.id === formData.tipo_id);
-  const isNotebook = tipoSelecionado?.name?.toLowerCase().includes("notebook");
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      resetForm();
+    }
+  };
+
+  // Renderizar conteúdo do dialog baseado no estado
+  const renderDialogContent = () => {
+    // Modo de edição: formulário completo
+    if (editingId) {
+      return (
+        <>
+          <DialogHeader>
+            <DialogTitle>Editar Ativo</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="patrimonio">Patrimônio *</Label>
+                <Input
+                  id="patrimonio"
+                  value={formData.patrimonio}
+                  onChange={(e) => setFormData({ ...formData, patrimonio: e.target.value })}
+                  required
+                  disabled
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome *</Label>
+                <Input
+                  id="nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tipo_id">Tipo</Label>
+                <Select value={formData.tipo_id} onValueChange={(v) => setFormData({ ...formData, tipo_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tipos.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disponivel">Disponível</SelectItem>
+                    <SelectItem value="em_uso">Em Uso</SelectItem>
+                    <SelectItem value="manutencao">Manutenção</SelectItem>
+                    <SelectItem value="baixado">Baixado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="marca">Marca</Label>
+                <Input
+                  id="marca"
+                  value={formData.marca}
+                  onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modelo">Modelo</Label>
+                <Input
+                  id="modelo"
+                  value={formData.modelo}
+                  onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="numero_serie">Número de Série</Label>
+                <Input
+                  id="numero_serie"
+                  value={formData.numero_serie}
+                  onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="imei">IMEI</Label>
+                <Input
+                  id="imei"
+                  value={formData.imei}
+                  onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="funcionario_id">Funcionário</Label>
+                <FuncionarioCombobox
+                  value={formData.funcionario_id}
+                  onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}
+                  funcionarios={funcionarios}
+                  placeholder="Buscar por nome ou CPF"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="empresa_id">Empresa</Label>
+                <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {empresas.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={updateAtivo.isPending}>
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
+        </>
+      );
+    }
+
+    // Modo de criação - Etapa 1: Seleção do tipo
+    if (!selectedTipoId) {
+      return (
+        <>
+          <DialogHeader>
+            <DialogTitle>Novo Ativo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Selecione o Tipo de Ativo</Label>
+              <Select onValueChange={setSelectedTipoId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha o tipo de ativo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tipos.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {(t as any).prefix || "---"}
+                        </Badge>
+                        {t.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                O formulário de cadastro será exibido de acordo com o tipo selecionado.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </>
+      );
+    }
+
+    // Modo de criação - Etapa 2: Formulário dinâmico
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setSelectedTipoId(null)}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            Novo {tipoSelecionado?.name || "Ativo"}
+          </DialogTitle>
+        </DialogHeader>
+        <DynamicAssetForm
+          tipoId={selectedTipoId}
+          tipoNome={tipoSelecionado?.name || "Ativo"}
+          formFields={formFields || []}
+          onSuccess={handleFormSuccess}
+          onCancel={() => setSelectedTipoId(null)}
+        />
+      </>
+    );
+  };
 
   return (
     <AppLayout>
@@ -161,7 +362,7 @@ export default function Ativos() {
                 />
               </div>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
@@ -169,130 +370,7 @@ export default function Ativos() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingId ? "Editar Ativo" : isNotebook ? "Novo Notebook" : "Novo Ativo"}
-                  </DialogTitle>
-                </DialogHeader>
-                
-                {/* Formulário específico para Notebook (sem edição) */}
-                {!editingId && isNotebook ? (
-                  <NotebookForm
-                    onSuccess={handleFormSuccess}
-                    onCancel={() => setIsDialogOpen(false)}
-                  />
-                ) : (
-                  /* Formulário padrão para outros tipos e edição */
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="patrimonio">Patrimônio *</Label>
-                        <Input
-                          id="patrimonio"
-                          value={formData.patrimonio}
-                          onChange={(e) => setFormData({ ...formData, patrimonio: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="nome">Nome *</Label>
-                        <Input
-                          id="nome"
-                          value={formData.nome}
-                          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tipo_id">Tipo</Label>
-                        <Select value={formData.tipo_id} onValueChange={(v) => setFormData({ ...formData, tipo_id: v })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {tipos.map((t) => (
-                              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="status">Status</Label>
-                        <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="disponivel">Disponível</SelectItem>
-                            <SelectItem value="em_uso">Em Uso</SelectItem>
-                            <SelectItem value="manutencao">Manutenção</SelectItem>
-                            <SelectItem value="baixado">Baixado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="marca">Marca</Label>
-                        <Input
-                          id="marca"
-                          value={formData.marca}
-                          onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="modelo">Modelo</Label>
-                        <Input
-                          id="modelo"
-                          value={formData.modelo}
-                          onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="numero_serie">Número de Série</Label>
-                        <Input
-                          id="numero_serie"
-                          value={formData.numero_serie}
-                          onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="imei">IMEI</Label>
-                        <Input
-                          id="imei"
-                          value={formData.imei}
-                          onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="funcionario_id">Funcionário</Label>
-                        <FuncionarioCombobox
-                          value={formData.funcionario_id}
-                          onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}
-                          funcionarios={funcionarios}
-                          placeholder="Buscar por nome ou CPF"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="empresa_id">Empresa</Label>
-                        <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {empresas.map((e) => (
-                              <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                      <Button type="submit" disabled={createAtivo.isPending || updateAtivo.isPending}>
-                        {editingId ? "Salvar" : "Criar"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                )}
+                {renderDialogContent()}
               </DialogContent>
             </Dialog>
           </CardHeader>

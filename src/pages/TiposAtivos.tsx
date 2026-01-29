@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useTiposAtivos } from "@/hooks/useAtivos";
+import { AssetFormBuilder, FormFieldConfig } from "@/components/AssetFormBuilder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, FolderKanban } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FolderKanban, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
@@ -21,6 +22,12 @@ export default function TiposAtivos() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [formBuilderOpen, setFormBuilderOpen] = useState(false);
+  const [selectedTipoForBuilder, setSelectedTipoForBuilder] = useState<{
+    id: string;
+    name: string;
+    form_fields: FormFieldConfig[];
+  } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -89,6 +96,21 @@ export default function TiposAtivos() {
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     }
+  };
+
+  const handleOpenFormBuilder = (tipo: typeof tipos[0]) => {
+    const formFields = (tipo as any).form_fields as FormFieldConfig[] || [];
+    setSelectedTipoForBuilder({
+      id: tipo.id,
+      name: tipo.name,
+      form_fields: formFields,
+    });
+    setFormBuilderOpen(true);
+  };
+
+  const getFieldCount = (tipo: typeof tipos[0]) => {
+    const fields = (tipo as any).form_fields as FormFieldConfig[] | undefined;
+    return fields?.length || 0;
   };
 
   return (
@@ -210,6 +232,7 @@ export default function TiposAtivos() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Prefixo</TableHead>
                     <TableHead>Categoria</TableHead>
+                    <TableHead>Campos Formulário</TableHead>
                     <TableHead>Taxa Depreciação</TableHead>
                     <TableHead>Vida Útil</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -227,9 +250,22 @@ export default function TiposAtivos() {
                         ) : "-"}
                       </TableCell>
                       <TableCell>{tipo.category || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {getFieldCount(tipo)} campos
+                        </Badge>
+                      </TableCell>
                       <TableCell>{tipo.depreciation_rate ? `${tipo.depreciation_rate}%` : "-"}</TableCell>
                       <TableCell>{tipo.useful_life_months ? `${tipo.useful_life_months} meses` : "-"}</TableCell>
                       <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Personalizar formulário"
+                          onClick={() => handleOpenFormBuilder(tipo)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(tipo)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -241,7 +277,7 @@ export default function TiposAtivos() {
                   ))}
                   {filteredTipos.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         Nenhum tipo encontrado
                       </TableCell>
                     </TableRow>
@@ -261,6 +297,16 @@ export default function TiposAtivos() {
         itemType="tipo de ativo"
         isLoading={deleteTipo.isPending}
       />
+
+      {selectedTipoForBuilder && (
+        <AssetFormBuilder
+          open={formBuilderOpen}
+          onOpenChange={setFormBuilderOpen}
+          tipoId={selectedTipoForBuilder.id}
+          tipoNome={selectedTipoForBuilder.name}
+          currentFields={selectedTipoForBuilder.form_fields}
+        />
+      )}
     </AppLayout>
   );
 }
