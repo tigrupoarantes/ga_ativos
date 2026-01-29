@@ -33,6 +33,7 @@ import Agenda from "./pages/Agenda";
 import OrdensServico from "./pages/OrdensServico";
 import Pecas from "./pages/Pecas";
 import Preventivas from "./pages/Preventivas";
+import Lavagens from "./pages/Lavagens";
 import Relatorios from "./pages/Relatorios";
 
 const queryClient = new QueryClient({
@@ -82,6 +83,7 @@ const App = () => (
             <Route path="/oficina/ordens" element={<ProtectedRoute><OrdensServico /></ProtectedRoute>} />
             <Route path="/oficina/pecas" element={<ProtectedRoute><Pecas /></ProtectedRoute>} />
             <Route path="/oficina/preventivas" element={<ProtectedRoute><Preventivas /></ProtectedRoute>} />
+            <Route path="/oficina/lavagem" element={<ProtectedRoute><Lavagens /></ProtectedRoute>} />
             
             {/* Outros módulos */}
             <Route path="/telefonia" element={<ProtectedRoute><Telefonia /></ProtectedRoute>} />
