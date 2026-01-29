@@ -457,6 +457,8 @@ export type Database = {
           telefone: string | null
           updated_at: string | null
           user_id: string | null
+          whatsapp_opt_in: boolean | null
+          whatsapp_phone_e164: string | null
         }
         Insert: {
           active?: boolean | null
@@ -476,6 +478,8 @@ export type Database = {
           telefone?: string | null
           updated_at?: string | null
           user_id?: string | null
+          whatsapp_opt_in?: boolean | null
+          whatsapp_phone_e164?: string | null
         }
         Update: {
           active?: boolean | null
@@ -495,6 +499,8 @@ export type Database = {
           telefone?: string | null
           updated_at?: string | null
           user_id?: string | null
+          whatsapp_opt_in?: boolean | null
+          whatsapp_phone_e164?: string | null
         }
         Relationships: [
           {
@@ -685,6 +691,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_jobs: {
+        Row: {
+          channel: string
+          created_at: string | null
+          id: string
+          last_error: string | null
+          payload: Json | null
+          sent_at: string | null
+          status: string | null
+          template: string
+          to_email: string | null
+          to_phone: string | null
+          tries: number | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          payload?: Json | null
+          sent_at?: string | null
+          status?: string | null
+          template: string
+          to_email?: string | null
+          to_phone?: string | null
+          tries?: number | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          payload?: Json | null
+          sent_at?: string | null
+          status?: string | null
+          template?: string
+          to_email?: string | null
+          to_phone?: string | null
+          tries?: number | null
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
