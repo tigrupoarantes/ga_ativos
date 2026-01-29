@@ -81,6 +81,7 @@ export type Database = {
           created_at: string | null
           depreciation_rate: number | null
           description: string | null
+          form_fields: Json | null
           id: string
           name: string
           prefix: string | null
@@ -93,6 +94,7 @@ export type Database = {
           created_at?: string | null
           depreciation_rate?: number | null
           description?: string | null
+          form_fields?: Json | null
           id?: string
           name: string
           prefix?: string | null
@@ -105,6 +107,7 @@ export type Database = {
           created_at?: string | null
           depreciation_rate?: number | null
           description?: string | null
+          form_fields?: Json | null
           id?: string
           name?: string
           prefix?: string | null
