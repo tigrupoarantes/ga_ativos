@@ -16,7 +16,7 @@ export function useVeiculos() {
         .from("veiculos")
         .select(`
           *,
-          funcionario:funcionarios(*),
+          funcionario:funcionarios!veiculos_funcionario_id_fkey(*),
           empresa:empresas(*)
         `)
         .eq("active", true)
