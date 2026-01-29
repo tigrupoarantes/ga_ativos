@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Shield, Users, Bell, Database } from "lucide-react";
+import { Settings, Shield, Users, Bell, Database, Plug } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
+import { WhatsAppConfigForm } from "@/components/WhatsAppConfigForm";
 import { EmpresasInlineManager } from "@/components/EmpresasInlineManager";
 
 export default function Configuracoes() {
@@ -29,6 +30,7 @@ export default function Configuracoes() {
             <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
             {isAdmin && <TabsTrigger value="seguranca">Segurança</TabsTrigger>}
             {isAdmin && <TabsTrigger value="sistema">Sistema</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="integracoes">Integrações</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="geral" className="space-y-6">
@@ -200,9 +202,33 @@ export default function Configuracoes() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="integracoes" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Plug className="h-5 w-5" />
+                    <CardTitle>Integrações</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Configure integrações com serviços externos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Gerencie as credenciais e configurações de serviços integrados ao sistema.
+                  </p>
+                </CardContent>
+              </Card>
 
               {/* SMTP Configuration */}
               <SmtpConfigForm />
+
+              {/* WhatsApp Configuration */}
+              <WhatsAppConfigForm />
             </TabsContent>
           )}
         </Tabs>
