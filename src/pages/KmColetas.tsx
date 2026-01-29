@@ -30,9 +30,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Gauge, AlertTriangle, CheckCircle, XCircle, Filter, Smartphone, PenLine } from "lucide-react";
+import { Plus, Gauge, AlertTriangle, CheckCircle, XCircle, Filter, Smartphone, PenLine, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { RequestKmWhatsAppButton } from "@/components/RequestKmWhatsAppButton";
 
 const validationStatusConfig = {
   ok: { label: "OK", variant: "default" as const, icon: CheckCircle, className: "bg-green-500/10 text-green-600 border-green-500/20" },
@@ -65,6 +66,9 @@ export default function KmColetas() {
 
   // Condutores ativos
   const condutores = funcionarios.filter(f => f.is_condutor && f.active);
+
+  // Veículos com motorista para solicitação WhatsApp
+  const veiculosComMotorista = veiculos.filter(v => v.funcionario_id && v.active);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,13 +108,64 @@ export default function KmColetas() {
             </p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Lançar KM
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            {/* Solicitar KM via WhatsApp */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Solicitar KM
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Solicitar KM via WhatsApp</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Selecione um veículo para enviar solicitação de KM ao motorista responsável:
+                  </p>
+                  <div className="max-h-[300px] overflow-y-auto space-y-2">
+                    {veiculosComMotorista.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhum veículo com motorista atribuído
+                      </p>
+                    ) : (
+                      veiculosComMotorista.map((v) => {
+                        const motorista = funcionarios.find(f => f.id === v.funcionario_id);
+                        return (
+                          <div
+                            key={v.id}
+                            className="flex items-center justify-between p-3 border rounded-lg"
+                          >
+                            <div>
+                              <div className="font-medium">{v.placa}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {motorista?.nome || "Sem motorista"}
+                              </div>
+                            </div>
+                            <RequestKmWhatsAppButton
+                              vehicleId={v.id}
+                              vehiclePlaca={v.placa}
+                              employeeName={motorista?.nome}
+                              employeePhone={motorista?.telefone || undefined}
+                            />
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Lançar KM
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Lançar Leitura de KM</DialogTitle>
@@ -174,7 +229,8 @@ export default function KmColetas() {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {/* Stats Cards */}
