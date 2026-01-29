@@ -283,12 +283,12 @@ export default function KmColetas() {
           <CardContent>
             <div className="flex flex-wrap gap-4">
               <div className="w-full sm:w-auto">
-                <Select value={filterVehicle} onValueChange={setFilterVehicle}>
+                <Select value={filterVehicle || "all"} onValueChange={(v) => setFilterVehicle(v === "all" ? "" : v)}>
                   <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue placeholder="Todos os veículos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os veículos</SelectItem>
+                    <SelectItem value="all">Todos os veículos</SelectItem>
                     {veiculos.map((v) => (
                       <SelectItem key={v.id} value={v.id}>
                         {v.placa}
@@ -299,12 +299,12 @@ export default function KmColetas() {
               </div>
 
               <div className="w-full sm:w-auto">
-                <Select value={filterSource} onValueChange={setFilterSource}>
+                <Select value={filterSource || "all"} onValueChange={(v) => setFilterSource(v === "all" ? "" : v)}>
                   <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue placeholder="Todas as origens" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as origens</SelectItem>
+                    <SelectItem value="all">Todas as origens</SelectItem>
                     <SelectItem value="manual">Manual</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                   </SelectContent>
