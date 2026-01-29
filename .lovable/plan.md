@@ -1,138 +1,107 @@
 
 
-# Plano: Corrigir Erro de Chave Duplicada no Patrimônio
+# Plano: Corrigir Função generate_patrimonio
 
 ## Problema Identificado
 
-O erro `duplicate key value violates unique constraint "assets_patrimonio_key"` ocorre devido a uma **condição de corrida** (race condition):
+A função `generate_patrimonio` está com **erros de indexação** que fazem ela sempre gerar o mesmo patrimônio:
 
-1. A função `generatePatrimonio(tipoId)` é chamada no frontend
-2. O banco calcula o próximo número sequencial (ex: `NTB-2600025`)
-3. O frontend tenta inserir o ativo com esse patrimônio
-4. **Se houver falha ou delay**, outro processo pode gerar o mesmo número
-5. Ao tentar inserir, o patrimônio já existe → ERRO
+### Formato Real vs Esperado pela Função
 
-### Cenários que causam o problema:
-- Duplo clique no botão "Criar Ativo"
-- Erro de conexão seguido de retry
-- Dois usuários criando ativos simultaneamente
+```text
+Patrimônio: NTB-2600024
+Posição:    123 4 56 78901
+            ^^^ ^ ^^ ^^^^^
+            |   | |  |
+            |   | |  +-- Sequencial (posições 7-11)
+            |   | +-- Ano (posições 5-6)
+            |   +-- Hífen (posição 4)
+            +-- Prefixo (posições 1-3)
+```
+
+### Erros na Função Atual
+
+| Problema | Código Atual | Código Correto |
+|----------|--------------|----------------|
+| Verificação de tamanho | `LENGTH(patrimonio) >= 12` | `LENGTH(patrimonio) >= 11` |
+| Extração do sequencial | `SUBSTRING(patrimonio FROM 8 FOR 5)` | `SUBSTRING(patrimonio FROM 7 FOR 5)` |
+
+### Por que Falha em 5 Tentativas
+
+1. Função sempre retorna sequencial = 0 (devido ao LENGTH errado)
+2. Calcula próximo = 0 + 1 = 1
+3. Gera `NTB-2600001` que já existe
+4. Tenta novamente, mesmo resultado
+5. Após 5 tentativas, desiste com erro
 
 ---
 
 ## Solução
 
-Implementar **geração atômica com retry** - o patrimônio será gerado diretamente no banco usando um trigger ou uma função que faz INSERT com retry automático em caso de colisão.
-
-### Abordagem escolhida:
-Criar uma nova função RPC `create_asset_with_patrimonio` que:
-1. Gera o patrimônio
-2. Insere o ativo
-3. Em caso de colisão, tenta novamente com novo sequencial (até 5 tentativas)
-4. Retorna o ativo criado ou erro
-
----
-
-## Mudanças Necessárias
-
-### 1. Migração SQL - Nova Função Atômica
+Criar migração para corrigir a função `generate_patrimonio`:
 
 ```sql
-CREATE OR REPLACE FUNCTION public.create_asset_with_patrimonio(
-  p_tipo_id UUID,
-  p_nome TEXT,
-  p_marca TEXT DEFAULT NULL,
-  p_modelo TEXT DEFAULT NULL,
-  p_numero_serie TEXT DEFAULT NULL,
-  p_imei TEXT DEFAULT NULL,
-  p_chip_linha TEXT DEFAULT NULL,
-  p_descricao TEXT DEFAULT NULL,
-  p_data_aquisicao DATE DEFAULT NULL,
-  p_valor_aquisicao NUMERIC DEFAULT NULL,
-  p_funcionario_id UUID DEFAULT NULL,
-  p_empresa_id UUID DEFAULT NULL,
-  p_status TEXT DEFAULT 'disponivel'
-)
-RETURNS TABLE(id UUID, patrimonio TEXT) AS $$
+CREATE OR REPLACE FUNCTION public.generate_patrimonio(p_tipo_id uuid)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
 DECLARE
+  v_prefix VARCHAR(5);
+  v_year VARCHAR(2);
+  v_next_seq INTEGER;
   v_patrimonio TEXT;
-  v_asset_id UUID;
-  v_attempt INTEGER := 0;
-  v_max_attempts INTEGER := 5;
+  v_pattern TEXT;
 BEGIN
-  WHILE v_attempt < v_max_attempts LOOP
-    v_attempt := v_attempt + 1;
-    
-    -- Gerar patrimônio
-    v_patrimonio := public.generate_patrimonio(p_tipo_id);
-    
-    BEGIN
-      -- Tentar inserir
-      INSERT INTO assets (
-        patrimonio, nome, tipo_id, marca, modelo, numero_serie,
-        imei, chip_linha, descricao, data_aquisicao, valor_aquisicao,
-        funcionario_id, empresa_id, status
-      ) VALUES (
-        v_patrimonio, p_nome, p_tipo_id, p_marca, p_modelo, p_numero_serie,
-        p_imei, p_chip_linha, p_descricao, p_data_aquisicao, p_valor_aquisicao,
-        p_funcionario_id, p_empresa_id, p_status
-      )
-      RETURNING assets.id INTO v_asset_id;
-      
-      -- Sucesso - retornar
-      RETURN QUERY SELECT v_asset_id, v_patrimonio;
-      RETURN;
-      
-    EXCEPTION WHEN unique_violation THEN
-      -- Colisão detectada - tentar novamente
-      CONTINUE;
-    END;
-  END LOOP;
+  -- Buscar prefixo do tipo (usa ATI como padrão se não definido)
+  SELECT COALESCE(prefix, 'ATI') INTO v_prefix 
+  FROM asset_types WHERE id = p_tipo_id;
   
-  -- Excedeu tentativas
-  RAISE EXCEPTION 'Não foi possível gerar patrimônio único após % tentativas', v_max_attempts;
+  IF v_prefix IS NULL THEN
+    v_prefix := 'ATI';
+  END IF;
+  
+  -- Ano atual (2 dígitos)
+  v_year := TO_CHAR(NOW(), 'YY');
+  
+  -- Padrão para buscar patrimônios do mesmo tipo e ano
+  v_pattern := v_prefix || '-' || v_year || '%';
+  
+  -- Buscar próximo sequencial (CORRIGIDO)
+  SELECT COALESCE(MAX(
+    CASE 
+      WHEN LENGTH(patrimonio) >= 11 
+           AND patrimonio ~ ('^' || v_prefix || '-' || v_year || '[0-9]{5}$')
+      THEN CAST(SUBSTRING(patrimonio FROM 7 FOR 5) AS INTEGER)
+      ELSE 0
+    END
+  ), 0) + 1 INTO v_next_seq
+  FROM assets 
+  WHERE patrimonio LIKE v_pattern;
+  
+  -- Formatar patrimônio: PREFIXO-AAXXXXX (ex: NTB-2600001)
+  v_patrimonio := v_prefix || '-' || v_year || LPAD(v_next_seq::TEXT, 5, '0');
+  
+  RETURN v_patrimonio;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 ```
-
-### 2. Atualizar DynamicAssetForm.tsx
-
-Substituir a chamada separada de `generatePatrimonio` + `createAtivo` por uma única chamada RPC:
-
-```typescript
-// ANTES (duas operações separadas - problemático)
-const patrimonio = await generatePatrimonio(tipoId);
-await createAtivo.mutateAsync({ patrimonio, ...assetData });
-
-// DEPOIS (operação atômica)
-const { data, error } = await supabase.rpc('create_asset_with_patrimonio', {
-  p_tipo_id: tipoId,
-  p_nome: nome,
-  p_marca: formData.marca || null,
-  // ... demais campos
-});
-```
-
-### 3. Adicionar proteção de duplo clique
-
-Desabilitar o botão durante o submit já está implementado (`disabled={isSubmitting}`), mas vamos garantir que o form não seja submetido se já estiver em progresso.
 
 ---
 
-## Arquivos a Modificar
+## Mudanças
 
 | Arquivo | Alteração |
 |---------|-----------|
-| Migração SQL | Criar função `create_asset_with_patrimonio` |
-| `src/components/DynamicAssetForm.tsx` | Usar nova função RPC atômica |
-| `src/components/NotebookForm.tsx` | Usar nova função RPC atômica |
-| `src/hooks/useAtivos.ts` | Adicionar nova função de criação atômica |
+| Nova Migração SQL | Corrigir função `generate_patrimonio` |
 
 ---
 
 ## Resultado Esperado
 
-1. Cadastro de ativos funciona sem erro de chave duplicada
-2. Duplo clique não causa problemas
-3. Operações concorrentes são tratadas automaticamente
-4. Patrimônio sempre único e sequencial
+1. Função calcula corretamente o próximo sequencial
+2. Para NTB com último `NTB-2600024`, gerará `NTB-2600025`
+3. Cadastro de ativos funciona normalmente
+4. Não haverá mais erros de chave duplicada
 
