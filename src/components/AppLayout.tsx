@@ -124,6 +124,7 @@ const navStructure: NavEntry[] = [
   { icon: Phone, label: "Telefonia", path: "/linhas-telefonicas", module: "telefonia" },
   { icon: MessageSquare, label: "Relatórios IA", path: "/relatorios", module: "relatorios" },
   { icon: History, label: "Histórico", path: "/historico", module: "historico" },
+  { icon: FileText, label: "Contratos", path: "/contratos", module: "contratos" },
 ];
 
 // Admin items
