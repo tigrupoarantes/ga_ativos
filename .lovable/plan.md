@@ -1,102 +1,76 @@
 
 
-# Plano: Adicionar Ação de Devolver Ativo
+# Plano: Alterar Status Automaticamente ao Associar Funcionário
 
-## Objetivo
+## Problema Identificado
 
-Adicionar um botão de ação "Devolver" na lista de ativos que:
-1. Remove o funcionário responsável (funcionario_id = null)
-2. Altera o status para "disponível"
-3. O histórico é registrado automaticamente pelo trigger existente
+Ao editar um ativo e associar um funcionário, o status permanece como "disponivel" em vez de mudar para "em_uso" automaticamente. Os formulários específicos (NotebookForm, CelularForm) já implementam essa lógica, mas o formulário de edição principal em `Ativos.tsx` não.
 
-## Situação Atual
+## Comparação
 
-- A tabela de ativos tem botões de: Histórico, Editar e Excluir
-- O hook `useAtivos` tem: createAtivo, updateAtivo, deleteAtivo
-- Existe um trigger `log_asset_assignment_change` que registra automaticamente mudanças de responsável
+| Formulário | Lógica Implementada |
+|------------|---------------------|
+| NotebookForm | `const status = formData.funcionario_id ? "em_uso" : "disponivel"` |
+| CelularForm | `const status = formData.funcionario_id ? "em_uso" : "disponivel"` |
+| Ativos.tsx (edição) | Status não é alterado automaticamente |
 
-## Implementação
+## Solução
 
-### 1. Hook useAtivos - Adicionar Mutation `devolverAtivo`
-
-```typescript
-const devolverAtivo = useMutation({
-  mutationFn: async (id: string) => {
-    const { data, error } = await supabase
-      .from("assets")
-      .update({ 
-        funcionario_id: null,
-        status: "disponivel"
-      })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["ativos"] });
-    toast.success("Ativo devolvido com sucesso!");
-  },
-  onError: (error) => {
-    toast.error("Erro ao devolver ativo: " + error.message);
-  },
-});
-```
-
-### 2. Página Ativos - Adicionar Botão de Devolver
-
-Adicionar botão com ícone de "Undo2" (seta de retorno) na coluna de ações, **visível apenas para ativos com funcionário atribuído**.
-
-```tsx
-{(ativo as any).funcionario?.nome && (
-  <Button 
-    variant="ghost" 
-    size="icon" 
-    title="Devolver ativo"
-    onClick={() => handleDevolverAtivo(ativo)}
-  >
-    <Undo2 className="h-4 w-4 text-orange-500" />
-  </Button>
-)}
-```
-
-### 3. Handler de Devolução
+Modificar a função `handleSubmit` em `Ativos.tsx` para determinar o status automaticamente baseado na presença de `funcionario_id`:
 
 ```typescript
-const handleDevolverAtivo = async (ativo: typeof ativos[0]) => {
-  await devolverAtivo.mutateAsync(ativo.id);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // Determinar status automaticamente baseado no funcionário
+  const autoStatus = formData.funcionario_id ? "em_uso" : "disponivel";
+  
+  // Sanitizar campos UUID vazios para null e converter tipos
+  const sanitizedData = {
+    ...formData,
+    funcionario_id: formData.funcionario_id || null,
+    empresa_id: formData.empresa_id || null,
+    tipo_id: formData.tipo_id || null,
+    valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
+    data_aquisicao: formData.data_aquisicao || null,
+    status: autoStatus, // Status automático
+  };
+  
+  if (editingId) {
+    await updateAtivo.mutateAsync({ id: editingId, ...sanitizedData });
+  } else {
+    await createAtivo.mutateAsync(sanitizedData);
+  }
+  setIsDialogOpen(false);
+  resetForm();
 };
 ```
 
-## Arquivos a Modificar
+## Arquivo a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/useAtivos.ts` | Adicionar mutation `devolverAtivo` |
-| `src/pages/Ativos.tsx` | Importar `Undo2`, adicionar handler e botão de devolução |
+| `src/pages/Ativos.tsx` | Adicionar lógica de status automático em `handleSubmit` |
+
+## Comportamento Esperado
+
+| Ação | Status Resultante |
+|------|-------------------|
+| Criar/editar ativo **com** funcionário | `em_uso` |
+| Criar/editar ativo **sem** funcionário | `disponivel` |
+| Devolver ativo (botão existente) | `disponivel` |
 
 ## Fluxo Completo
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  Usuário clica em "Devolver"                                │
-│           ↓                                                 │
-│  updateAtivo({ funcionario_id: null, status: 'disponivel'}) │
-│           ↓                                                 │
-│  Trigger 'log_asset_assignment_change' detecta mudança      │
-│           ↓                                                 │
-│  Registro automático na tabela 'atribuicoes'                │
-│           ↓                                                 │
-│  Ativo aparece como "Disponível" sem responsável            │
-└─────────────────────────────────────────────────────────────┘
+Usuário edita ativo
+        ↓
+Seleciona funcionário no combobox
+        ↓
+handleSubmit detecta funcionario_id presente
+        ↓
+Define status = "em_uso" automaticamente
+        ↓
+Ativo aparece na lista com badge "Em Uso"
 ```
-
-## Resultado Esperado
-
-1. Botão "Devolver" aparece apenas em ativos com funcionário atribuído
-2. Ao clicar, o ativo é imediatamente liberado (funcionario_id = null, status = disponível)
-3. O histórico de atribuição é atualizado automaticamente pelo trigger
-4. Toast de sucesso confirma a operação
 
