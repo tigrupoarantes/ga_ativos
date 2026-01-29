@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useSmtpConfig, SmtpConfigInput } from "@/hooks/useSmtpConfig";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,8 @@ const isValidPortSecureCombination = (port: number, secure: boolean): boolean =>
   return true; // For non-standard ports, allow any configuration
 };
 
-export function SmtpConfigForm() {
+export const SmtpConfigForm = React.forwardRef<HTMLDivElement, object>(
+  function SmtpConfigForm(_props, ref) {
   const { user } = useAuth();
   const { smtpConfig, isLoading, saveConfig, testConnection } = useSmtpConfig();
   
@@ -115,7 +116,7 @@ export function SmtpConfigForm() {
   }
 
   return (
-    <Card>
+    <Card ref={ref}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Mail className="h-5 w-5" />
@@ -335,4 +336,5 @@ export function SmtpConfigForm() {
       </CardContent>
     </Card>
   );
-}
+});
+SmtpConfigForm.displayName = "SmtpConfigForm";

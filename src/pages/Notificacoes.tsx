@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { AppLayout } from "@/components/AppLayout";
 import { OficinaLayout } from "@/components/OficinaLayout";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -99,9 +98,8 @@ export default function Notificacoes() {
   };
 
   return (
-    <AppLayout>
-      <OficinaLayout>
-        <div className="space-y-6">
+    <OficinaLayout>
+      <div className="space-y-6">
           <PageHeader
             title="Central de Notificações"
             description="Gerencie a fila de mensagens WhatsApp e alertas automáticos"
@@ -312,8 +310,7 @@ export default function Notificacoes() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </OficinaLayout>
-    </AppLayout>
+      </div>
+    </OficinaLayout>
   );
 }
