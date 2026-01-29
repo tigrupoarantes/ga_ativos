@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { useFuncionariosCombobox } from "@/hooks/useSelectOptions";
 import { useEmpresas } from "@/hooks/useEmpresas";
-import { useAtivos, generatePatrimonio } from "@/hooks/useAtivos";
+import { useAtivos } from "@/hooks/useAtivos";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface FormFieldConfig {
   field: string;
@@ -62,7 +64,7 @@ const DEFAULT_FIELDS: FormFieldConfig[] = [
 export function DynamicAssetForm({ tipoId, tipoNome, formFields, onSuccess, onCancel }: DynamicAssetFormProps) {
   const { funcionarios } = useFuncionariosCombobox();
   const { empresas } = useEmpresas();
-  const { createAtivo } = useAtivos();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Usar campos padrão se não houver configuração
@@ -84,6 +86,9 @@ export function DynamicAssetForm({ tipoId, tipoNome, formFields, onSuccess, onCa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Proteção contra duplo clique
+    if (isSubmitting) return;
+    
     // Validar campos obrigatórios
     for (const field of fields) {
       if (field.required && !formData[field.field]) {
@@ -94,37 +99,37 @@ export function DynamicAssetForm({ tipoId, tipoNome, formFields, onSuccess, onCa
 
     setIsSubmitting(true);
     try {
-      // Gerar patrimônio automaticamente
-      const patrimonio = await generatePatrimonio(tipoId);
-      
       // Determinar status baseado no funcionário
       const status = formData.funcionario_id ? "em_uso" : "disponivel";
       
       // Gerar nome automático se não preenchido
       const nome = formData.nome || `${tipoNome} ${formData.marca || ""} ${formData.modelo || ""}`.trim();
 
-      const assetData = {
-        patrimonio,
-        nome,
-        tipo_id: tipoId,
-        status,
-        marca: formData.marca || null,
-        modelo: formData.modelo || null,
-        numero_serie: formData.numero_serie || null,
-        imei: formData.imei || null,
-        chip_linha: formData.chip_linha || null,
-        descricao: formData.descricao || null,
-        data_aquisicao: formData.data_aquisicao || null,
-        valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
-        funcionario_id: formData.funcionario_id || null,
-        empresa_id: formData.empresa_id || null,
-      };
+      // Usar função RPC atômica que gera patrimônio e insere em uma única operação
+      const { data, error } = await supabase.rpc('create_asset_with_patrimonio', {
+        p_tipo_id: tipoId,
+        p_nome: nome,
+        p_marca: formData.marca || null,
+        p_modelo: formData.modelo || null,
+        p_numero_serie: formData.numero_serie || null,
+        p_imei: formData.imei || null,
+        p_chip_linha: formData.chip_linha || null,
+        p_descricao: formData.descricao || null,
+        p_data_aquisicao: formData.data_aquisicao || null,
+        p_valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
+        p_funcionario_id: formData.funcionario_id || null,
+        p_empresa_id: formData.empresa_id || null,
+        p_status: status,
+      });
 
-      await createAtivo.mutateAsync(assetData);
+      if (error) throw error;
+
+      toast.success("Ativo criado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["ativos"] });
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao criar ativo:", error);
-      toast.error("Erro ao criar ativo");
+      toast.error("Erro ao criar ativo: " + (error.message || "Erro desconhecido"));
     } finally {
       setIsSubmitting(false);
     }
