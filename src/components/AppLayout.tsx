@@ -124,13 +124,13 @@ const navStructure: NavEntry[] = [
   { icon: Phone, label: "Telefonia", path: "/linhas-telefonicas", module: "telefonia" },
   { icon: MessageSquare, label: "Relatórios IA", path: "/relatorios", module: "relatorios" },
   { icon: History, label: "Histórico", path: "/historico", module: "historico" },
-  { icon: Settings, label: "Configurações", path: "/configuracoes", module: "configuracoes" },
 ];
 
 // Admin items
 const adminItems: NavItem[] = [
   { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
   { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
+  { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
 ];
 
 function NavContent() {
