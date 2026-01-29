@@ -1,83 +1,63 @@
 
-# Plano de Correção - Página de Notificações e Configurações
+# Plano: Reorganização de Configurações WhatsApp e Menu de Administração
 
-## Problemas Identificados
+## Resumo
 
-Analisei os logs de console e o código, encontrando dois problemas principais:
+Vamos reorganizar a estrutura de navegação para:
+1. Adicionar configuração de credenciais WhatsApp dentro da página de Configurações
+2. Mover o item "Configurações" para dentro da seção "Administração" no menu lateral
+3. Tornar ambos visíveis apenas para administradores
 
-### Problema 1: Layout Duplicado na Página de Notificações
-A página `Notificacoes.tsx` envolve o conteúdo com `AppLayout` e `OficinaLayout`, mas o `OficinaLayout` já inclui internamente o `AppLayout`. Isso causa um aninhamento duplo de layouts que pode gerar comportamentos visuais estranhos.
-
-**Código atual (linha 101-103):**
-```jsx
-return (
-  <AppLayout>        {/* <- DUPLICADO */}
-    <OficinaLayout>  {/* <- Já inclui AppLayout internamente */}
-```
-
-### Problema 2: Refs em Function Components (SmtpConfigForm)
-Os avisos de console indicam que:
-1. O `SmtpConfigForm` não usa `forwardRef` mas está recebendo uma ref do `TabsContent`
-2. O componente `Select` do Radix também está gerando warnings similares
-
-Estes são warnings (não erros), mas indicam um pattern incorreto.
+A **Central de Notificações** (`/oficina/notificacoes`) permanece no módulo Oficina pois é uma ferramenta operacional (monitoramento de fila, envio de mensagens), não configuração.
 
 ---
 
-## Correções Planejadas
+## Arquitetura Proposta
 
-### Correção 1: Remover AppLayout duplicado de Notificacoes.tsx
-
-Remover o wrapper `<AppLayout>` pois o `OficinaLayout` já o inclui.
-
-**Antes:**
-```jsx
-return (
-  <AppLayout>
-    <OficinaLayout>
-      <div className="space-y-6">
-        ...
-      </div>
-    </OficinaLayout>
-  </AppLayout>
-);
+```text
+Menu Lateral (Sidebar)
+├── Dashboard
+├── Patrimônio (grupo colapsável)
+│   ├── Ativos
+│   └── Tipos de Ativos
+├── Pessoas (grupo colapsável)
+│   ├── Funcionários
+│   └── Equipes
+├── Frota (grupo colapsável)
+│   ├── Veículos
+│   └── Oficina (inclui Central de Notificações como submenu)
+├── Telefonia
+├── Relatórios IA
+├── Histórico
+│
+└── ADMINISTRAÇÃO (seção de admin - visível apenas para admins)
+    ├── Usuários
+    ├── Permissões
+    └── Configurações ← MOVIDO PARA CÁ
 ```
 
-**Depois:**
-```jsx
-return (
-  <OficinaLayout>
-    <div className="space-y-6">
-      ...
-    </div>
-  </OficinaLayout>
-);
-```
+---
 
-### Correção 2: Adicionar forwardRef ao SmtpConfigForm
+## Mudanças na Página de Configurações
 
-Converter o `SmtpConfigForm` para usar `React.forwardRef` para eliminar o warning de refs.
+### Nova aba "Integrações" (apenas para admins)
 
-**Antes:**
-```jsx
-export function SmtpConfigForm() {
-  ...
-}
-```
+Dentro de `/configuracoes`, adicionaremos uma nova aba chamada **"Integrações"** que conterá:
 
-**Depois:**
-```jsx
-export const SmtpConfigForm = React.forwardRef<HTMLDivElement, {}>(
-  function SmtpConfigForm(props, ref) {
-    ...
-    return (
-      <Card ref={ref}>
-        ...
-      </Card>
-    );
-  }
-);
-SmtpConfigForm.displayName = "SmtpConfigForm";
+1. **Configuração SMTP** (já existente, movido do "Sistema")
+2. **Configuração WhatsApp** (NOVO)
+   - Campo para WHATSAPP_ACCESS_TOKEN
+   - Campo para WHATSAPP_PHONE_NUMBER_ID  
+   - Botão de teste de conexão
+   - Instruções de como obter as credenciais
+
+```text
+Configurações (apenas admins)
+├── Geral (preferências pessoais + gestão de empresas)
+├── Notificações (preferências de alertas)
+├── Segurança (links para Permissões e Usuários)
+├── Sistema (modo manutenção, logs)
+└── Integrações (SMTP + WhatsApp) ← NOVA ABA
 ```
 
 ---
@@ -86,22 +66,107 @@ SmtpConfigForm.displayName = "SmtpConfigForm";
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/Notificacoes.tsx` | Remover wrapper `<AppLayout>` duplicado |
-| `src/components/SmtpConfigForm.tsx` | Adicionar `forwardRef` para eliminar warning de refs |
+| `src/components/AppLayout.tsx` | Mover "Configurações" de item normal para dentro da seção "Administração" |
+| `src/pages/Configuracoes.tsx` | Adicionar aba "Integrações" com form de configuração WhatsApp |
+| `src/components/WhatsAppConfigForm.tsx` | NOVO - Componente de configuração de credenciais WhatsApp |
 
 ---
 
 ## Detalhes Técnicos
 
-### Por que o layout estava duplicado?
-O `OficinaLayout` foi desenhado como um wrapper completo que já inclui o `AppLayout` internamente (linha 26 e 82 de OficinaLayout.tsx). Outras páginas do módulo Oficina como `Agenda.tsx`, `Lavagens.tsx` e `KmColetas.tsx` não têm esse problema porque já usam apenas o `OficinaLayout`.
+### 1. Modificação do Menu Lateral (AppLayout.tsx)
 
-### Por que o warning de refs aparece?
-O Radix UI `TabsContent` tenta passar uma ref para seus children diretos. Quando o child é um function component sem `forwardRef`, o React gera um warning. A solução é envolver o componente com `forwardRef`.
+**Antes:**
+```typescript
+const navStructure: NavEntry[] = [
+  // ... outros itens
+  { icon: Settings, label: "Configurações", path: "/configuracoes", module: "configuracoes" },
+];
+
+const adminItems: NavItem[] = [
+  { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
+  { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
+];
+```
+
+**Depois:**
+```typescript
+const navStructure: NavEntry[] = [
+  // ... outros itens (SEM Configurações)
+];
+
+const adminItems: NavItem[] = [
+  { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
+  { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
+  { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" }, // ADICIONADO
+];
+```
+
+### 2. Nova Aba "Integrações" em Configurações
+
+A aba conterá:
+- **SmtpConfigForm** (movido de "Sistema")
+- **WhatsAppConfigForm** (novo componente)
+
+O formulário de WhatsApp irá:
+1. Verificar se os secrets já estão configurados via edge function
+2. Permitir entrada de novos valores
+3. Testar a conexão com a API do WhatsApp
+4. Salvar via backend (edge function que atualiza secrets)
+
+### 3. Novo Componente WhatsAppConfigForm
+
+```typescript
+// src/components/WhatsAppConfigForm.tsx
+export const WhatsAppConfigForm = React.forwardRef<HTMLDivElement, object>(
+  function WhatsAppConfigForm(_props, ref) {
+    // Form para:
+    // - WHATSAPP_ACCESS_TOKEN (campo password/masked)
+    // - WHATSAPP_PHONE_NUMBER_ID (campo texto)
+    // - Botão "Testar Conexão"
+    // - Instruções com link para Meta Business Suite
+  }
+);
+```
+
+### 4. Proteção de Acesso
+
+A página de Configurações já verifica `isAdmin` para mostrar abas restritas:
+
+```typescript
+const isAdmin = userRole === "admin" || userRole === "diretor";
+```
+
+Com a mudança no menu, apenas admins verão o item Configurações na seção Administração.
+
+---
+
+## Fluxo de Configuração de WhatsApp
+
+1. Admin acessa Configurações → Integrações
+2. Vê status atual (configurado/não configurado)
+3. Insere credenciais do Meta Business Suite
+4. Clica em "Testar Conexão"
+5. Sistema valida via edge function
+6. Credenciais são salvas como secrets
+
+---
+
+## O Que NÃO Muda
+
+- **Central de Notificações** (`/oficina/notificacoes`) continua no módulo Oficina
+  - É uma ferramenta operacional para monitorar fila e executar envios
+  - Não é configuração de sistema
+  
+- **Fluxo de envio de WhatsApp** permanece igual
+  - Edge functions `whatsapp-send` e `workshop-scheduler`
+  - Tabela `notification_jobs`
 
 ---
 
 ## Resultado Esperado
-- Página de Notificações renderiza corretamente sem layouts duplicados
-- Console limpo sem warnings de refs
-- Funcionalidade mantida integralmente
+
+1. Menu lateral mais organizado com seção Administração consolidada
+2. Configurações de integrações (SMTP + WhatsApp) centralizadas
+3. Apenas administradores veem e acessam Configurações
+4. Central de Notificações permanece acessível na Oficina para operação do dia-a-dia
