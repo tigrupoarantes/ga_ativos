@@ -1460,6 +1460,56 @@ export type Database = {
           },
         ]
       }
+      wash_plans: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          estimated_minutes: number | null
+          frequency_days: number | null
+          id: string
+          notes: string | null
+          preferred_weekday: number | null
+          status: string
+          updated_at: string | null
+          vehicle_id: string
+          wash_type: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          estimated_minutes?: number | null
+          frequency_days?: number | null
+          id?: string
+          notes?: string | null
+          preferred_weekday?: number | null
+          status?: string
+          updated_at?: string | null
+          vehicle_id: string
+          wash_type?: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          estimated_minutes?: number | null
+          frequency_days?: number | null
+          id?: string
+          notes?: string | null
+          preferred_weekday?: number | null
+          status?: string
+          updated_at?: string | null
+          vehicle_id?: string
+          wash_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wash_plans_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
