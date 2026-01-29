@@ -61,7 +61,7 @@ export default function Ativos() {
     (a) =>
       a.nome?.toLowerCase().includes(search.toLowerCase()) ||
       a.patrimonio?.toLowerCase().includes(search.toLowerCase()) ||
-      a.marca?.toLowerCase().includes(search.toLowerCase())
+      a.numero_serie?.toLowerCase().includes(search.toLowerCase())
   );
 
   // Obter tipo selecionado e seus campos de formulário
