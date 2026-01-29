@@ -102,6 +102,30 @@ export function useAtivos() {
     },
   });
 
+  const devolverAtivo = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("assets")
+        .update({ 
+          funcionario_id: null,
+          status: "disponivel"
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ativos"] });
+      toast.success("Ativo devolvido com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao devolver ativo: " + error.message);
+    },
+  });
+
   return {
     ativos,
     isLoading,
@@ -109,6 +133,7 @@ export function useAtivos() {
     createAtivo,
     updateAtivo,
     deleteAtivo,
+    devolverAtivo,
   };
 }
 
