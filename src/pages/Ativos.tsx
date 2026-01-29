@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
@@ -30,7 +30,7 @@ const statusColors: Record<string, string> = {
 
 export default function Ativos() {
   const queryClient = useQueryClient();
-  const { ativos, isLoading, createAtivo, updateAtivo, deleteAtivo } = useAtivos();
+  const { ativos, isLoading, createAtivo, updateAtivo, deleteAtivo, devolverAtivo } = useAtivos();
   const { tipos } = useTiposAtivos();
   const { funcionarios } = useFuncionariosCombobox();
   const { empresas } = useEmpresas();
@@ -157,6 +157,10 @@ export default function Ativos() {
   const handleOpenHistorico = (ativo: typeof ativos[0]) => {
     setHistoricoAtivoId(ativo.id);
     setHistoricoAtivoNome(ativo.nome);
+  };
+
+  const handleDevolverAtivo = async (ativo: typeof ativos[0]) => {
+    await devolverAtivo.mutateAsync(ativo.id);
   };
 
   const handleDialogClose = (open: boolean) => {
@@ -453,6 +457,17 @@ export default function Ativos() {
                         >
                           <History className="h-4 w-4 text-muted-foreground" />
                         </Button>
+                        {(ativo as any).funcionario?.nome && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            title="Devolver ativo"
+                            onClick={() => handleDevolverAtivo(ativo)}
+                            disabled={devolverAtivo.isPending}
+                          >
+                            <Undo2 className="h-4 w-4 text-orange-500" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(ativo)}>
                           <Edit className="h-4 w-4" />
                         </Button>
