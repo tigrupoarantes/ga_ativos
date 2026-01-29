@@ -972,6 +972,102 @@ export type Database = {
           },
         ]
       }
+      service_appointments: {
+        Row: {
+          active: boolean | null
+          assigned_to_employee_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          origin: string
+          preventive_plan_id: string | null
+          priority: string | null
+          requested_by_employee_id: string | null
+          scheduled_at: string
+          service_type: string
+          status: string
+          updated_at: string | null
+          vehicle_id: string
+          wash_plan_id: string | null
+          work_order_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          assigned_to_employee_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string
+          preventive_plan_id?: string | null
+          priority?: string | null
+          requested_by_employee_id?: string | null
+          scheduled_at: string
+          service_type: string
+          status?: string
+          updated_at?: string | null
+          vehicle_id: string
+          wash_plan_id?: string | null
+          work_order_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          assigned_to_employee_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string
+          preventive_plan_id?: string | null
+          priority?: string | null
+          requested_by_employee_id?: string | null
+          scheduled_at?: string
+          service_type?: string
+          status?: string
+          updated_at?: string | null
+          vehicle_id?: string
+          wash_plan_id?: string | null
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_appointments_assigned_to_employee_id_fkey"
+            columns: ["assigned_to_employee_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_appointments_preventive_plan_id_fkey"
+            columns: ["preventive_plan_id"]
+            isOneToOne: false
+            referencedRelation: "preventivas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_appointments_requested_by_employee_id_fkey"
+            columns: ["requested_by_employee_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_appointments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_appointments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       smtp_config: {
         Row: {
           created_at: string | null

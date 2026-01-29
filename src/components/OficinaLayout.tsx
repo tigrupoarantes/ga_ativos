@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Wrench, Gauge, ClipboardList, Package, ShieldCheck, Droplets } from "lucide-react";
+import { Wrench, Gauge, ClipboardList, Package, ShieldCheck, Droplets, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/AppLayout";
 
@@ -10,6 +10,7 @@ interface OficinaLayoutProps {
 
 const subNavItems = [
   { icon: Gauge, label: "Dashboard", shortLabel: "Dash", path: "/oficina" },
+  { icon: CalendarDays, label: "Agenda", shortLabel: "Agenda", path: "/oficina/agenda" },
   { icon: ClipboardList, label: "Ordens de Serviço", shortLabel: "OS", path: "/oficina/os" },
   { icon: Package, label: "Peças e Estoque", shortLabel: "Peças", path: "/oficina/pecas" },
   { icon: ShieldCheck, label: "Preventivas", shortLabel: "Prev.", path: "/oficina/preventivas" },
@@ -43,6 +44,7 @@ export function OficinaLayout({ children }: OficinaLayoutProps) {
           {subNavItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path ||
+              (item.path === "/oficina/agenda" && location.pathname.startsWith("/oficina/agenda")) ||
               (item.path === "/oficina/pecas" && location.pathname.startsWith("/oficina/pecas")) ||
               (item.path === "/oficina/preventivas" && location.pathname.startsWith("/oficina/preventivas")) ||
               (item.path === "/oficina/lavagem" && location.pathname.startsWith("/oficina/lavagem"));

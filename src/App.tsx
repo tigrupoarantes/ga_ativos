@@ -29,6 +29,7 @@ import Permissoes from "./pages/Permissoes";
 import Usuarios from "./pages/Usuarios";
 import Historico from "./pages/Historico";
 import Oficina from "./pages/Oficina";
+import Agenda from "./pages/Agenda";
 import OrdensServico from "./pages/OrdensServico";
 import Pecas from "./pages/Pecas";
 import Preventivas from "./pages/Preventivas";
@@ -77,6 +78,7 @@ const App = () => (
             
             {/* Oficina */}
             <Route path="/oficina" element={<ProtectedRoute><Oficina /></ProtectedRoute>} />
+            <Route path="/oficina/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/oficina/ordens" element={<ProtectedRoute><OrdensServico /></ProtectedRoute>} />
             <Route path="/oficina/pecas" element={<ProtectedRoute><Pecas /></ProtectedRoute>} />
             <Route path="/oficina/preventivas" element={<ProtectedRoute><Preventivas /></ProtectedRoute>} />
