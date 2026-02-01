@@ -1,19 +1,105 @@
+import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Shield, Users, Bell, Database, Plug, Building2, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Settings, Shield, Users, Bell, Database, Plug, Building2, Plus, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
 import { WhatsAppConfigForm } from "@/components/WhatsAppConfigForm";
 import { SyncToGA360 } from "@/components/SyncToGA360";
+import { useEmpresas } from "@/hooks/useEmpresas";
+import { CompanyCard } from "@/components/admin/CompanyCard";
+import { CompanyFormDialog } from "@/components/admin/CompanyFormDialog";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 export default function Configuracoes() {
   const { userRole } = useAuth();
   const isAdmin = userRole === "admin" || userRole === "diretor";
+  
+  // State for companies management
+  const { empresas, isLoading, createEmpresa, updateEmpresa, deleteEmpresa } = useEmpresas();
+  const [search, setSearch] = useState("");
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<typeof empresas[0] | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<typeof empresas[0] | null>(null);
+
+  const filteredEmpresas = empresas.filter(
+    (e) =>
+      e.nome?.toLowerCase().includes(search.toLowerCase()) ||
+      e.cnpj?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleAddCompany = () => {
+    setEditingCompany(null);
+    setCompanyDialogOpen(true);
+  };
+
+  const handleEditCompany = (empresa: typeof empresas[0]) => {
+    setEditingCompany(empresa);
+    setCompanyDialogOpen(true);
+  };
+
+  const handleDeleteCompanyClick = (empresa: typeof empresas[0]) => {
+    setCompanyToDelete(empresa);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCompanySubmit = async (data: {
+    nome: string;
+    razao_social: string;
+    cnpj: string;
+    endereco: string;
+    telefone: string;
+    email: string;
+    logo_url: string;
+    color: string;
+    is_auditable: boolean;
+  }) => {
+    if (editingCompany) {
+      await updateEmpresa.mutateAsync({
+        id: editingCompany.id,
+        nome: data.nome,
+        razao_social: data.razao_social || undefined,
+        cnpj: data.cnpj || undefined,
+        endereco: data.endereco || undefined,
+        telefone: data.telefone || undefined,
+        email: data.email || undefined,
+        logo_url: data.logo_url || undefined,
+        color: data.color || undefined,
+        is_auditable: data.is_auditable,
+      });
+    } else {
+      await createEmpresa.mutateAsync({
+        nome: data.nome,
+        razao_social: data.razao_social || undefined,
+        cnpj: data.cnpj || undefined,
+        endereco: data.endereco || undefined,
+        telefone: data.telefone || undefined,
+        email: data.email || undefined,
+        logo_url: data.logo_url || undefined,
+        color: data.color || undefined,
+        is_auditable: data.is_auditable,
+      });
+    }
+    setCompanyDialogOpen(false);
+    setEditingCompany(null);
+  };
+
+  const handleConfirmDeleteCompany = async () => {
+    if (companyToDelete) {
+      await deleteEmpresa.mutateAsync(companyToDelete.id);
+      setDeleteDialogOpen(false);
+      setCompanyToDelete(null);
+    }
+  };
 
   return (
     <AppLayout>
@@ -27,6 +113,7 @@ export default function Configuracoes() {
         <Tabs defaultValue="geral" className="space-y-6">
           <TabsList>
             <TabsTrigger value="geral">Geral</TabsTrigger>
+            {isAdmin && <TabsTrigger value="empresas">Empresas</TabsTrigger>}
             <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
             {isAdmin && <TabsTrigger value="seguranca">Segurança</TabsTrigger>}
             {isAdmin && <TabsTrigger value="sistema">Sistema</TabsTrigger>}
@@ -62,29 +149,57 @@ export default function Configuracoes() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Link to Organizational Structure for Admins */}
-            {isAdmin && (
-              <Link to="/estrutura-organizacional">
-                <Card className="cursor-pointer hover:bg-accent transition-colors">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-5 w-5 text-muted-foreground" />
-                        <CardTitle className="text-base">Estrutura Organizacional</CardTitle>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Gerencie empresas e áreas do Grupo
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            )}
           </TabsContent>
+
+          {/* Empresas Tab - Organizational Structure integrated */}
+          {isAdmin && (
+            <TabsContent value="empresas" className="space-y-6">
+              {/* Header with search and add button */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar empresas..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10 w-[300px]"
+                  />
+                </div>
+                <Button onClick={handleAddCompany}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Empresa
+                </Button>
+              </div>
+
+              {/* Grid of Company Cards */}
+              {isLoading ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-64 w-full" />
+                  ))}
+                </div>
+              ) : filteredEmpresas.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Nenhuma empresa encontrada</p>
+                  <p className="text-sm">
+                    {search ? "Tente outra busca" : "Clique em 'Nova Empresa' para começar"}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredEmpresas.map((empresa) => (
+                    <CompanyCard
+                      key={empresa.id}
+                      empresa={empresa}
+                      onEdit={() => handleEditCompany(empresa)}
+                      onDelete={() => handleDeleteCompanyClick(empresa)}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
 
           <TabsContent value="notificacoes" className="space-y-6">
             <Card>
@@ -255,6 +370,39 @@ export default function Configuracoes() {
           )}
         </Tabs>
       </div>
+
+      {/* Company Form Dialog */}
+      <CompanyFormDialog
+        open={companyDialogOpen}
+        onOpenChange={(open) => {
+          setCompanyDialogOpen(open);
+          if (!open) setEditingCompany(null);
+        }}
+        onSubmit={handleCompanySubmit}
+        initialData={editingCompany ? {
+          nome: editingCompany.nome || "",
+          razao_social: editingCompany.razao_social || "",
+          cnpj: editingCompany.cnpj || "",
+          endereco: editingCompany.endereco || "",
+          telefone: editingCompany.telefone || "",
+          email: editingCompany.email || "",
+          logo_url: (editingCompany as any).logo_url || "",
+          color: (editingCompany as any).color || "#0B3D91",
+          is_auditable: (editingCompany as any).is_auditable || false,
+        } : undefined}
+        isEditing={!!editingCompany}
+        isLoading={createEmpresa.isPending || updateEmpresa.isPending}
+      />
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDeleteCompany}
+        itemName={companyToDelete?.nome || ""}
+        itemType="empresa"
+        isLoading={deleteEmpresa.isPending}
+      />
     </AppLayout>
   );
 }

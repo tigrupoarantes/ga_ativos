@@ -17,7 +17,6 @@ import Funcionarios from "./pages/Funcionarios";
 
 import Empresas from "./pages/Empresas";
 import Equipes from "./pages/Equipes";
-import EstruturaOrganizacional from "./pages/EstruturaOrganizacional";
 import Veiculos from "./pages/Veiculos";
 
 import VeiculosMultas from "./pages/VeiculosMultas";
@@ -73,7 +72,6 @@ const App = () => (
             
             <Route path="/empresas" element={<ProtectedRoute><Empresas /></ProtectedRoute>} />
             <Route path="/equipes" element={<ProtectedRoute><Equipes /></ProtectedRoute>} />
-            <Route path="/estrutura-organizacional" element={<ProtectedRoute><EstruturaOrganizacional /></ProtectedRoute>} />
             
             {/* Veículos */}
             <Route path="/veiculos" element={<ProtectedRoute><Veiculos /></ProtectedRoute>} />
