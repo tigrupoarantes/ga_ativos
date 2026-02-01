@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { RefreshCw, Building2, Users, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useSyncToGA360, SyncType } from "@/hooks/useSyncToGA360";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function SyncToGA360() {
-  const { sync, isLoading, lastResult } = useSyncToGA360();
+  const { sync, isLoading, lastResult, progress } = useSyncToGA360();
   const [showErrors, setShowErrors] = useState(false);
 
   const handleSync = async (syncType: SyncType) => {
@@ -19,11 +20,13 @@ export function SyncToGA360() {
     ...(lastResult?.result.funcionarios.errors || [])
   ];
 
+  const isProcessing = isLoading && progress.phase !== 'idle' && progress.phase !== 'complete';
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <RefreshCw className="h-5 w-5" />
+          <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
           <CardTitle>Sincronização GA360</CardTitle>
         </div>
         <CardDescription>
@@ -31,6 +34,32 @@ export function SyncToGA360() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Progress Section */}
+        {isProcessing && (
+          <div className="space-y-4 p-4 rounded-lg bg-muted/50 border">
+            <div className="flex items-center gap-3">
+              {progress.phase === 'empresas' ? (
+                <Building2 className="h-5 w-5 text-primary animate-pulse" />
+              ) : (
+                <Users className="h-5 w-5 text-primary animate-pulse" />
+              )}
+              <span className="font-medium">
+                {progress.phase === 'empresas' ? 'Sincronizando Empresas' : 'Sincronizando Funcionários'}
+              </span>
+            </div>
+            
+            <Progress value={progress.percentage} className="h-3" />
+            
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>{progress.message}</span>
+              <span className="font-mono">
+                {progress.current} / {progress.total} ({progress.percentage}%)
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
         <div className="grid gap-4 md:grid-cols-3">
           <Button
             variant="outline"
@@ -62,7 +91,8 @@ export function SyncToGA360() {
           </Button>
         </div>
 
-        {lastResult && (
+        {/* Results Section */}
+        {lastResult && !isProcessing && (
           <div className="space-y-4 pt-4 border-t">
             <div className="flex items-center gap-2">
               {lastResult.success ? (
@@ -114,7 +144,7 @@ export function SyncToGA360() {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="mt-2 p-3 rounded-lg bg-destructive/10 text-sm space-y-1">
+                  <div className="mt-2 p-3 rounded-lg bg-destructive/10 text-sm space-y-1 max-h-48 overflow-y-auto">
                     {allErrors.map((error, index) => (
                       <p key={index} className="text-destructive">
                         • {error}
