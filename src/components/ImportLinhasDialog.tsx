@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, FileText, AlertCircle, CheckCircle, Download } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/external-client";
 
 // CSV Template constants
 const CSV_HEADERS = ['NUMERO', 'CPF_FUNCIONARIO', 'OPERADORA', 'PLANO', 'OBSERVACOES'];

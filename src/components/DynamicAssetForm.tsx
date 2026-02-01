@@ -13,7 +13,7 @@ import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { useFuncionariosCombobox } from "@/hooks/useSelectOptions";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useAtivos } from "@/hooks/useAtivos";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";

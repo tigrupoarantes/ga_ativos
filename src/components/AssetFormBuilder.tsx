@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, GripVertical, Check } from "lucide-react";
 import { useTiposAtivos } from "@/hooks/useAtivos";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/external-client";
 import { useQueryClient } from "@tanstack/react-query";
 
 export interface FormFieldConfig {
