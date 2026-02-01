@@ -111,7 +111,6 @@ const navStructure: NavEntry[] = [
     module: "funcionarios",
     children: [
       { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
-      { icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "funcionarios" },
     ],
   },
   {
@@ -131,6 +130,7 @@ const navStructure: NavEntry[] = [
 
 // Admin items
 const adminItems: NavItem[] = [
+  { icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "admin" },
   { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
   { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
