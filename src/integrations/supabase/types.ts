@@ -74,6 +74,54 @@ export type Database = {
         }
         Relationships: []
       }
+      areas: {
+        Row: {
+          active: boolean | null
+          company_id: string | null
+          cost_center: string | null
+          created_at: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          company_id?: string | null
+          cost_center?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          company_id?: string | null
+          cost_center?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "areas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "areas_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_types: {
         Row: {
           active: boolean | null
@@ -358,10 +406,14 @@ export type Database = {
         Row: {
           active: boolean | null
           cnpj: string | null
+          color: string | null
           created_at: string | null
           email: string | null
           endereco: string | null
+          external_id: string | null
           id: string
+          is_auditable: boolean | null
+          logo_url: string | null
           nome: string
           razao_social: string | null
           telefone: string | null
@@ -370,10 +422,14 @@ export type Database = {
         Insert: {
           active?: boolean | null
           cnpj?: string | null
+          color?: string | null
           created_at?: string | null
           email?: string | null
           endereco?: string | null
+          external_id?: string | null
           id?: string
+          is_auditable?: boolean | null
+          logo_url?: string | null
           nome: string
           razao_social?: string | null
           telefone?: string | null
@@ -382,10 +438,14 @@ export type Database = {
         Update: {
           active?: boolean | null
           cnpj?: string | null
+          color?: string | null
           created_at?: string | null
           email?: string | null
           endereco?: string | null
+          external_id?: string | null
           id?: string
+          is_auditable?: boolean | null
+          logo_url?: string | null
           nome?: string
           razao_social?: string | null
           telefone?: string | null
@@ -444,6 +504,7 @@ export type Database = {
       funcionarios: {
         Row: {
           active: boolean | null
+          area_id: string | null
           cargo: string | null
           cnh_categoria: string | null
           cnh_numero: string | null
@@ -465,6 +526,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          area_id?: string | null
           cargo?: string | null
           cnh_categoria?: string | null
           cnh_numero?: string | null
@@ -486,6 +548,7 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          area_id?: string | null
           cargo?: string | null
           cnh_categoria?: string | null
           cnh_numero?: string | null
@@ -506,6 +569,13 @@ export type Database = {
           whatsapp_phone_e164?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "funcionarios_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "funcionarios_empresa_id_fkey"
             columns: ["empresa_id"]
