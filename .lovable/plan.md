@@ -1,112 +1,46 @@
 
 
-# Plano: Compatibilizar Sync GA360 com Tabela `companies`
+# Plano: Corrigir Acesso Service Role no GA360
 
-## Problema
+## Diagnóstico Atualizado
 
-A edge function está tentando acessar a tabela `empresas` no GA360, mas o esquema real usa:
+A tabela `companies` está sendo encontrada corretamente. O problema é que a **Edge Function não consegue bypassar o RLS**, mesmo com políticas criadas para `service_role`.
 
-```text
-ORIGEM (Ativos Arantes)          DESTINO (GA360)
-┌────────────────────┐           ┌────────────────────┐
-│ Tabela: empresas   │           │ Tabela: companies  │
-├────────────────────┤           ├────────────────────┤
-│ nome               │  ──────>  │ name               │
-│ cnpj               │  ──────>  │ cnpj               │
-│ active             │  ──────>  │ is_active          │
-│ logo_url           │  ──────>  │ logo_url           │
-│ color              │  ──────>  │ color              │
-│ external_id        │  ──────>  │ external_id        │
-│ is_auditable       │  ──────>  │ is_auditable       │
-│ razao_social       │     X     │ (não existe)       │
-│ endereco           │     X     │ (não existe)       │
-│ telefone           │     X     │ (não existe)       │
-│ email              │     X     │ (não existe)       │
-└────────────────────┘           └────────────────────┘
-```
+## Causa Provável
 
-## Alterações
+A secret `GA360_SUPABASE_SERVICE_KEY` contém a **anon key** em vez da **service_role key**.
 
-### Arquivo: `supabase/functions/sync-to-ga360/index.ts`
+Quando você cria um cliente Supabase com a service_role key, ele automaticamente ignora todas as políticas RLS. Isso não está acontecendo, o que indica key incorreta.
 
-**1. Trocar nome da tabela de destino:**
-- Linha 89: `.from('empresas')` para `.from('companies')`
-- Linha 111-113: `.from('empresas')` para `.from('companies')`
-- Linha 124-125: `.from('empresas')` para `.from('companies')`
-- Linha 159-163: `.from('empresas')` para `.from('companies')`
-- Linha 199-203: `.from('empresas')` para `.from('companies')`
+## Solução
 
-**2. Mapear campos corretamente (linhas 99-107):**
+### Passo 1: Obter a Service Role Key Correta
 
-```typescript
-// ANTES
-const empresaData = {
-  nome: empresa.nome,
-  razao_social: empresa.razao_social,
-  cnpj: empresa.cnpj,
-  endereco: empresa.endereco,
-  telefone: empresa.telefone,
-  email: empresa.email,
-  active: empresa.active
-};
+No projeto GA360 (Supabase Dashboard):
+1. Vá em **Settings** > **API**
+2. Na seção **Project API keys**, copie a **service_role key** (NÃO a anon/public key)
+3. A service_role key é a segunda key, marcada como "secret"
 
-// DEPOIS
-const companyData = {
-  name: empresa.nome,
-  cnpj: empresa.cnpj,
-  is_active: empresa.active ?? true,
-  logo_url: empresa.logo_url,
-  color: empresa.color,
-  external_id: empresa.external_id,
-  is_auditable: empresa.is_auditable ?? false
-};
-```
+### Passo 2: Atualizar o Secret no Lovable
 
-**3. Atualizar lógica de funcionários para buscar company_id:**
+Você precisa atualizar o secret `GA360_SUPABASE_SERVICE_KEY` com a key correta.
 
-Na seção de funcionários, onde busca empresa por CNPJ, também trocar para `companies`:
+## Verificação Rápida
 
-```typescript
-// Buscar companies por CNPJ no destino
-const { data: destCompany } = await targetSupabase
-  .from('companies')
-  .select('id')
-  .eq('cnpj', emp.cnpj)
-  .maybeSingle();
-```
+Para confirmar qual tipo de key está configurada:
 
-## Mapeamento Completo de Campos
+| Tipo de Key | Comportamento |
+|-------------|---------------|
+| anon key | Respeita RLS - precisa de políticas específicas |
+| service_role key | Ignora RLS completamente - acesso total |
 
-| Campo Origem | Campo Destino | Observação |
-|--------------|---------------|------------|
-| nome | name | Obrigatório |
-| cnpj | cnpj | Chave de match |
-| active | is_active | Default true |
-| logo_url | logo_url | Opcional |
-| color | color | Opcional |
-| external_id | external_id | Opcional |
-| is_auditable | is_auditable | Default false |
-| razao_social | - | Ignorado (não existe no destino) |
-| endereco | - | Ignorado |
-| telefone | - | Ignorado |
-| email | - | Ignorado |
+Se a key atual fosse service_role, não haveria erro de RLS.
 
-## Resultado Esperado
+## Ação Imediata
 
-Após as alterações, a sincronização mapeará corretamente:
+1. Acesse o dashboard do projeto GA360
+2. Copie a **service_role key** (não a anon key)
+3. Atualize o secret `GA360_SUPABASE_SERVICE_KEY` no Lovable com essa key
 
-```text
-ORIGEM: empresas (12 registros)
-   ↓
-   ↓  Mapeamento de campos
-   ↓
-DESTINO: companies (12 registros)
-   ✓ name = nome
-   ✓ cnpj = cnpj  
-   ✓ is_active = active
-   ✓ logo_url = logo_url
-   ✓ color = color
-   ✓ external_id = external_id
-   ✓ is_auditable = is_auditable
-```
+Após atualizar, a sincronização funcionará sem precisar de políticas RLS adicionais.
 
