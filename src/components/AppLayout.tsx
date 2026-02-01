@@ -22,7 +22,6 @@ import {
   FileText,
   Boxes,
   UsersRound,
-  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,7 +55,7 @@ const routeConfig: Record<string, { label: string; parent?: string }> = {
   "/permissoes": { label: "Permissões", parent: "/" },
   "/empresas": { label: "Empresas", parent: "/" },
   "/equipes": { label: "Equipes", parent: "/" },
-  "/estrutura-organizacional": { label: "Estrutura Organizacional", parent: "/" },
+  
   "/contratos": { label: "Contratos", parent: "/" },
   "/telefonia": { label: "Telefonia", parent: "/" },
   "/linhas-telefonicas": { label: "Linhas Telefônicas", parent: "/" },
@@ -130,7 +129,6 @@ const navStructure: NavEntry[] = [
 
 // Admin items
 const adminItems: NavItem[] = [
-  { icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "admin" },
   { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
   { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
