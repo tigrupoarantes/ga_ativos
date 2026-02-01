@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Bell, Send, RefreshCw, MessageSquare, Mail } from "lucide-react";
 import { useNotificationJobs } from "@/hooks/useNotificationJobs";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
