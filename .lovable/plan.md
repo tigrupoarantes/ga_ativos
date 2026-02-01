@@ -1,81 +1,53 @@
 
-# Plano: Integrar Estrutura Organizacional em Configurações
+# Correção: Remover Estrutura Organizacional do Menu Lateral
 
-## Problema Atual
+## O que foi esquecido
 
-Hoje existe fricção desnecessária para acessar a gestão de empresas:
+No arquivo `src/components/AppLayout.tsx`, duas referências à rota removida ainda existem:
 
-```text
-Configurações → Aba "Geral" → Card "Estrutura Organizacional" → Clique → Nova página
+| Linha | Código | Ação |
+|-------|--------|------|
+| 59 | `"/estrutura-organizacional": { label: "Estrutura Organizacional", parent: "/" }` | Remover |
+| 133 | `{ icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "admin" }` | Remover |
 
-Total: 4 cliques para chegar à funcionalidade
+## Alterações
+
+### Arquivo: `src/components/AppLayout.tsx`
+
+**1. Remover do `routeConfig` (linha 59):**
+```typescript
+// REMOVER esta linha:
+"/estrutura-organizacional": { label: "Estrutura Organizacional", parent: "/" },
 ```
 
-O card atual é apenas um atalho que adiciona uma etapa extra na jornada do usuário.
+**2. Remover do `adminItems` (linha 133):**
+```typescript
+// ANTES (linhas 131-137):
+const adminItems: NavItem[] = [
+  { icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "admin" },
+  { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
+  { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
+  { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
+];
 
-## Solução Proposta
-
-Mover toda a funcionalidade diretamente para dentro de Configurações, em uma nova aba dedicada:
-
-```text
-Configurações → Aba "Empresas" → Gestão completa
-
-Total: 2 cliques
+// DEPOIS (linhas 131-136):
+const adminItems: NavItem[] = [
+  { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
+  { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
+  { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
+];
 ```
 
-## Arquitetura da Mudança
-
-```text
-ANTES                                    DEPOIS
-┌─────────────────────────────────┐     ┌─────────────────────────────────┐
-│ Configurações                   │     │ Configurações                   │
-├─────────────────────────────────┤     ├─────────────────────────────────┤
-│ [Geral] [Notific...] [Seguran..]│     │ [Geral] [Empresas] [Notific...]│
-├─────────────────────────────────┤     ├─────────────────────────────────┤
-│ Preferências Gerais             │     │ Busca    [+ Nova Empresa]       │
-│ ──────────────────────          │     │ ────────────────────────        │
-│ Estrutura Organizacional   →    │     │ ┌──────┐ ┌──────┐ ┌──────┐     │
-│ (atalho para outra página)      │     │ │Card 1│ │Card 2│ │Card 3│     │
-│                                 │     │ └──────┘ └──────┘ └──────┘     │
-└─────────────────────────────────┘     └─────────────────────────────────┘
-         ↓ clique                                (tudo inline)
-┌─────────────────────────────────┐
-│ Estrutura Organizacional        │
-│ (página separada)               │
-└─────────────────────────────────┘
+**3. Remover import não utilizado (linha 25):**
+```typescript
+// Se Building2 não for mais usado em nenhum outro lugar, remover da linha de imports
 ```
 
-## Alterações Técnicas
+## Resultado
 
-### 1. Atualizar `src/pages/Configuracoes.tsx`
+O menu lateral de Administração terá apenas 3 itens:
+- Usuários
+- Permissões
+- Configurações
 
-| Acao | Descrição |
-|------|-----------|
-| Adicionar imports | `useEmpresas`, `CompanyCard`, `CompanyFormDialog`, `ConfirmDeleteDialog`, `Input`, `Skeleton`, `Search`, `Plus` |
-| Adicionar state | Estados para busca, dialogs de empresa (criar/editar/excluir) |
-| Nova aba "Empresas" | `<TabsTrigger value="empresas">` visível apenas para admins |
-| Conteúdo da aba | Grid de `CompanyCard` + barra de busca + botão "Nova Empresa" |
-| Remover atalho | Eliminar o card `<Link to="/estrutura-organizacional">` da aba Geral |
-
-### 2. Atualizar `src/App.tsx`
-
-| Acao | Descrição |
-|------|-----------|
-| Remover import | `EstruturaOrganizacional` |
-| Remover rota | `/estrutura-organizacional` |
-
-### 3. Excluir arquivo
-
-| Arquivo | Acao |
-|---------|------|
-| `src/pages/EstruturaOrganizacional.tsx` | Deletar (código será movido para Configurações) |
-
-## Resultado para o Usuário
-
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| Cliques para gerenciar empresas | 4 | 2 |
-| Páginas envolvidas | 2 | 1 |
-| Contexto perdido ao navegar | Sim | Não |
-
-O usuário permanece em Configurações durante toda a operação, mantendo o contexto e reduzindo a carga cognitiva conforme a filosofia de simplicidade do projeto.
+A gestão de empresas agora é acessada via **Configurações → Aba "Empresas"**.
