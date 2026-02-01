@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Users, Car } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
 import { ImportFuncionariosDialog } from "@/components/ImportFuncionariosDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
