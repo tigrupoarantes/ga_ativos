@@ -58,12 +58,12 @@ Deno.serve(async (req) => {
       funcionarios: { inserted: 0, updated: 0, errors: [] }
     };
 
-    // Mapa de empresa_id origem -> empresa_id destino (via CNPJ)
+    // Mapa de empresa_id origem -> company_id destino (via CNPJ)
     const empresaIdMap = new Map<string, string>();
 
-    // ========== SYNC EMPRESAS ==========
+    // ========== SYNC EMPRESAS -> COMPANIES ==========
     if (syncType === 'empresas' || syncType === 'all') {
-      console.log('Iniciando sincronização de empresas...');
+      console.log('Iniciando sincronização de empresas -> companies...');
       
       // Buscar empresas ativas do banco origem
       const { data: empresasOrigem, error: empresasError } = await sourceSupabase
@@ -84,9 +84,9 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            // Verificar se empresa já existe no destino por CNPJ
-            const { data: existingEmpresa, error: checkError } = await targetSupabase
-              .from('empresas')
+            // Verificar se company já existe no destino por CNPJ
+            const { data: existingCompany, error: checkError } = await targetSupabase
+              .from('companies')
               .select('id')
               .eq('cnpj', empresa.cnpj)
               .maybeSingle();
@@ -96,42 +96,43 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            const empresaData = {
-              nome: empresa.nome,
-              razao_social: empresa.razao_social,
+            // Mapear campos: empresas (origem) -> companies (destino)
+            const companyData = {
+              name: empresa.nome,
               cnpj: empresa.cnpj,
-              endereco: empresa.endereco,
-              telefone: empresa.telefone,
-              email: empresa.email,
-              active: empresa.active
+              is_active: empresa.active ?? true,
+              logo_url: empresa.logo_url,
+              color: empresa.color,
+              external_id: empresa.external_id,
+              is_auditable: empresa.is_auditable ?? false
             };
 
-            if (existingEmpresa) {
-              // Atualizar empresa existente
+            if (existingCompany) {
+              // Atualizar company existente
               const { error: updateError } = await targetSupabase
-                .from('empresas')
-                .update(empresaData)
-                .eq('id', existingEmpresa.id);
+                .from('companies')
+                .update(companyData)
+                .eq('id', existingCompany.id);
 
               if (updateError) {
                 result.empresas.errors.push(`Erro ao atualizar empresa ${empresa.cnpj}: ${updateError.message}`);
               } else {
                 result.empresas.updated++;
-                empresaIdMap.set(empresa.id, existingEmpresa.id);
+                empresaIdMap.set(empresa.id, existingCompany.id);
               }
             } else {
-              // Inserir nova empresa
-              const { data: newEmpresa, error: insertError } = await targetSupabase
-                .from('empresas')
-                .insert(empresaData)
+              // Inserir nova company
+              const { data: newCompany, error: insertError } = await targetSupabase
+                .from('companies')
+                .insert(companyData)
                 .select('id')
                 .single();
 
               if (insertError) {
                 result.empresas.errors.push(`Erro ao inserir empresa ${empresa.cnpj}: ${insertError.message}`);
-              } else if (newEmpresa) {
+              } else if (newCompany) {
                 result.empresas.inserted++;
-                empresaIdMap.set(empresa.id, newEmpresa.id);
+                empresaIdMap.set(empresa.id, newCompany.id);
               }
             }
           } catch (err) {
@@ -156,14 +157,15 @@ Deno.serve(async (req) => {
         if (empresasOrigem) {
           for (const emp of empresasOrigem) {
             if (emp.cnpj) {
-              const { data: destEmpresa } = await targetSupabase
-                .from('empresas')
+              // Buscar na tabela companies do destino
+              const { data: destCompany } = await targetSupabase
+                .from('companies')
                 .select('id')
                 .eq('cnpj', emp.cnpj)
                 .maybeSingle();
               
-              if (destEmpresa) {
-                empresaIdMap.set(emp.id, destEmpresa.id);
+              if (destCompany) {
+                empresaIdMap.set(emp.id, destCompany.id);
               }
             }
           }
@@ -189,22 +191,22 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            // Resolver empresa_id no destino
-            let targetEmpresaId: string | null = null;
+            // Resolver empresa_id no destino (agora company_id)
+            let targetCompanyId: string | null = null;
             if (func.empresa_id) {
-              targetEmpresaId = empresaIdMap.get(func.empresa_id) || null;
+              targetCompanyId = empresaIdMap.get(func.empresa_id) || null;
               
-              // Se não encontrou no mapa, buscar por CNPJ
-              if (!targetEmpresaId && func.empresas?.cnpj) {
-                const { data: destEmpresa } = await targetSupabase
-                  .from('empresas')
+              // Se não encontrou no mapa, buscar por CNPJ na tabela companies
+              if (!targetCompanyId && func.empresas?.cnpj) {
+                const { data: destCompany } = await targetSupabase
+                  .from('companies')
                   .select('id')
                   .eq('cnpj', func.empresas.cnpj)
                   .maybeSingle();
                 
-                if (destEmpresa) {
-                  targetEmpresaId = destEmpresa.id;
-                  empresaIdMap.set(func.empresa_id, destEmpresa.id);
+                if (destCompany) {
+                  targetCompanyId = destCompany.id;
+                  empresaIdMap.set(func.empresa_id, destCompany.id);
                 }
               }
             }
@@ -228,7 +230,7 @@ Deno.serve(async (req) => {
               cargo: func.cargo,
               departamento: func.departamento,
               cpf: func.cpf,
-              empresa_id: targetEmpresaId,
+              empresa_id: targetCompanyId,
               is_condutor: func.is_condutor,
               cnh_numero: func.cnh_numero,
               cnh_categoria: func.cnh_categoria,
