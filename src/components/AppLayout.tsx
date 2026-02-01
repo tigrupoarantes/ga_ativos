@@ -22,6 +22,7 @@ import {
   FileText,
   Boxes,
   UsersRound,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,6 +56,7 @@ const routeConfig: Record<string, { label: string; parent?: string }> = {
   "/permissoes": { label: "Permissões", parent: "/" },
   "/empresas": { label: "Empresas", parent: "/" },
   "/equipes": { label: "Equipes", parent: "/" },
+  "/estrutura-organizacional": { label: "Estrutura Organizacional", parent: "/" },
   "/contratos": { label: "Contratos", parent: "/" },
   "/telefonia": { label: "Telefonia", parent: "/" },
   "/linhas-telefonicas": { label: "Linhas Telefônicas", parent: "/" },
@@ -109,7 +111,7 @@ const navStructure: NavEntry[] = [
     module: "funcionarios",
     children: [
       { icon: Users, label: "Funcionários", path: "/funcionarios", module: "funcionarios" },
-      { icon: UsersRound, label: "Equipes", path: "/equipes", module: "funcionarios" },
+      { icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "funcionarios" },
     ],
   },
   {

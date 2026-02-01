@@ -1,10 +1,39 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
-import { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
-type EmpresaInsert = TablesInsert<"empresas">;
-type EmpresaUpdate = TablesUpdate<"empresas">;
+export interface Empresa {
+  id: string;
+  nome: string;
+  razao_social?: string;
+  cnpj?: string;
+  external_id?: string;
+  endereco?: string;
+  telefone?: string;
+  email?: string;
+  logo_url?: string;
+  color?: string;
+  is_auditable?: boolean;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface EmpresaInsert {
+  nome: string;
+  razao_social?: string;
+  cnpj?: string;
+  endereco?: string;
+  telefone?: string;
+  email?: string;
+  logo_url?: string;
+  color?: string;
+  is_auditable?: boolean;
+}
+
+interface EmpresaUpdate extends Partial<EmpresaInsert> {
+  id: string;
+}
 
 export function useEmpresas() {
   const queryClient = useQueryClient();
@@ -19,7 +48,7 @@ export function useEmpresas() {
         .order("nome");
 
       if (error) throw error;
-      return data;
+      return data as Empresa[];
     },
   });
 
@@ -36,6 +65,7 @@ export function useEmpresas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["empresas"] });
+      queryClient.invalidateQueries({ queryKey: ["areas"] });
       toast.success("Empresa criada com sucesso!");
     },
     onError: (error) => {
@@ -44,7 +74,7 @@ export function useEmpresas() {
   });
 
   const updateEmpresa = useMutation({
-    mutationFn: async ({ id, ...updates }: EmpresaUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...updates }: EmpresaUpdate) => {
       const { data, error } = await supabase
         .from("empresas")
         .update(updates)
@@ -75,6 +105,7 @@ export function useEmpresas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["empresas"] });
+      queryClient.invalidateQueries({ queryKey: ["areas"] });
       toast.success("Empresa excluída!");
     },
     onError: (error) => {
