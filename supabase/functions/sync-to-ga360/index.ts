@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
 
                   // Verificar se funcionário já existe no destino por CPF
                   const { data: existingFunc, error: checkError } = await targetSupabase
-                    .from('funcionarios')
+                    .from('external_employees')
                     .select('id')
                     .eq('cpf', func.cpf)
                     .maybeSingle();
@@ -279,26 +279,27 @@ Deno.serve(async (req) => {
                     continue;
                   }
 
-                  const funcData = {
-                    nome: func.nome,
+                  // Mapeamento para external_employees
+                  const employeeData = {
+                    external_id: func.id,
+                    source_system: 'gestao_ativos',
+                    company_id: targetCompanyId,
+                    full_name: func.nome,
                     email: func.email,
-                    telefone: func.telefone,
-                    cargo: func.cargo,
-                    departamento: func.departamento,
+                    phone: func.telefone,
+                    department: func.departamento,
+                    position: func.cargo,
                     cpf: func.cpf,
-                    empresa_id: targetCompanyId,
-                    is_condutor: func.is_condutor,
-                    cnh_numero: func.cnh_numero,
-                    cnh_categoria: func.cnh_categoria,
-                    cnh_validade: func.cnh_validade,
-                    active: func.active
+                    is_active: func.active ?? true,
+                    is_condutor: func.is_condutor ?? false,
+                    synced_at: new Date().toISOString()
                   };
 
                   if (existingFunc) {
                     // Atualizar funcionário existente
                     const { error: updateError } = await targetSupabase
-                      .from('funcionarios')
-                      .update(funcData)
+                      .from('external_employees')
+                      .update(employeeData)
                       .eq('id', existingFunc.id);
 
                     if (updateError) {
@@ -309,8 +310,8 @@ Deno.serve(async (req) => {
                   } else {
                     // Inserir novo funcionário
                     const { error: insertError } = await targetSupabase
-                      .from('funcionarios')
-                      .insert(funcData);
+                      .from('external_employees')
+                      .insert(employeeData);
 
                     if (insertError) {
                       result.funcionarios.errors.push(`Erro ao inserir funcionário ${func.cpf}: ${insertError.message}`);
