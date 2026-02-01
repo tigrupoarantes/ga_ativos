@@ -1,93 +1,94 @@
 
 
-# Correção: Estrutura Organizacional Substitui Cadastro de Empresas
+# Plano: Corrigir Sincronização GA360
 
-## Problema Atual
+## Problema Identificado
 
-1. **Em Configurações (aba Geral)**: Existe `EmpresasInlineManager` - um CRUD inline de empresas
-2. **No menu Pessoas**: "Estrutura Organizacional" foi adicionada incorretamente
+A Edge Function `sync-to-ga360` está usando credenciais incorretas para o banco de origem:
 
-## Solução
+```text
+Linha 31-34 (ATUAL):
+sourceSupabase = createClient(
+  Deno.env.get("SUPABASE_URL"),           → Lovable Cloud ❌
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+)
+```
 
-A "Estrutura Organizacional" é a nova forma de cadastrar empresas e áreas, portanto:
-
-1. **Remover** o componente `EmpresasInlineManager` da página de Configurações
-2. **Adicionar** um card/link em Configurações que redireciona para `/estrutura-organizacional`
-3. **Mover** "Estrutura Organizacional" do grupo "Pessoas" para a seção "Administração" no menu lateral
+Isso causa o erro "Could not find table 'public.empresas'" porque a tabela existe no **Supabase Externo**, não no Lovable Cloud.
 
 ---
 
-## Alterações
+## Arquitetura Corrigida
 
-### 1. Arquivo: `src/pages/Configuracoes.tsx`
-
-**Remover:**
-- Import do `EmpresasInlineManager`
-- Uso do componente `{isAdmin && <EmpresasInlineManager />}` na aba Geral
-
-**Adicionar:**
-- Import do `Building2` icon (já existe)
-- Card com link para `/estrutura-organizacional` na aba Geral (para admins)
-
+```text
+┌──────────────────────────────────────┐          ┌────────────────────────────────┐
+│      SUPABASE EXTERNO (ORIGEM)       │          │          GA360 (DESTINO)       │
+│     ftksidxyhnvzdsuonwop             │  ─────>  │      zveqhxaiwghexfobjaek      │
+│                                      │   sync   │                                │
+│  - empresas ✓                        │          │  - empresas                    │
+│  - funcionarios ✓                    │          │  - funcionarios                │
+│  - veiculos                          │          │                                │
+│  - ativos                            │          │                                │
+└──────────────────────────────────────┘          └────────────────────────────────┘
+  EXTERNAL_SUPABASE_URL                            GA360_SUPABASE_URL
+  EXTERNAL_SUPABASE_SERVICE_KEY                    GA360_SUPABASE_SERVICE_KEY
 ```
-Nova estrutura da aba Geral:
-┌─────────────────────────────────────────────────────┐
-│  Preferências Gerais                                │
-│  - Tema Escuro                                      │
-│  - Exibição Compacta                                │
-└─────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────┐
-│  🏢 Estrutura Organizacional              [→]       │
-│  Gerencie empresas e áreas do Grupo                 │
-│  (Card clicável que redireciona)                    │
-└─────────────────────────────────────────────────────┘
-```
-
-### 2. Arquivo: `src/components/AppLayout.tsx`
-
-**Remover** de `navStructure` (grupo Pessoas):
-```typescript
-{ icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "funcionarios" }
-```
-
-**Adicionar** em `adminItems`:
-```typescript
-{ icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "admin" }
-```
-
-**Nova estrutura do menu:**
-```
-- Dashboard
-- Patrimônio
-  - Ativos
-  - Tipos de Ativos
-- Pessoas
-  - Funcionários          ← Apenas funcionários
-- Frota
-  - Veículos
-  - Oficina
-- Telefonia
-- Relatórios IA
-- Histórico
-- Contratos
-─────────────────────────
-ADMINISTRAÇÃO
-- Estrutura Organizacional  ← Movido para cá
-- Usuários
-- Permissões
-- Configurações
-```
-
-### 3. Arquivo: `src/components/EmpresasInlineManager.tsx`
-
-**Manter** o arquivo (pode ser útil futuramente ou para outros contextos), mas não será mais usado em Configurações.
 
 ---
 
-## Resumo das Mudanças
+## Alterações Necessárias
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/Configuracoes.tsx` | Substituir `EmpresasInlineManager` por card com link |
-| `src/components/AppLayout.tsx` | Mover item do grupo "Pessoas" para "Administração" |
+### 1. Adicionar Novas Secrets
+
+| Secret | Valor |
+|--------|-------|
+| `EXTERNAL_SUPABASE_URL` | `https://ftksidxyhnvzdsuonwop.supabase.co` |
+| `EXTERNAL_SUPABASE_SERVICE_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (fornecida) |
+
+### 2. Atualizar Edge Function
+
+**Arquivo:** `supabase/functions/sync-to-ga360/index.ts`
+
+**Mudança nas linhas 30-45:**
+
+```typescript
+// ANTES (incorreto)
+const sourceSupabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+);
+
+// DEPOIS (corrigido)
+const externalUrl = Deno.env.get("EXTERNAL_SUPABASE_URL");
+const externalKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_KEY");
+
+if (!externalUrl || !externalKey) {
+  return new Response(
+    JSON.stringify({ error: 'Credenciais do Supabase externo não configuradas' }),
+    { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+const sourceSupabase = createClient(externalUrl, externalKey);
+```
+
+---
+
+## Resumo de Alterações
+
+| Item | Ação |
+|------|------|
+| Secret `EXTERNAL_SUPABASE_URL` | Criar |
+| Secret `EXTERNAL_SUPABASE_SERVICE_KEY` | Criar |
+| `supabase/functions/sync-to-ga360/index.ts` | Atualizar linhas 30-34 |
+
+---
+
+## Resultado Esperado
+
+Após as alterações, a sincronização irá:
+1. Ler empresas e funcionários do **Supabase Externo** (ftksidxyhnvzdsuonwop)
+2. Gravar/atualizar no **GA360** (zveqhxaiwghexfobjaek)
+3. Usar CNPJ como chave única para empresas
+4. Usar CPF como chave única para funcionários
 
