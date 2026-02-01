@@ -1,176 +1,351 @@
 
-# Plano: Sincronização Manual entre Ativos Arantes e GA360
+# Plano: Padronizar Estrutura Organizacional (Empresas + Areas)
 
-## Objetivo
-Criar um sistema de sincronização manual que permite exportar os dados de **empresas** e **funcionarios** do Ativos Arantes (banco master) para o GA360, mantendo os bancos de dados separados.
+## Resumo
+
+Replicar a estrutura do GA360 no Gestao de Ativos, transformando a gestao de "Empresas" e "Equipes" em uma estrutura mais organica com:
+- **Empresas (companies)**: com campos visuais (cor, logo) e flag de auditoria
+- **Areas**: substituindo "Equipes", com suporte a hierarquia (parent_id) e centro de custo
 
 ---
 
-## Arquitetura da Solução
+## 1. Alteracoes no Banco de Dados
+
+### 1.1 Tabela `empresas` - Adicionar campos
 
 ```text
-┌─────────────────────────────┐         ┌─────────────────────────────┐
-│     ATIVOS ARANTES          │         │         GA360               │
-│   (Master - Supabase)       │         │    (Destino - Supabase)     │
-│  ftksidxyhnvzdsuonwop       │         │    [Credenciais GA360]      │
-├─────────────────────────────┤         ├─────────────────────────────┤
-│  - empresas                 │ ──────► │  - empresas                 │
-│  - funcionarios             │  Sync   │  - funcionarios             │
-│  - equipes                  │ ──────► │  - equipes (opcional)       │
-└─────────────────────────────┘         └─────────────────────────────┘
-            │                                       ▲
-            │                                       │
-            ▼                                       │
-┌─────────────────────────────────────────────────────────────────────┐
-│                     Edge Function: sync-to-ga360                     │
-│   1. Busca dados do banco Ativos Arantes                            │
-│   2. Faz upsert no banco GA360 usando CNPJ (empresa) / CPF (func)   │
-│   3. Retorna relatório de sincronização                             │
-└─────────────────────────────────────────────────────────────────────┘
+Campos atuais:     id, nome, razao_social, cnpj, endereco, telefone, email, active
+Campos a adicionar: external_id, logo_url, color, is_auditable
+Campos a renomear:  endereco -> address, telefone -> phone, active -> is_active
+```
+
+**Migracao SQL:**
+```sql
+-- Adicionar novos campos
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS external_id TEXT UNIQUE;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS color TEXT DEFAULT '#0B3D91';
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS is_auditable BOOLEAN DEFAULT false;
+
+-- Criar indice para external_id (CNPJ normalizado)
+CREATE INDEX IF NOT EXISTS idx_empresas_external_id ON empresas(external_id);
+CREATE INDEX IF NOT EXISTS idx_empresas_cnpj ON empresas(cnpj);
+CREATE INDEX IF NOT EXISTS idx_empresas_active ON empresas(active);
+
+-- Trigger para atualizar external_id automaticamente
+CREATE OR REPLACE FUNCTION normalize_cnpj_to_external_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.cnpj IS NOT NULL THEN
+    NEW.external_id := regexp_replace(NEW.cnpj, '[^0-9]', '', 'g');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_empresas_normalize_cnpj
+  BEFORE INSERT OR UPDATE ON empresas
+  FOR EACH ROW
+  EXECUTE FUNCTION normalize_cnpj_to_external_id();
+```
+
+### 1.2 Tabela `equipes` -> `areas` (renomear e reestruturar)
+
+**Estrategia:** Criar nova tabela `areas` e migrar dados de `equipes`
+
+```sql
+-- Criar nova tabela areas
+CREATE TABLE areas (
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id      UUID        REFERENCES empresas(id) ON DELETE CASCADE,
+  parent_id       UUID        REFERENCES areas(id) ON DELETE SET NULL,
+  name            TEXT        NOT NULL,
+  cost_center     TEXT,
+  active          BOOLEAN     DEFAULT true,
+  created_at      TIMESTAMPTZ DEFAULT now(),
+  updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indices
+CREATE INDEX idx_areas_company ON areas(company_id);
+CREATE INDEX idx_areas_parent ON areas(parent_id);
+CREATE INDEX idx_areas_cost_center ON areas(cost_center);
+
+-- RLS Policies
+ALTER TABLE areas ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Usuarios autenticados podem ver areas"
+  ON areas FOR SELECT USING (true);
+
+CREATE POLICY "Admin pode gerenciar areas"
+  ON areas FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_roles.user_id = auth.uid()
+      AND user_roles.role = ANY (ARRAY['admin', 'diretor', 'coordenador'])
+      AND user_roles.is_approved = true
+    )
+  );
+
+-- Migrar dados de equipes para areas
+INSERT INTO areas (id, company_id, name, active, created_at, updated_at)
+SELECT id, empresa_id, nome, active, created_at, updated_at
+FROM equipes;
+
+-- Atualizar funcionarios para usar area_id ao inves de equipe_id
+ALTER TABLE funcionarios ADD COLUMN IF NOT EXISTS area_id UUID REFERENCES areas(id);
+UPDATE funcionarios SET area_id = equipe_id WHERE equipe_id IS NOT NULL;
 ```
 
 ---
 
-## Componentes a Implementar
+## 2. Arquivos a Criar/Modificar
 
-### 1. Configuração de Secrets
-Precisaremos armazenar as credenciais do banco GA360 como secrets:
+### 2.1 Novos Arquivos
 
-| Secret | Descrição |
-|--------|-----------|
-| `GA360_SUPABASE_URL` | URL do projeto GA360 (ex: https://xxx.supabase.co) |
-| `GA360_SUPABASE_SERVICE_KEY` | Service Role Key do GA360 (para bypass de RLS) |
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/pages/EstruturaOrganizacional.tsx` | Nova pagina principal com layout de cards |
+| `src/components/admin/CompanyCard.tsx` | Card de empresa com areas em TreeView |
+| `src/components/admin/CompanyFormDialog.tsx` | Modal criar/editar empresa |
+| `src/components/admin/AreaFormDialog.tsx` | Modal criar/editar area |
+| `src/components/admin/AreaTreeView.tsx` | Componente arvore hierarquica |
+| `src/hooks/useAreas.ts` | Hook CRUD para areas |
 
-### 2. Edge Function: `sync-to-ga360`
-Uma Edge Function que:
-- Recebe o tipo de sincronização (empresas, funcionarios, ou ambos)
-- Busca os dados ativos do banco Ativos Arantes
-- Conecta ao banco GA360 usando as credenciais armazenadas
-- Faz UPSERT usando CNPJ (empresas) e CPF (funcionarios) como chaves
-- Retorna um relatório com quantidades inseridas/atualizadas
+### 2.2 Arquivos a Modificar
 
-### 3. Interface de Sincronização
-Um novo componente na página de Configuracoes (aba Integracoes):
-- Botao para sincronizar empresas
-- Botao para sincronizar funcionarios
-- Botao para sincronizar tudo
-- Exibicao do status/resultado da ultima sincronizacao
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/hooks/useEmpresas.ts` | Adicionar campos novos (color, logo_url, is_auditable) |
+| `src/pages/Empresas.tsx` | Redirecionar para nova pagina ou deprecar |
+| `src/pages/Equipes.tsx` | Deprecar - funcionalidade movida para EstruturaOrganizacional |
+| `src/App.tsx` | Adicionar rota `/estrutura-organizacional` |
+| `src/components/AppLayout.tsx` | Atualizar menu lateral |
+| `src/types/index.ts` | Adicionar tipos Empresa e Area atualizados |
 
 ---
 
-## Detalhes Tecnicos
+## 3. Layout da Nova Pagina
 
-### Mapeamento de Campos - Empresas
+### 3.1 Estrutura Visual
 
-| Campo Ativos Arantes | Tipo | Chave |
-|---------------------|------|-------|
-| id | uuid | - |
-| nome | text | - |
-| razao_social | text | - |
-| cnpj | text | **Chave de Match** |
-| endereco | text | - |
-| telefone | text | - |
-| email | text | - |
-| active | boolean | - |
+```text
++---------------------------------------------------------------+
+| <- Voltar                                                      |
++---------------------------------------------------------------+
+|                                                                |
+|  Estrutura Organizacional                    [+ Nova Empresa]  |
+|  Gerencie empresas e areas do Grupo                            |
+|                                                                |
++---------------------------------------------------------------+
+|                                                                |
+|  +------------------+  +------------------+  +----------------+ |
+|  | [cor]  [ed][del] |  | [cor]  [ed][del] |  | [cor] [ed][del]| |
+|  |                  |  |                  |  |                | |
+|  | JArantes         |  | Chok Distrib.    |  | G4 Arantes     | |
+|  | CNPJ: 12.513...  |  | CNPJ: 05.383...  |  | CNPJ: 42.501...| |
+|  |                  |  |                  |  |                | |
+|  | Areas [+ Nova]   |  | Areas [+ Nova]   |  | Areas [+ Nova] | |
+|  | +-------------+  |  | +-------------+  |  | +------------+ | |
+|  | | > COMERCIAL |  |  | |   VENDAS AS |  |  | |  COMERCIAL | | |
+|  | |   - Sul     |  |  | |   VENDAS KA |  |  | |  LOGISTICA | | |
+|  | |   - Norte   |  |  | |   MERCH     |  |  | +------------+ | |
+|  | | > LOGISTICA |  |  | +-------------+  |  |                | |
+|  | +-------------+  |  |                  |  |                | |
+|  +------------------+  +------------------+  +----------------+ |
+|                                                                |
++---------------------------------------------------------------+
+```
 
-**Logica de Upsert:** Buscar por CNPJ. Se existir, atualizar. Se nao, inserir com novo UUID.
+### 3.2 Componentes React
 
-### Mapeamento de Campos - Funcionarios
+**CompanyCard:**
+- Exibe icone com cor tematica da empresa
+- Mostra nome, CNPJ formatado
+- Botoes editar/excluir (aparecem no hover)
+- Secao "Areas" com TreeView e botao "+ Nova Area"
 
-| Campo Ativos Arantes | Tipo | Chave |
-|---------------------|------|-------|
-| id | uuid | - |
-| nome | text | - |
-| email | text | - |
-| telefone | text | - |
-| cargo | text | - |
-| departamento | text | - |
-| cpf | text | **Chave de Match** |
-| empresa_id | uuid | FK (mapeado via CNPJ) |
-| equipe_id | uuid | FK (opcional) |
-| is_condutor | boolean | - |
-| cnh_numero | text | - |
-| cnh_categoria | text | - |
-| cnh_validade | date | - |
-| active | boolean | - |
+**AreaTreeView:**
+- Renderiza hierarquia recursiva
+- Icones de expandir/colapsar para areas com filhos
+- Centro de custo exibido entre parenteses
+- Botoes editar/excluir por area
 
-**Logica de Upsert:** 
-1. Buscar funcionario por CPF
-2. Resolver empresa_id: buscar empresa no GA360 pelo CNPJ da empresa original
-3. Se existir, atualizar. Se nao, inserir com novo UUID
+---
 
-### Codigo da Edge Function (resumo)
+## 4. Tipos TypeScript
 
 ```typescript
-// supabase/functions/sync-to-ga360/index.ts
+// src/types/organization.ts
 
-import { createClient } from "@supabase/supabase-js";
+export interface Empresa {
+  id: string;
+  nome: string;
+  razao_social?: string;
+  cnpj?: string;
+  external_id?: string;        // CNPJ sem formatacao (sync key)
+  endereco?: string;
+  telefone?: string;
+  email?: string;
+  logo_url?: string;
+  color?: string;              // Cor hex (#0B3D91)
+  is_auditable?: boolean;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
-// Cliente para o banco ORIGEM (Ativos Arantes)
-const sourceSupabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-);
-
-// Cliente para o banco DESTINO (GA360)
-const targetSupabase = createClient(
-  Deno.env.get("GA360_SUPABASE_URL")!,
-  Deno.env.get("GA360_SUPABASE_SERVICE_KEY")!
-);
-
-Deno.serve(async (req) => {
-  // 1. Buscar empresas ativas do banco origem
-  // 2. Para cada empresa, fazer upsert no destino por CNPJ
-  // 3. Buscar funcionarios ativos do banco origem
-  // 4. Mapear empresa_id usando CNPJ
-  // 5. Para cada funcionario, fazer upsert no destino por CPF
-  // 6. Retornar relatorio
-});
+export interface Area {
+  id: string;
+  company_id?: string;
+  parent_id?: string;          // Hierarquia
+  name: string;
+  cost_center?: string;        // Centro de custo
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  // Campos calculados
+  children?: Area[];           // Sub-areas
+  company?: Empresa;
+}
 ```
 
 ---
 
-## Alteracoes nos Arquivos
+## 5. Hook useAreas
 
-| Arquivo | Acao |
-|---------|------|
-| `supabase/functions/sync-to-ga360/index.ts` | **CRIAR** - Edge Function de sincronizacao |
-| `src/components/SyncToGA360.tsx` | **CRIAR** - Componente de UI para sincronizacao |
-| `src/hooks/useSyncToGA360.ts` | **CRIAR** - Hook para chamar a Edge Function |
-| `src/pages/Configuracoes.tsx` | **EDITAR** - Adicionar componente de sync na aba Integracoes |
-| `supabase/config.toml` | **EDITAR** - Registrar nova Edge Function |
+```typescript
+// src/hooks/useAreas.ts
+
+export function useAreas(companyId?: string) {
+  // Query com filtro por empresa
+  const { data: areas } = useQuery({
+    queryKey: ["areas", companyId],
+    queryFn: async () => {
+      let query = supabase
+        .from("areas")
+        .select("*")
+        .eq("active", true)
+        .order("name");
+      
+      if (companyId) {
+        query = query.eq("company_id", companyId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return buildAreaTree(data);  // Monta hierarquia
+    },
+  });
+
+  // Mutations: create, update, delete
+  // ...
+}
+
+// Funcao para montar arvore hierarquica
+function buildAreaTree(areas: Area[]): Area[] {
+  const map = new Map<string, Area>();
+  const roots: Area[] = [];
+
+  // Criar mapa de todos os nos
+  areas.forEach(area => {
+    map.set(area.id, { ...area, children: [] });
+  });
+
+  // Montar hierarquia
+  areas.forEach(area => {
+    const node = map.get(area.id)!;
+    if (area.parent_id && map.has(area.parent_id)) {
+      map.get(area.parent_id)!.children!.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+}
+```
 
 ---
 
-## Fluxo de Uso
+## 6. Formularios
 
-1. Admin acessa **Configuracoes > Integracoes**
-2. Na secao "Sincronizacao GA360", clica em "Sincronizar Empresas e Funcionarios"
-3. Sistema executa Edge Function que:
-   - Le empresas ativas do Ativos Arantes
-   - Faz upsert no GA360 por CNPJ
-   - Le funcionarios ativos do Ativos Arantes
-   - Resolve vinculo empresa via CNPJ
-   - Faz upsert no GA360 por CPF
-4. Exibe toast com resultado: "Sincronizados: 15 empresas, 234 funcionarios"
+### 6.1 CompanyFormDialog
+
+| Campo | Tipo | Obrigatorio | Validacao |
+|-------|------|-------------|-----------|
+| Nome | Text | Sim | min 1 char |
+| Razao Social | Text | Nao | - |
+| CNPJ | Text (masked) | Nao | formato valido |
+| Endereco | Text | Nao | - |
+| Telefone | Text | Nao | - |
+| Email | Email | Nao | formato valido |
+| Cor Tematica | Color picker | Nao | hex valido |
+| URL Logo | URL | Nao | URL valida |
+| Ativa | Switch | Sim | boolean |
+| Auditavel | Switch | Nao | boolean |
+
+### 6.2 AreaFormDialog
+
+| Campo | Tipo | Obrigatorio | Validacao |
+|-------|------|-------------|-----------|
+| Nome | Text | Sim | min 2 chars |
+| Centro de Custo | Text | Nao | - |
+| Area Superior | Select | Nao | Exclui propria area e descendentes |
 
 ---
 
-## Pre-requisitos
+## 7. Sequencia de Implementacao
 
-Antes de implementar, voce precisara fornecer:
+### Fase 1: Banco de Dados
+1. Executar migracao para adicionar campos em `empresas`
+2. Criar tabela `areas` com RLS
+3. Migrar dados de `equipes` para `areas`
+4. Adicionar `area_id` em `funcionarios`
 
-1. **GA360_SUPABASE_URL** - URL do projeto GA360
-2. **GA360_SUPABASE_SERVICE_KEY** - Service Role Key do GA360
+### Fase 2: Backend (Hooks)
+5. Atualizar `useEmpresas` com novos campos
+6. Criar `useAreas` com suporte a hierarquia
+7. Atualizar `useFuncionarios` para usar `area_id`
 
-O GA360 precisa ter as tabelas `empresas` e `funcionarios` com estrutura compativel.
+### Fase 3: Componentes
+8. Criar `AreaTreeView` (arvore hierarquica)
+9. Criar `CompanyFormDialog` (modal empresa)
+10. Criar `AreaFormDialog` (modal area)
+11. Criar `CompanyCard` (card com areas)
+
+### Fase 4: Pagina Principal
+12. Criar `EstruturaOrganizacional.tsx`
+13. Atualizar rotas em `App.tsx`
+14. Atualizar menu em `AppLayout.tsx`
+
+### Fase 5: Limpeza
+15. Deprecar pagina `Empresas.tsx`
+16. Deprecar pagina `Equipes.tsx`
+17. Remover referencias antigas
 
 ---
 
-## Proximos Passos apos Aprovacao
+## 8. Compatibilidade com GA360
 
-1. Solicitar as credenciais do GA360 (URL e Service Role Key)
-2. Configurar os secrets no Supabase
-3. Criar a Edge Function
-4. Criar componente de UI
-5. Testar sincronizacao em ambiente controlado
+Apos esta implementacao, a sincronizacao sera facilitada:
+
+| Gestao de Ativos | GA360 | Tipo |
+|------------------|-------|------|
+| empresas.external_id | companies.external_id | Chave sync |
+| empresas.nome | companies.name | Mapeamento direto |
+| empresas.color | companies.color | Mapeamento direto |
+| areas.id | areas.external_id | Chave sync (a adicionar no GA360) |
+| areas.name | areas.name | Mapeamento direto |
+| areas.cost_center | areas.cost_center | Mapeamento direto |
+| areas.parent_id | areas.parent_id | Hierarquia preservada |
+
+---
+
+## 9. Consideracoes Importantes
+
+- **Migracao de dados:** Os dados existentes em `equipes` serao migrados para `areas`
+- **Funcionarios:** O campo `equipe_id` sera substituido por `area_id`
+- **Retrocompatibilidade:** Durante a transicao, manter ambos os campos
+- **Trigger CNPJ:** Automatiza a geracao do `external_id` a partir do CNPJ
+
