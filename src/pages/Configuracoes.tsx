@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
 import { WhatsAppConfigForm } from "@/components/WhatsAppConfigForm";
 import { EmpresasInlineManager } from "@/components/EmpresasInlineManager";
+import { SyncToGA360 } from "@/components/SyncToGA360";
 
 export default function Configuracoes() {
   const { userRole } = useAuth();
@@ -223,6 +224,9 @@ export default function Configuracoes() {
                   </p>
                 </CardContent>
               </Card>
+
+              {/* GA360 Sync */}
+              <SyncToGA360 />
 
               {/* SMTP Configuration */}
               <SmtpConfigForm />
