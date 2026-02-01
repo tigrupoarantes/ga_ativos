@@ -1,135 +1,122 @@
 
-# Plano: Barra de Progresso em Tempo Real para Sincronização GA360
+# Plano: Atualizar Sincronização para `external_employees` com Validação de CPF
 
-## Visão Geral
+## Resumo das Mudanças
 
-Implementar uma barra de progresso que mostre o andamento da sincronização em tempo real, incluindo:
-- Quantos registros foram processados vs total
-- Fase atual (empresas/funcionários)
-- Estimativa de tempo restante
+Atualizar a sincronização de funcionários para usar a tabela `external_employees` no GA360, com deduplicação por CPF para evitar registros duplicados.
 
-## Arquitetura Proposta
+## Estratégia de Deduplicação
+
+A tabela `external_employees` possui:
+1. **Constraint única composta**: `(company_id, external_id, source_system)` 
+2. **Necessidade adicional**: CPF não pode repetir
+
+**Solução**: Buscar registro existente por CPF primeiro. Se existir, atualiza. Se não existir, insere novo.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Frontend (React)                            │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  SyncToGA360.tsx                                          │  │
-│  │  ┌─────────────────────────────────────────────────────┐  │  │
-│  │  │  Progress Bar                                       │  │  │
-│  │  │  [████████████░░░░░░░░░░░] 45%                      │  │  │
-│  │  │  Fase: Funcionários | 380/839 processados          │  │  │
-│  │  └─────────────────────────────────────────────────────┘  │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                           ▲                                     │
-│                           │ SSE (Server-Sent Events)            │
-└───────────────────────────│─────────────────────────────────────┘
-                            │
-┌───────────────────────────│─────────────────────────────────────┐
-│                  Edge Function                                  │
+│  Verificação de Duplicata                                       │
 │                                                                 │
-│  1. Conta total de registros                                    │
-│  2. Processa em lotes                                           │
-│  3. Envia evento de progresso a cada lote                       │
+│  1. Buscar por CPF na tabela external_employees                 │
+│     SELECT id FROM external_employees WHERE cpf = ?             │
 │                                                                 │
-│  Eventos SSE:                                                   │
-│  - { phase: "empresas", current: 5, total: 12 }                 │
-│  - { phase: "funcionarios", current: 200, total: 839 }          │
-│  - { status: "complete", result: {...} }                        │
+│  2. Se encontrou → UPDATE                                       │
+│     Se não encontrou → INSERT                                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Detalhes Técnicos
+## Mapeamento de Campos Atualizado
 
-### 1. Edge Function (`sync-to-ga360/index.ts`)
+| Campo Origem (`funcionarios`) | Campo Destino (`external_employees`) | Notas |
+|-------------------------------|--------------------------------------|-------|
+| `id` | `external_id` | UUID original como referência |
+| `empresa_id` (via CNPJ) | `company_id` | FK para companies |
+| `nome` | `full_name` | Nome completo |
+| `email` | `email` | - |
+| `telefone` | `phone` | - |
+| `departamento` | `department` | - |
+| `cargo` | `position` | - |
+| `cpf` | `cpf` | Chave de deduplicação |
+| `active` | `is_active` | Status ativo |
+| `is_condutor` | `is_condutor` | Flag condutor |
+| - | `source_system` | Fixo: `'gestao_ativos'` |
+| - | `synced_at` | Timestamp da sincronização |
 
-**Mudanças:**
-- Adicionar suporte a streaming via SSE
-- Contar totais antes de processar
-- Enviar eventos de progresso a cada registro processado (ou a cada lote de 10)
-- Enviar evento final com resultado completo
+## Mudanças no Código
 
-**Estrutura dos eventos:**
+### Edge Function (`sync-to-ga360/index.ts`)
+
+**Seção de funcionários (linhas 270-320) - Alterações:**
+
+1. Trocar tabela `funcionarios` → `external_employees`
+2. Buscar existente por CPF (mantém lógica atual)
+3. Ajustar objeto de dados para novo schema:
+
 ```typescript
-// Evento de progresso
-{ 
-  type: "progress",
-  phase: "empresas" | "funcionarios",
-  current: number,
-  total: number,
-  message: string
-}
+// Verificar por CPF (mesmo que tabela anterior)
+const { data: existingFunc } = await targetSupabase
+  .from('external_employees')  // ← Tabela nova
+  .select('id')
+  .eq('cpf', func.cpf)
+  .maybeSingle();
 
-// Evento de conclusão
-{
-  type: "complete",
-  success: boolean,
-  result: SyncResult
+// Novo mapeamento de campos
+const employeeData = {
+  external_id: func.id,           // ID original como referência
+  source_system: 'gestao_ativos', // Identificador fixo
+  company_id: targetCompanyId,    // FK para companies
+  full_name: func.nome,           // ← nome → full_name
+  email: func.email,
+  phone: func.telefone,           // ← telefone → phone  
+  department: func.departamento,  // ← departamento → department
+  position: func.cargo,           // ← cargo → position
+  cpf: func.cpf,
+  is_active: func.active ?? true, // ← active → is_active
+  is_condutor: func.is_condutor ?? false,
+  synced_at: new Date().toISOString()  // ← Novo campo
+};
+
+// UPDATE ou INSERT na tabela nova
+if (existingFunc) {
+  await targetSupabase
+    .from('external_employees')
+    .update(employeeData)
+    .eq('id', existingFunc.id);
+} else {
+  await targetSupabase
+    .from('external_employees')
+    .insert(employeeData);
 }
 ```
 
-### 2. Hook (`useSyncToGA360.ts`)
+## Fluxo de Processamento
 
-**Mudanças:**
-- Adicionar estado para progresso (`progress`)
-- Usar `EventSource` ou `fetch` com streaming para receber eventos SSE
-- Atualizar estado a cada evento recebido
-- Manter compatibilidade com resultado final
-
-**Novo estado:**
-```typescript
-interface SyncProgress {
-  phase: 'idle' | 'empresas' | 'funcionarios' | 'complete';
-  current: number;
-  total: number;
-  percentage: number;
-  message: string;
-}
-```
-
-### 3. Componente UI (`SyncToGA360.tsx`)
-
-**Mudanças:**
-- Adicionar componente `Progress` durante sincronização
-- Mostrar fase atual com ícone
-- Exibir contagem de registros processados
-- Animação suave na barra de progresso
-
-**Layout durante sincronização:**
 ```text
-┌────────────────────────────────────────────────────┐
-│ 🔄 Sincronização GA360                             │
-├────────────────────────────────────────────────────┤
-│                                                    │
-│  Fase: 👥 Funcionários                             │
-│  [████████████████░░░░░░░░░░░░░░░░░░░] 45%        │
-│  380 de 839 registros processados                  │
-│                                                    │
-└────────────────────────────────────────────────────┘
+Para cada funcionário origem:
+│
+├─ Tem CPF? ──────────────────── Não → Ignora (erro no log)
+│      │
+│      ▼ Sim
+├─ Resolve company_id via CNPJ
+│      │
+│      ▼
+├─ Busca por CPF no destino
+│      │
+│      ├─ Encontrou → UPDATE external_employees
+│      │
+│      └─ Não encontrou → INSERT external_employees
+│
+└─ Próximo funcionário
 ```
 
-## Arquivos a Modificar
+## Arquivo a Modificar
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `supabase/functions/sync-to-ga360/index.ts` | Modificar | Adicionar streaming SSE e contagem de progresso |
-| `src/hooks/useSyncToGA360.ts` | Modificar | Consumir SSE e expor estado de progresso |
-| `src/components/SyncToGA360.tsx` | Modificar | Renderizar barra de progresso durante sync |
+| Arquivo | Linhas | Mudança |
+|---------|--------|---------|
+| `supabase/functions/sync-to-ga360/index.ts` | 270-320 | Trocar tabela e mapeamento de campos |
 
-## Fluxo de Execução
+## Validações Mantidas
 
-1. Usuário clica em "Sincronizar"
-2. Hook inicia conexão SSE com Edge Function
-3. Edge Function:
-   - Conta total de empresas e funcionários
-   - Envia evento inicial com totais
-   - Processa cada registro, enviando progresso
-   - Envia evento final com resultado
-4. UI atualiza barra de progresso em tempo real
-5. Ao concluir, exibe resultado final (comportamento atual)
-
-## Considerações
-
-- **Fallback**: Se SSE falhar, manter comportamento atual (aguardar resposta completa)
-- **Timeout**: Edge Functions têm limite de 60s, mas com streaming o timeout é estendido
-- **Performance**: Enviar eventos a cada 5-10 registros para não sobrecarregar
+- Funcionários sem CPF são ignorados
+- Funcionários sem empresa resolvida terão `company_id: null` (permitido pelo schema)
+- Erros individuais não interrompem o processamento
