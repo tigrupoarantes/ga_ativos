@@ -4,12 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Shield, Users, Bell, Database, Plug } from "lucide-react";
+import { Settings, Shield, Users, Bell, Database, Plug, Building2, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
 import { WhatsAppConfigForm } from "@/components/WhatsAppConfigForm";
-import { EmpresasInlineManager } from "@/components/EmpresasInlineManager";
 import { SyncToGA360 } from "@/components/SyncToGA360";
 
 export default function Configuracoes() {
@@ -64,8 +63,27 @@ export default function Configuracoes() {
               </CardContent>
             </Card>
 
-            {/* Inline Empresas Management for Admins */}
-            {isAdmin && <EmpresasInlineManager />}
+            {/* Link to Organizational Structure for Admins */}
+            {isAdmin && (
+              <Link to="/estrutura-organizacional">
+                <Card className="cursor-pointer hover:bg-accent transition-colors">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                        <CardTitle className="text-base">Estrutura Organizacional</CardTitle>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Gerencie empresas e áreas do Grupo
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
           </TabsContent>
 
           <TabsContent value="notificacoes" className="space-y-6">
