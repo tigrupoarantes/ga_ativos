@@ -27,11 +27,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Cliente para o banco ORIGEM (Ativos Arantes)
-    const sourceSupabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // Cliente para o banco ORIGEM (Supabase Externo - Ativos Arantes)
+    const externalUrl = Deno.env.get("EXTERNAL_SUPABASE_URL");
+    const externalKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_KEY");
+
+    if (!externalUrl || !externalKey) {
+      return new Response(
+        JSON.stringify({ error: 'Credenciais do Supabase externo não configuradas' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const sourceSupabase = createClient(externalUrl, externalKey);
 
     // Cliente para o banco DESTINO (GA360)
     const ga360Url = Deno.env.get("GA360_SUPABASE_URL");
