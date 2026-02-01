@@ -1,216 +1,99 @@
 
 
-# Plano de Migração: Lovable Cloud para Supabase Proprio
+# Plano: Migrar reports-chat para OpenAI API
 
-## Visao Geral
+## Resumo da Mudança
 
-Este plano detalha os passos necessarios para migrar seu aplicativo do Lovable Cloud para seu proprio projeto Supabase. A migracao envolve exportar schema, dados, edge functions e reconfigurar o frontend.
-
-## Inventario do Projeto Atual
-
-### Tabelas do Banco de Dados (28 tabelas)
-
-| Tabela | Descricao |
-|--------|-----------|
-| activity_history | Historico de atividades |
-| allowed_email_domains | Dominios de email permitidos |
-| asset_types | Tipos de ativos |
-| assets | Ativos/patrimonio |
-| atribuicoes | Atribuicoes de ativos a funcionarios |
-| audit_log | Log de auditoria |
-| contratos | Contratos |
-| empresas | Empresas |
-| equipes | Equipes |
-| funcionarios | Funcionarios |
-| itens_ordem | Itens de ordem de servico |
-| linhas_telefonicas | Linhas telefonicas |
-| module_permissions | Permissoes de modulos |
-| movimentacoes_estoque | Movimentacoes de estoque |
-| notification_jobs | Jobs de notificacao |
-| notifications | Notificacoes |
-| ordens_servico | Ordens de servico |
-| password_reset_tokens | Tokens de reset de senha |
-| pecas | Pecas |
-| preventivas | Manutencoes preventivas |
-| service_appointments | Agendamentos de servico |
-| smtp_config | Configuracao SMTP |
-| tipos_veiculos | Tipos de veiculos |
-| user_roles | Roles de usuario |
-| vehicle_odometer_reports | Relatorios de odometro |
-| veiculos | Veiculos |
-| veiculos_documentos | Documentos de veiculos |
-| veiculos_historico_responsavel | Historico de responsaveis |
-| veiculos_multas | Multas de veiculos |
-| veiculos_seguros | Seguros de veiculos |
-| wash_plans | Planos de lavagem |
-
-### Edge Functions (9 funcoes)
-
-1. **consulta-fipe** - Consulta tabela FIPE
-2. **password-reset-confirm** - Confirmacao de reset de senha
-3. **password-reset-request** - Solicitacao de reset de senha
-4. **reports-chat** - Chat de relatorios (IA)
-5. **send-email** - Envio de emails via SMTP
-6. **test-smtp** - Teste de configuracao SMTP
-7. **whatsapp-send** - Envio de mensagens WhatsApp
-8. **whatsapp-webhook** - Webhook do WhatsApp
-9. **workshop-scheduler** - Agendador de oficina
-
-### Database Functions (10 funcoes)
-
-1. `update_vehicle_km_on_report()` - Trigger para atualizar KM
-2. `create_asset_with_patrimonio()` - Criar ativo com patrimonio
-3. `generate_patrimonio()` - Gerar numero de patrimonio
-4. `log_asset_assignment_change()` - Log de mudanca de atribuicao
-5. `handle_new_user()` - Handler para novo usuario
-6. `update_updated_at_column()` - Atualizar coluna updated_at
-7. `generate_os_number()` - Gerar numero de OS
-8. `is_current_user_admin()` - Verificar se usuario e admin
-9. `get_current_user_role()` - Obter role do usuario atual
-10. `get_dashboard_stats()` - Estatisticas do dashboard
-11. `get_dashboard_alerts()` - Alertas do dashboard
-
-### Storage Buckets
-
-1. **veiculos-documentos** (publico) - Documentos de veiculos
+Vamos atualizar a Edge Function `reports-chat` para usar sua API da OpenAI diretamente, substituindo o Lovable AI Gateway.
 
 ---
 
-## Etapas da Migracao
+## O que vai mudar
 
-### Etapa 1: Criar Projeto no Supabase
+| Antes (Atual) | Depois (OpenAI) |
+|---------------|-----------------|
+| Lovable AI Gateway | OpenAI API direta |
+| `LOVABLE_API_KEY` | `OPENAI_API_KEY` |
+| `google/gemini-3-flash-preview` | `gpt-4o-mini` ou `gpt-4o` |
+| URL: ai.gateway.lovable.dev | URL: api.openai.com |
 
-1. Acesse [supabase.com](https://supabase.com) e crie uma conta
-2. Crie um novo projeto
-3. Anote as credenciais:
-   - **Project URL**: `https://[project-id].supabase.co`
-   - **Anon Key**: chave publica para o frontend
-   - **Service Role Key**: chave privada para edge functions
+---
 
-### Etapa 2: Exportar e Executar Schema
+## Passo a Passo
 
-Vou gerar um arquivo SQL consolidado com todo o schema. Voce deve executar este SQL no SQL Editor do seu novo projeto Supabase.
+### Passo 1: Adicionar Secret da OpenAI
 
-O arquivo incluira:
-- Criacao de todas as tabelas
-- Constraints e foreign keys
-- RLS policies
-- Database functions
-- Triggers
-- Dados iniciais (module_permissions)
+Você precisará cadastrar sua chave de API da OpenAI como um **Secret** no projeto:
+- Nome: `OPENAI_API_KEY`
+- Valor: Sua chave (começa com `sk-...`)
 
-### Etapa 3: Exportar Dados
+### Passo 2: Atualizar a Edge Function
 
-Para exportar os dados do Lovable Cloud:
+Modificar o arquivo `supabase/functions/reports-chat/index.ts`:
 
-1. Acesse o Cloud Dashboard
-2. Va em **Database > Export**
-3. Exporte cada tabela como CSV ou JSON
-4. Importe no novo Supabase via SQL Editor ou interface
+1. **Trocar a variável de ambiente**: De `LOVABLE_API_KEY` para `OPENAI_API_KEY`
+2. **Atualizar o endpoint**: De `https://ai.gateway.lovable.dev/v1/chat/completions` para `https://api.openai.com/v1/chat/completions`
+3. **Ajustar o modelo**: Usar `gpt-4o-mini` (mais barato e rápido) ou `gpt-4o` (mais poderoso)
 
-### Etapa 4: Configurar Storage
+### Passo 3: Deploy da Função
 
-No novo projeto Supabase:
+Após as alterações, a função será reimplantada automaticamente no Lovable Cloud.
 
-1. Va em **Storage**
-2. Crie bucket `veiculos-documentos` como publico
-3. Configure as policies de acesso
+---
 
-### Etapa 5: Migrar Edge Functions
+## Código da Alteração
 
-Copie as edge functions para o novo projeto. Existem duas opcoes:
+A mudança principal será nas linhas 17-19 e 239-252:
 
-**Opcao A - Via Supabase CLI:**
-```bash
-supabase init
-supabase link --project-ref [seu-project-id]
-supabase functions deploy consulta-fipe
-supabase functions deploy send-email
-# ... repetir para cada funcao
+```typescript
+// ANTES:
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+if (!LOVABLE_API_KEY) {
+  throw new Error("LOVABLE_API_KEY is not configured");
+}
+// ...
+const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  headers: {
+    Authorization: `Bearer ${LOVABLE_API_KEY}`,
+  },
+  body: JSON.stringify({
+    model: "google/gemini-3-flash-preview",
+    // ...
+  }),
+});
+
+// DEPOIS:
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+if (!OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY is not configured");
+}
+// ...
+const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  headers: {
+    Authorization: `Bearer ${OPENAI_API_KEY}`,
+  },
+  body: JSON.stringify({
+    model: "gpt-4o-mini", // ou "gpt-4o" para respostas mais complexas
+    // ...
+  }),
+});
 ```
 
-**Opcao B - Via Dashboard:**
-1. Va em **Edge Functions** no dashboard
-2. Crie cada funcao manualmente
-3. Cole o codigo de cada arquivo
+---
 
-### Etapa 6: Configurar Secrets
+## Escolha do Modelo OpenAI
 
-No novo Supabase, configure os secrets necessarios:
+| Modelo | Custo | Velocidade | Qualidade | Recomendação |
+|--------|-------|------------|-----------|--------------|
+| `gpt-4o-mini` | Baixo | Rápido | Muito boa | **Recomendado para este caso** |
+| `gpt-4o` | Médio | Médio | Excelente | Para análises complexas |
+| `gpt-4-turbo` | Alto | Médio | Excelente | Contexto maior |
 
-| Secret | Descricao |
-|--------|-----------|
-| SUPABASE_URL | URL do projeto |
-| SUPABASE_ANON_KEY | Chave anonima |
-| SUPABASE_SERVICE_ROLE_KEY | Chave de servico |
-
-### Etapa 7: Atualizar Configuracao do Frontend
-
-Atualizar o arquivo `.env` com as novas credenciais:
-
-```env
-VITE_SUPABASE_PROJECT_ID="[novo-project-id]"
-VITE_SUPABASE_PUBLISHABLE_KEY="[nova-anon-key]"
-VITE_SUPABASE_URL="https://[novo-project-id].supabase.co"
-```
-
-### Etapa 8: Configurar Autenticacao
-
-No novo Supabase:
-
-1. Va em **Authentication > URL Configuration**
-2. Configure Site URL: `https://seu-dominio.com`
-3. Configure Redirect URLs: adicione URLs do preview e producao
+**Recomendo `gpt-4o-mini`** pois é suficiente para consultas de dados e tem ótimo custo-benefício.
 
 ---
 
-## Script SQL Consolidado
+## Resultado Esperado
 
-Disponibilizarei um script SQL completo que consolida todas as 25 migracoes existentes. Este script deve ser executado no SQL Editor do novo Supabase.
-
-O script incluira:
-1. Criacao de sequencias (os_sequence)
-2. Todas as tabelas com suas colunas e tipos
-3. Foreign keys
-4. RLS habilitado em todas as tabelas
-5. Policies de acesso
-6. Functions e triggers
-7. Dados iniciais de permissoes
-
----
-
-## Checklist Pos-Migracao
-
-- [ ] Schema criado com sucesso
-- [ ] Dados importados
-- [ ] Storage bucket criado
-- [ ] Edge functions deployadas
-- [ ] Secrets configurados
-- [ ] .env atualizado no frontend
-- [ ] Autenticacao funcionando
-- [ ] Testar login/signup
-- [ ] Testar CRUD em cada modulo
-- [ ] Testar upload de documentos
-- [ ] Testar edge functions
-
----
-
-## Consideracoes Importantes
-
-1. **Dados de Usuarios**: Os usuarios do auth.users nao podem ser exportados diretamente. Usuarios precisarao se recadastrar ou voce pode usar a API Admin do Supabase para migrar.
-
-2. **IDs e Referencias**: Se voce exportar/importar dados, os UUIDs serao mantidos, garantindo integridade referencial.
-
-3. **Edge Functions**: Algumas funcoes dependem de secrets (ex: WhatsApp API key). Configure-os no novo projeto.
-
-4. **Realtime**: Se estiver usando realtime, reconfigure as publicacoes apos a migracao.
-
----
-
-## Proximo Passo
-
-Apos sua aprovacao, irei:
-1. Gerar o script SQL consolidado completo
-2. Criar um arquivo de documentacao da migracao no projeto
-3. Atualizar o `.env` com placeholders para as novas credenciais
+Após a implementação, o chat de relatórios continuará funcionando normalmente, mas agora usando sua conta da OpenAI diretamente. Você poderá monitorar o uso e custos no dashboard da OpenAI.
 
