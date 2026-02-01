@@ -5,8 +5,9 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
+import { EXTERNAL_SUPABASE_CONFIG } from "@/config/supabase.config";
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports-chat`;
+const CHAT_URL = `${EXTERNAL_SUPABASE_CONFIG.url}/functions/v1/reports-chat`;
 
 export function useReportsChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -39,7 +40,7 @@ export function useReportsChat() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${EXTERNAL_SUPABASE_CONFIG.anonKey}`,
         },
         body: JSON.stringify({ messages: [...messages, userMsg] }),
       });

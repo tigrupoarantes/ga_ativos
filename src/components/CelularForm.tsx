@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useTiposAtivos } from "@/hooks/useAtivos";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/external-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Info } from "lucide-react";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
