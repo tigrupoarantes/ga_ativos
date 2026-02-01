@@ -1,53 +1,112 @@
 
-# Correção: Remover Estrutura Organizacional do Menu Lateral
 
-## O que foi esquecido
+# Plano: Compatibilizar Sync GA360 com Tabela `companies`
 
-No arquivo `src/components/AppLayout.tsx`, duas referências à rota removida ainda existem:
+## Problema
 
-| Linha | Código | Ação |
-|-------|--------|------|
-| 59 | `"/estrutura-organizacional": { label: "Estrutura Organizacional", parent: "/" }` | Remover |
-| 133 | `{ icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "admin" }` | Remover |
+A edge function está tentando acessar a tabela `empresas` no GA360, mas o esquema real usa:
+
+```text
+ORIGEM (Ativos Arantes)          DESTINO (GA360)
+┌────────────────────┐           ┌────────────────────┐
+│ Tabela: empresas   │           │ Tabela: companies  │
+├────────────────────┤           ├────────────────────┤
+│ nome               │  ──────>  │ name               │
+│ cnpj               │  ──────>  │ cnpj               │
+│ active             │  ──────>  │ is_active          │
+│ logo_url           │  ──────>  │ logo_url           │
+│ color              │  ──────>  │ color              │
+│ external_id        │  ──────>  │ external_id        │
+│ is_auditable       │  ──────>  │ is_auditable       │
+│ razao_social       │     X     │ (não existe)       │
+│ endereco           │     X     │ (não existe)       │
+│ telefone           │     X     │ (não existe)       │
+│ email              │     X     │ (não existe)       │
+└────────────────────┘           └────────────────────┘
+```
 
 ## Alterações
 
-### Arquivo: `src/components/AppLayout.tsx`
+### Arquivo: `supabase/functions/sync-to-ga360/index.ts`
 
-**1. Remover do `routeConfig` (linha 59):**
+**1. Trocar nome da tabela de destino:**
+- Linha 89: `.from('empresas')` para `.from('companies')`
+- Linha 111-113: `.from('empresas')` para `.from('companies')`
+- Linha 124-125: `.from('empresas')` para `.from('companies')`
+- Linha 159-163: `.from('empresas')` para `.from('companies')`
+- Linha 199-203: `.from('empresas')` para `.from('companies')`
+
+**2. Mapear campos corretamente (linhas 99-107):**
+
 ```typescript
-// REMOVER esta linha:
-"/estrutura-organizacional": { label: "Estrutura Organizacional", parent: "/" },
+// ANTES
+const empresaData = {
+  nome: empresa.nome,
+  razao_social: empresa.razao_social,
+  cnpj: empresa.cnpj,
+  endereco: empresa.endereco,
+  telefone: empresa.telefone,
+  email: empresa.email,
+  active: empresa.active
+};
+
+// DEPOIS
+const companyData = {
+  name: empresa.nome,
+  cnpj: empresa.cnpj,
+  is_active: empresa.active ?? true,
+  logo_url: empresa.logo_url,
+  color: empresa.color,
+  external_id: empresa.external_id,
+  is_auditable: empresa.is_auditable ?? false
+};
 ```
 
-**2. Remover do `adminItems` (linha 133):**
-```typescript
-// ANTES (linhas 131-137):
-const adminItems: NavItem[] = [
-  { icon: Building2, label: "Estrutura Organizacional", path: "/estrutura-organizacional", module: "admin" },
-  { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
-  { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
-  { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
-];
+**3. Atualizar lógica de funcionários para buscar company_id:**
 
-// DEPOIS (linhas 131-136):
-const adminItems: NavItem[] = [
-  { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
-  { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
-  { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
-];
+Na seção de funcionários, onde busca empresa por CNPJ, também trocar para `companies`:
+
+```typescript
+// Buscar companies por CNPJ no destino
+const { data: destCompany } = await targetSupabase
+  .from('companies')
+  .select('id')
+  .eq('cnpj', emp.cnpj)
+  .maybeSingle();
 ```
 
-**3. Remover import não utilizado (linha 25):**
-```typescript
-// Se Building2 não for mais usado em nenhum outro lugar, remover da linha de imports
+## Mapeamento Completo de Campos
+
+| Campo Origem | Campo Destino | Observação |
+|--------------|---------------|------------|
+| nome | name | Obrigatório |
+| cnpj | cnpj | Chave de match |
+| active | is_active | Default true |
+| logo_url | logo_url | Opcional |
+| color | color | Opcional |
+| external_id | external_id | Opcional |
+| is_auditable | is_auditable | Default false |
+| razao_social | - | Ignorado (não existe no destino) |
+| endereco | - | Ignorado |
+| telefone | - | Ignorado |
+| email | - | Ignorado |
+
+## Resultado Esperado
+
+Após as alterações, a sincronização mapeará corretamente:
+
+```text
+ORIGEM: empresas (12 registros)
+   ↓
+   ↓  Mapeamento de campos
+   ↓
+DESTINO: companies (12 registros)
+   ✓ name = nome
+   ✓ cnpj = cnpj  
+   ✓ is_active = active
+   ✓ logo_url = logo_url
+   ✓ color = color
+   ✓ external_id = external_id
+   ✓ is_auditable = is_auditable
 ```
 
-## Resultado
-
-O menu lateral de Administração terá apenas 3 itens:
-- Usuários
-- Permissões
-- Configurações
-
-A gestão de empresas agora é acessada via **Configurações → Aba "Empresas"**.
