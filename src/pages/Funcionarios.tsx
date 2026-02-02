@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useFuncionariosPaginated } from "@/hooks/useFuncionarios";
@@ -69,10 +69,10 @@ export default function Funcionarios() {
     deleteFuncionario,
   } = useFuncionariosPaginated({ pageSize });
 
-  // Update search when debounced value changes
-  useState(() => {
+  // Sync debounced search with hook
+  useEffect(() => {
     setSearch(debouncedSearch);
-  });
+  }, [debouncedSearch, setSearch]);
 
   const { empresas } = useEmpresasSelect();
   
@@ -101,15 +101,6 @@ export default function Funcionarios() {
     setSearchInput(value);
   };
 
-  // Effect to sync debounced search
-  if (debouncedSearch !== searchInput) {
-    // This will trigger on next render cycle
-  }
-
-  // Update search in hook when debounce changes
-  useState(() => {
-    setSearch(debouncedSearch);
-  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
