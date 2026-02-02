@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// Cliente externo para operações de banco (veiculos)
 import { supabase } from "@/integrations/supabase/external-client";
+// Cliente Lovable Cloud para Edge Functions
+import { supabase as supabaseLovable } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface FipeMarca {
@@ -29,7 +32,8 @@ interface FipeValor {
 }
 
 async function consultaFipe<T>(body: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke("consulta-fipe", {
+  // Usar cliente Lovable Cloud para chamar Edge Functions
+  const { data, error } = await supabaseLovable.functions.invoke("consulta-fipe", {
     body,
   });
 
