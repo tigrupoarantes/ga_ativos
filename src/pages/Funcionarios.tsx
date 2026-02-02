@@ -92,6 +92,8 @@ export default function Funcionarios() {
     cnh_numero: "",
     cnh_categoria: "",
     cnh_validade: "",
+    is_vendedor: false,
+    codigo_vendedor: "",
   });
 
   // Sync debounced search with hook
@@ -134,6 +136,8 @@ export default function Funcionarios() {
       cnh_numero: formData.cnh_numero || null,
       cnh_categoria: formData.cnh_categoria || null,
       cnh_validade: formData.cnh_validade || null,
+      is_vendedor: formData.is_vendedor,
+      codigo_vendedor: formData.codigo_vendedor || null,
     };
     
     try {
@@ -165,6 +169,8 @@ export default function Funcionarios() {
       cnh_numero: "",
       cnh_categoria: "",
       cnh_validade: "",
+      is_vendedor: false,
+      codigo_vendedor: "",
     });
   };
 
@@ -182,6 +188,8 @@ export default function Funcionarios() {
       cnh_numero: funcionario.cnh_numero || "",
       cnh_categoria: funcionario.cnh_categoria || "",
       cnh_validade: funcionario.cnh_validade || "",
+      is_vendedor: (funcionario as any).is_vendedor || false,
+      codigo_vendedor: (funcionario as any).codigo_vendedor || "",
     });
     setIsDialogOpen(true);
   };
@@ -355,6 +363,31 @@ export default function Funcionarios() {
                           onChange={(e) => setFormData({ ...formData, cnh_validade: e.target.value })}
                         />
                       </div>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_vendedor"
+                      checked={formData.is_vendedor}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_vendedor: checked as boolean })}
+                    />
+                    <Label htmlFor="is_vendedor">É vendedor</Label>
+                  </div>
+                  {formData.is_vendedor && (
+                    <div className="space-y-2">
+                      <Label htmlFor="codigo_vendedor">Código do Vendedor</Label>
+                      <Input
+                        id="codigo_vendedor"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="Digite o código numérico"
+                        value={formData.codigo_vendedor}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          setFormData({ ...formData, codigo_vendedor: value });
+                        }}
+                      />
                     </div>
                   )}
                   <DialogFooter>
