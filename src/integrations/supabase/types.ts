@@ -509,6 +509,7 @@ export type Database = {
           cnh_categoria: string | null
           cnh_numero: string | null
           cnh_validade: string | null
+          codigo_vendedor: string | null
           cpf: string | null
           created_at: string | null
           departamento: string | null
@@ -517,6 +518,7 @@ export type Database = {
           equipe_id: string | null
           id: string
           is_condutor: boolean | null
+          is_vendedor: boolean | null
           nome: string
           telefone: string | null
           updated_at: string | null
@@ -531,6 +533,7 @@ export type Database = {
           cnh_categoria?: string | null
           cnh_numero?: string | null
           cnh_validade?: string | null
+          codigo_vendedor?: string | null
           cpf?: string | null
           created_at?: string | null
           departamento?: string | null
@@ -539,6 +542,7 @@ export type Database = {
           equipe_id?: string | null
           id?: string
           is_condutor?: boolean | null
+          is_vendedor?: boolean | null
           nome: string
           telefone?: string | null
           updated_at?: string | null
@@ -553,6 +557,7 @@ export type Database = {
           cnh_categoria?: string | null
           cnh_numero?: string | null
           cnh_validade?: string | null
+          codigo_vendedor?: string | null
           cpf?: string | null
           created_at?: string | null
           departamento?: string | null
@@ -561,6 +566,7 @@ export type Database = {
           equipe_id?: string | null
           id?: string
           is_condutor?: boolean | null
+          is_vendedor?: boolean | null
           nome?: string
           telefone?: string | null
           updated_at?: string | null

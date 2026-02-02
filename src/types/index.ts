@@ -41,6 +41,8 @@ export interface Funcionario {
   cnh_numero?: string;
   cnh_categoria?: string;
   cnh_validade?: string;
+  is_vendedor?: boolean;
+  codigo_vendedor?: string;
   active?: boolean;
   created_at?: string;
   updated_at?: string;

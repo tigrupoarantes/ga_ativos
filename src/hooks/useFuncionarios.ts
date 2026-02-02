@@ -57,6 +57,7 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
           id, nome, email, telefone, cargo, departamento, cpf,
           empresa_id, equipe_id, is_condutor,
           cnh_numero, cnh_categoria, cnh_validade,
+          is_vendedor, codigo_vendedor,
           empresa:empresas!funcionarios_empresa_id_fkey(id, nome),
           equipe:equipes!funcionarios_equipe_id_fkey(id, nome)
         `)
