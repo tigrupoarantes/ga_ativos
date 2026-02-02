@@ -1,95 +1,197 @@
 
-# Plano: Corrigir Chamada da Edge Function FIPE
+# Plano: Adicionar Campo "É Vendedor" no Cadastro de Funcionários
 
-## Problema Identificado
+## Objetivo
 
-A Edge Function `consulta-fipe` está deployada no **Lovable Cloud** (projeto `aahtjjolpmrfcxxiouxj`), mas o hook `useFipeConsulta.ts` usa o cliente do **Supabase externo** (`ftksidxyhnvzdsuonwop`) para chamá-la.
+Adicionar funcionalidade similar ao campo "É Condutor", onde:
+1. Um checkbox "É Vendedor" controla a exibição de campos adicionais
+2. Quando marcado, aparece um campo numérico para inserir um código/número do vendedor
 
-| Componente | Projeto | Status |
-|------------|---------|--------|
-| Edge Function `consulta-fipe` | Lovable Cloud (`aahtjjolpmrfcxxiouxj`) | Funcionando |
-| Cliente no hook | Supabase Externo (`ftksidxyhnvzdsuonwop`) | Não tem a função |
+## Análise Atual
 
-## Solução
+### Padrão Existente (É Condutor)
 
-Modificar o hook `useFipeConsulta.ts` para usar o cliente do **Lovable Cloud** especificamente para chamar Edge Functions, enquanto mantém o cliente externo para operações de banco de dados (tabela `veiculos`).
+| Campo | Tipo | Comportamento |
+|-------|------|---------------|
+| `is_condutor` | boolean | Checkbox que controla exibição |
+| `cnh_numero` | text | Aparece quando is_condutor = true |
+| `cnh_categoria` | text | Aparece quando is_condutor = true |
+| `cnh_validade` | date | Aparece quando is_condutor = true |
 
-## Arquivo a Modificar
+### Nova Estrutura (É Vendedor)
 
-**`src/hooks/useFipeConsulta.ts`**
+| Campo | Tipo | Comportamento |
+|-------|------|---------------|
+| `is_vendedor` | boolean | Checkbox que controla exibição |
+| `codigo_vendedor` | text | Campo numérico que aparece quando is_vendedor = true |
 
-## Mudanças
+## Etapas de Implementação
 
-### 1. Importar ambos os clientes
+### 1. Migração do Banco de Dados
 
-```typescript
-// Cliente externo para operações de banco
-import { supabase } from "@/integrations/supabase/external-client";
+Adicionar dois novos campos na tabela `funcionarios`:
 
-// Cliente Lovable Cloud para Edge Functions
-import { supabase as supabaseLovable } from "@/integrations/supabase/client";
+```sql
+ALTER TABLE funcionarios 
+ADD COLUMN is_vendedor boolean DEFAULT false,
+ADD COLUMN codigo_vendedor text;
 ```
 
-### 2. Atualizar função consultaFipe
+### 2. Atualizar Formulário (Funcionarios.tsx)
 
-Usar o cliente do Lovable Cloud para invocar as Edge Functions:
-
+**Estado do formulário** - Adicionar novos campos:
 ```typescript
-async function consultaFipe<T>(body: Record<string, unknown>): Promise<T> {
-  // Usar cliente Lovable Cloud para chamar Edge Functions
-  const { data, error } = await supabaseLovable.functions.invoke("consulta-fipe", {
-    body,
-  });
-
-  if (error) throw error;
-  if (data.error) throw new Error(data.error);
-  return data as T;
-}
+const [formData, setFormData] = useState({
+  // ... campos existentes
+  is_vendedor: false,
+  codigo_vendedor: "",
+});
 ```
 
-### 3. Manter operações de banco no cliente externo
-
-As operações de `update` na tabela `veiculos` continuam usando o cliente externo:
-
-```typescript
-// Atualizar veículo no banco externo
-const { error } = await supabase
-  .from("veiculos")
-  .update({...})
-  .eq("id", params.veiculoId);
-```
-
-## Fluxo Corrigido
-
+**Interface do usuário** - Adicionar após o checkbox "É Condutor":
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  FRONTEND                                                       │
-│                                                                 │
-│  useFipeConsulta.ts                                             │
-│       │                                                         │
-│       ├── supabaseLovable.functions.invoke("consulta-fipe")     │
-│       │         │                                               │
-│       │         ▼                                               │
-│       │   Lovable Cloud (aahtjjolpmrfcxxiouxj)                  │
-│       │         │                                               │
-│       │         ▼                                               │
-│       │   Edge Function consulta-fipe                           │
-│       │         │                                               │
-│       │         ▼                                               │
-│       │   API FIPE (parallelum.com.br)                          │
-│       │                                                         │
-│       └── supabase.from("veiculos").update(...)                 │
-│                 │                                               │
-│                 ▼                                               │
-│           Supabase Externo (ftksidxyhnvzdsuonwop)               │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  [x] É condutor                                         │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐       │
+│  │ CNH Número  │ │ Categoria   │ │ Validade    │       │
+│  └─────────────┘ └─────────────┘ └─────────────┘       │
+│                                                         │
+│  [x] É vendedor                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ Código do Vendedor (numérico)                   │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Resumo das Alterações
+### 3. Atualizar Hooks e Tipos
 
-| Linha | Antes | Depois |
-|-------|-------|--------|
-| 2 | Import único | Import duplo (externo + Lovable) |
-| 32 | `supabase.functions.invoke` | `supabaseLovable.functions.invoke` |
-| 94-101 | Manter | Continua usando cliente externo |
-| 140-147 | Manter | Continua usando cliente externo |
+**useFuncionarios.ts** - Incluir novos campos nas queries e mutations
+
+**types/index.ts** - Adicionar campos ao tipo Funcionario
+
+### 4. Atualizar Tabela de Listagem (Opcional)
+
+Adicionar coluna "Vendedor" com badge similar ao "Condutor"
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| **Migração SQL** | Criar campos `is_vendedor` e `codigo_vendedor` |
+| `src/pages/Funcionarios.tsx` | Formulário, estado, submit, tabela |
+| `src/hooks/useFuncionarios.ts` | Incluir campos na query select |
+| `src/types/index.ts` | Adicionar ao interface Funcionario |
+
+## Detalhes Técnicos
+
+### Migração SQL
+
+```sql
+-- Adicionar campos para funcionalidade "É Vendedor"
+ALTER TABLE funcionarios 
+ADD COLUMN IF NOT EXISTS is_vendedor boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS codigo_vendedor text;
+
+-- Comentário para documentação
+COMMENT ON COLUMN funcionarios.is_vendedor IS 'Indica se o funcionário é vendedor';
+COMMENT ON COLUMN funcionarios.codigo_vendedor IS 'Código numérico do vendedor';
+```
+
+### Formulário (Funcionarios.tsx)
+
+1. **Adicionar ao estado inicial** (linhas 83-95):
+```typescript
+is_vendedor: false,
+codigo_vendedor: "",
+```
+
+2. **Adicionar ao resetForm** (linhas 154-169):
+```typescript
+is_vendedor: false,
+codigo_vendedor: "",
+```
+
+3. **Adicionar ao handleEdit** (linhas 171-187):
+```typescript
+is_vendedor: funcionario.is_vendedor || false,
+codigo_vendedor: funcionario.codigo_vendedor || "",
+```
+
+4. **Adicionar ao dataToSave no handleSubmit** (linhas 125-137):
+```typescript
+is_vendedor: formData.is_vendedor,
+codigo_vendedor: formData.codigo_vendedor || null,
+```
+
+5. **Adicionar UI após o bloco "É Condutor"** (após linha 359):
+```tsx
+<div className="flex items-center space-x-2">
+  <Checkbox
+    id="is_vendedor"
+    checked={formData.is_vendedor}
+    onCheckedChange={(checked) => setFormData({ ...formData, is_vendedor: checked as boolean })}
+  />
+  <Label htmlFor="is_vendedor">É vendedor</Label>
+</div>
+{formData.is_vendedor && (
+  <div className="space-y-2">
+    <Label htmlFor="codigo_vendedor">Código do Vendedor</Label>
+    <Input
+      id="codigo_vendedor"
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      placeholder="Digite o código numérico"
+      value={formData.codigo_vendedor}
+      onChange={(e) => {
+        // Aceitar apenas números
+        const value = e.target.value.replace(/\D/g, '');
+        setFormData({ ...formData, codigo_vendedor: value });
+      }}
+    />
+  </div>
+)}
+```
+
+6. **Adicionar coluna na tabela** (opcional, após "Condutor"):
+```tsx
+<TableHead>Vendedor</TableHead>
+// ...
+<TableCell>
+  {funcionario.is_vendedor ? (
+    <Badge className="bg-green-100 text-green-800">
+      Cód: {funcionario.codigo_vendedor || "-"}
+    </Badge>
+  ) : "-"}
+</TableCell>
+```
+
+### Hook useFuncionarios.ts
+
+Adicionar campos na query select:
+```typescript
+.select(`
+  id, nome, email, telefone, cargo, departamento, cpf,
+  empresa_id, equipe_id, is_condutor,
+  cnh_numero, cnh_categoria, cnh_validade,
+  is_vendedor, codigo_vendedor,  // NOVO
+  empresa:empresas!funcionarios_empresa_id_fkey(id, nome),
+  equipe:equipes!funcionarios_equipe_id_fkey(id, nome)
+`)
+```
+
+### Types (index.ts)
+
+Adicionar ao interface Funcionario:
+```typescript
+is_vendedor?: boolean;
+codigo_vendedor?: string;
+```
+
+## Resultado Esperado
+
+Após a implementação:
+- Novo checkbox "É Vendedor" aparece no formulário
+- Quando marcado, exibe campo para código numérico
+- Dados são salvos e recuperados corretamente
+- Badge opcional na listagem mostra vendedores com código
