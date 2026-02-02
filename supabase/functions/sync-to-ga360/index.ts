@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
             // Buscar funcionários ativos do banco origem com empresa
             const { data: funcionariosOrigem, error: funcError } = await sourceSupabase
               .from('funcionarios')
-              .select('*, empresas!funcionarios_empresa_id_fkey(cnpj)')
+              .select('*, empresas!funcionarios_empresa_id_fkey(cnpj, nome)')
               .eq('active', true);
 
             if (funcError) {
@@ -284,6 +284,7 @@ Deno.serve(async (req) => {
                     external_id: func.id,
                     source_system: 'gestao_ativos',
                     company_id: targetCompanyId,
+                    unidade: func.empresas?.nome || null,
                     full_name: func.nome,
                     email: func.email,
                     phone: func.telefone,
