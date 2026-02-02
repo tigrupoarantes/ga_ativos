@@ -1,122 +1,80 @@
 
-# Plano: Atualizar Sincronização para `external_employees` com Validação de CPF
+# Plano: Adicionar Campo `unidade` na Sincronização de Funcionários
 
-## Resumo das Mudanças
+## Problema Identificado
 
-Atualizar a sincronização de funcionários para usar a tabela `external_employees` no GA360, com deduplicação por CPF para evitar registros duplicados.
+O campo `unidade` na tabela `external_employees` do GA360 não está sendo preenchido durante a sincronização. Este campo deveria conter o **nome da empresa** do funcionário.
 
-## Estratégia de Deduplicação
+## Diagnóstico
 
-A tabela `external_employees` possui:
-1. **Constraint única composta**: `(company_id, external_id, source_system)` 
-2. **Necessidade adicional**: CPF não pode repetir
+| Campo Destino | Status Atual | Ação Necessária |
+|---------------|--------------|-----------------|
+| `company_id` | Preenchido | Manter (FK para companies) |
+| `unidade` | Vazio | Adicionar nome da empresa |
 
-**Solução**: Buscar registro existente por CPF primeiro. Se existir, atualiza. Se não existir, insere novo.
+## Dados na Origem
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  Verificação de Duplicata                                       │
-│                                                                 │
-│  1. Buscar por CPF na tabela external_employees                 │
-│     SELECT id FROM external_employees WHERE cpf = ?             │
-│                                                                 │
-│  2. Se encontrou → UPDATE                                       │
-│     Se não encontrou → INSERT                                   │
-└─────────────────────────────────────────────────────────────────┘
+Na tabela `funcionarios`, já buscamos os dados da empresa via JOIN:
+```typescript
+.select('*, empresas!funcionarios_empresa_id_fkey(cnpj)')
 ```
 
-## Mapeamento de Campos Atualizado
+Precisamos também buscar o **nome** da empresa:
+```typescript
+.select('*, empresas!funcionarios_empresa_id_fkey(cnpj, nome)')
+```
 
-| Campo Origem (`funcionarios`) | Campo Destino (`external_employees`) | Notas |
-|-------------------------------|--------------------------------------|-------|
-| `id` | `external_id` | UUID original como referência |
-| `empresa_id` (via CNPJ) | `company_id` | FK para companies |
-| `nome` | `full_name` | Nome completo |
-| `email` | `email` | - |
-| `telefone` | `phone` | - |
-| `departamento` | `department` | - |
-| `cargo` | `position` | - |
-| `cpf` | `cpf` | Chave de deduplicação |
-| `active` | `is_active` | Status ativo |
-| `is_condutor` | `is_condutor` | Flag condutor |
-| - | `source_system` | Fixo: `'gestao_ativos'` |
-| - | `synced_at` | Timestamp da sincronização |
-
-## Mudanças no Código
+## Mudança no Código
 
 ### Edge Function (`sync-to-ga360/index.ts`)
 
-**Seção de funcionários (linhas 270-320) - Alterações:**
-
-1. Trocar tabela `funcionarios` → `external_employees`
-2. Buscar existente por CPF (mantém lógica atual)
-3. Ajustar objeto de dados para novo schema:
-
+**1. Atualizar a query de funcionários (linha 224):**
 ```typescript
-// Verificar por CPF (mesmo que tabela anterior)
-const { data: existingFunc } = await targetSupabase
-  .from('external_employees')  // ← Tabela nova
-  .select('id')
-  .eq('cpf', func.cpf)
-  .maybeSingle();
+// Antes
+.select('*, empresas!funcionarios_empresa_id_fkey(cnpj)')
 
-// Novo mapeamento de campos
-const employeeData = {
-  external_id: func.id,           // ID original como referência
-  source_system: 'gestao_ativos', // Identificador fixo
-  company_id: targetCompanyId,    // FK para companies
-  full_name: func.nome,           // ← nome → full_name
-  email: func.email,
-  phone: func.telefone,           // ← telefone → phone  
-  department: func.departamento,  // ← departamento → department
-  position: func.cargo,           // ← cargo → position
-  cpf: func.cpf,
-  is_active: func.active ?? true, // ← active → is_active
-  is_condutor: func.is_condutor ?? false,
-  synced_at: new Date().toISOString()  // ← Novo campo
-};
-
-// UPDATE ou INSERT na tabela nova
-if (existingFunc) {
-  await targetSupabase
-    .from('external_employees')
-    .update(employeeData)
-    .eq('id', existingFunc.id);
-} else {
-  await targetSupabase
-    .from('external_employees')
-    .insert(employeeData);
-}
+// Depois  
+.select('*, empresas!funcionarios_empresa_id_fkey(cnpj, nome)')
 ```
 
-## Fluxo de Processamento
+**2. Adicionar campo `unidade` no mapeamento (linha 283-296):**
+```typescript
+const employeeData = {
+  external_id: func.id,
+  source_system: 'gestao_ativos',
+  company_id: targetCompanyId,
+  unidade: func.empresas?.nome || null,  // NOVO: Nome da empresa
+  full_name: func.nome,
+  email: func.email,
+  phone: func.telefone,
+  department: func.departamento,
+  position: func.cargo,
+  cpf: func.cpf,
+  is_active: func.active ?? true,
+  is_condutor: func.is_condutor ?? false,
+  synced_at: new Date().toISOString()
+};
+```
+
+## Fluxo Atualizado
 
 ```text
-Para cada funcionário origem:
-│
-├─ Tem CPF? ──────────────────── Não → Ignora (erro no log)
-│      │
-│      ▼ Sim
-├─ Resolve company_id via CNPJ
-│      │
-│      ▼
-├─ Busca por CPF no destino
-│      │
-│      ├─ Encontrou → UPDATE external_employees
-│      │
-│      └─ Não encontrou → INSERT external_employees
-│
-└─ Próximo funcionário
+┌──────────────────────────────────────────────────────────────────┐
+│  ORIGEM (funcionarios)           DESTINO (external_employees)   │
+│                                                                  │
+│  empresa_id ─────(CNPJ)────────▶ company_id (FK)                │
+│  empresas.nome ─────────────────▶ unidade (TEXT)                │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+## Resultado Esperado
+
+Após a alteração, cada funcionário sincronizado terá:
+- `company_id`: UUID da empresa no GA360 (via lookup por CNPJ)
+- `unidade`: Nome da empresa (ex: "CHOKDOCE LOJA 2", "DISTRIBUIDORA G4 ARANTES LTDA")
 
 ## Arquivo a Modificar
 
 | Arquivo | Linhas | Mudança |
 |---------|--------|---------|
-| `supabase/functions/sync-to-ga360/index.ts` | 270-320 | Trocar tabela e mapeamento de campos |
-
-## Validações Mantidas
-
-- Funcionários sem CPF são ignorados
-- Funcionários sem empresa resolvida terão `company_id: null` (permitido pelo schema)
-- Erros individuais não interrompem o processamento
+| `supabase/functions/sync-to-ga360/index.ts` | 224, 283-296 | Adicionar nome da empresa na query e no mapeamento |
