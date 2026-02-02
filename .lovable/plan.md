@@ -1,80 +1,95 @@
 
-# Plano: Adicionar Campo `unidade` na Sincronização de Funcionários
+# Plano: Corrigir Chamada da Edge Function FIPE
 
 ## Problema Identificado
 
-O campo `unidade` na tabela `external_employees` do GA360 não está sendo preenchido durante a sincronização. Este campo deveria conter o **nome da empresa** do funcionário.
+A Edge Function `consulta-fipe` está deployada no **Lovable Cloud** (projeto `aahtjjolpmrfcxxiouxj`), mas o hook `useFipeConsulta.ts` usa o cliente do **Supabase externo** (`ftksidxyhnvzdsuonwop`) para chamá-la.
 
-## Diagnóstico
+| Componente | Projeto | Status |
+|------------|---------|--------|
+| Edge Function `consulta-fipe` | Lovable Cloud (`aahtjjolpmrfcxxiouxj`) | Funcionando |
+| Cliente no hook | Supabase Externo (`ftksidxyhnvzdsuonwop`) | Não tem a função |
 
-| Campo Destino | Status Atual | Ação Necessária |
-|---------------|--------------|-----------------|
-| `company_id` | Preenchido | Manter (FK para companies) |
-| `unidade` | Vazio | Adicionar nome da empresa |
+## Solução
 
-## Dados na Origem
-
-Na tabela `funcionarios`, já buscamos os dados da empresa via JOIN:
-```typescript
-.select('*, empresas!funcionarios_empresa_id_fkey(cnpj)')
-```
-
-Precisamos também buscar o **nome** da empresa:
-```typescript
-.select('*, empresas!funcionarios_empresa_id_fkey(cnpj, nome)')
-```
-
-## Mudança no Código
-
-### Edge Function (`sync-to-ga360/index.ts`)
-
-**1. Atualizar a query de funcionários (linha 224):**
-```typescript
-// Antes
-.select('*, empresas!funcionarios_empresa_id_fkey(cnpj)')
-
-// Depois  
-.select('*, empresas!funcionarios_empresa_id_fkey(cnpj, nome)')
-```
-
-**2. Adicionar campo `unidade` no mapeamento (linha 283-296):**
-```typescript
-const employeeData = {
-  external_id: func.id,
-  source_system: 'gestao_ativos',
-  company_id: targetCompanyId,
-  unidade: func.empresas?.nome || null,  // NOVO: Nome da empresa
-  full_name: func.nome,
-  email: func.email,
-  phone: func.telefone,
-  department: func.departamento,
-  position: func.cargo,
-  cpf: func.cpf,
-  is_active: func.active ?? true,
-  is_condutor: func.is_condutor ?? false,
-  synced_at: new Date().toISOString()
-};
-```
-
-## Fluxo Atualizado
-
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  ORIGEM (funcionarios)           DESTINO (external_employees)   │
-│                                                                  │
-│  empresa_id ─────(CNPJ)────────▶ company_id (FK)                │
-│  empresas.nome ─────────────────▶ unidade (TEXT)                │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-## Resultado Esperado
-
-Após a alteração, cada funcionário sincronizado terá:
-- `company_id`: UUID da empresa no GA360 (via lookup por CNPJ)
-- `unidade`: Nome da empresa (ex: "CHOKDOCE LOJA 2", "DISTRIBUIDORA G4 ARANTES LTDA")
+Modificar o hook `useFipeConsulta.ts` para usar o cliente do **Lovable Cloud** especificamente para chamar Edge Functions, enquanto mantém o cliente externo para operações de banco de dados (tabela `veiculos`).
 
 ## Arquivo a Modificar
 
-| Arquivo | Linhas | Mudança |
-|---------|--------|---------|
-| `supabase/functions/sync-to-ga360/index.ts` | 224, 283-296 | Adicionar nome da empresa na query e no mapeamento |
+**`src/hooks/useFipeConsulta.ts`**
+
+## Mudanças
+
+### 1. Importar ambos os clientes
+
+```typescript
+// Cliente externo para operações de banco
+import { supabase } from "@/integrations/supabase/external-client";
+
+// Cliente Lovable Cloud para Edge Functions
+import { supabase as supabaseLovable } from "@/integrations/supabase/client";
+```
+
+### 2. Atualizar função consultaFipe
+
+Usar o cliente do Lovable Cloud para invocar as Edge Functions:
+
+```typescript
+async function consultaFipe<T>(body: Record<string, unknown>): Promise<T> {
+  // Usar cliente Lovable Cloud para chamar Edge Functions
+  const { data, error } = await supabaseLovable.functions.invoke("consulta-fipe", {
+    body,
+  });
+
+  if (error) throw error;
+  if (data.error) throw new Error(data.error);
+  return data as T;
+}
+```
+
+### 3. Manter operações de banco no cliente externo
+
+As operações de `update` na tabela `veiculos` continuam usando o cliente externo:
+
+```typescript
+// Atualizar veículo no banco externo
+const { error } = await supabase
+  .from("veiculos")
+  .update({...})
+  .eq("id", params.veiculoId);
+```
+
+## Fluxo Corrigido
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  FRONTEND                                                       │
+│                                                                 │
+│  useFipeConsulta.ts                                             │
+│       │                                                         │
+│       ├── supabaseLovable.functions.invoke("consulta-fipe")     │
+│       │         │                                               │
+│       │         ▼                                               │
+│       │   Lovable Cloud (aahtjjolpmrfcxxiouxj)                  │
+│       │         │                                               │
+│       │         ▼                                               │
+│       │   Edge Function consulta-fipe                           │
+│       │         │                                               │
+│       │         ▼                                               │
+│       │   API FIPE (parallelum.com.br)                          │
+│       │                                                         │
+│       └── supabase.from("veiculos").update(...)                 │
+│                 │                                               │
+│                 ▼                                               │
+│           Supabase Externo (ftksidxyhnvzdsuonwop)               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Resumo das Alterações
+
+| Linha | Antes | Depois |
+|-------|-------|--------|
+| 2 | Import único | Import duplo (externo + Lovable) |
+| 32 | `supabase.functions.invoke` | `supabaseLovable.functions.invoke` |
+| 94-101 | Manter | Continua usando cliente externo |
+| 140-147 | Manter | Continua usando cliente externo |
