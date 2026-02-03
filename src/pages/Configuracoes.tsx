@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
 import { WhatsAppConfigForm } from "@/components/WhatsAppConfigForm";
 import { SyncToGA360 } from "@/components/SyncToGA360";
+import { SyncToGAPagamentos } from "@/components/SyncToGAPagamentos";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { CompanyCard } from "@/components/admin/CompanyCard";
 import { CompanyFormDialog } from "@/components/admin/CompanyFormDialog";
@@ -360,6 +361,9 @@ export default function Configuracoes() {
 
               {/* GA360 Sync */}
               <SyncToGA360 />
+
+              {/* GA Pagamentos Sync */}
+              <SyncToGAPagamentos />
 
               {/* SMTP Configuration */}
               <SmtpConfigForm />
