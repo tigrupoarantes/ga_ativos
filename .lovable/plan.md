@@ -1,102 +1,179 @@
 
-# Correção: Funcionários Não Aparecem na Tela
+# Plano: Implementar Sincronização para GA Pagamentos
 
-## Diagnóstico
+## Resumo
 
-Os funcionários **NÃO desapareceram do banco de dados**:
-- Contagem no banco: **839 registros ativos**
-- Requisições HTTP estão retornando dados corretamente (status 200)
-- Response Body contém lista completa de funcionários
+Implementar sincronização de Empresas e Funcionários do Gestão de Ativos para o GA Pagamentos, seguindo o mesmo padrão já existente para o GA360.
 
-## Problema Identificado
+## Credenciais Recebidas
 
-O código em `src/pages/Funcionarios.tsx` está usando `useState` incorretamente ao invés de `useEffect`:
+| Configuração | Valor |
+|--------------|-------|
+| URL | `https://rdccyabdhaemwhmtoniy.supabase.co` |
+| Service Role Key | `eyJhbGciOiJI...wSm4Q1Vk` |
 
-```typescript
-// CÓDIGO ATUAL (INCORRETO) - Linhas 73-75 e 110-112
-useState(() => {
-  setSearch(debouncedSearch);
-});
+## Arquitetura
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        FLUXO DE SINCRONIZAÇÃO                                   │
+│                                                                                 │
+│  ┌─────────────────────────┐                                                    │
+│  │   SUPABASE EXTERNO      │                                                    │
+│  │   (Gestão de Ativos)    │                                                    │
+│  │   FONTE ÚNICA           │                                                    │
+│  │   ftksidxyhnvzdsuonwop  │                                                    │
+│  │                         │                                                    │
+│  │   empresas              │                                                    │
+│  │   funcionarios          │                                                    │
+│  └───────────┬─────────────┘                                                    │
+│              │                                                                  │
+│              │ Leitura via Service Key                                          │
+│              ▼                                                                  │
+│  ┌─────────────────────────┐                                                    │
+│  │   LOVABLE CLOUD         │                                                    │
+│  │   aahtjjolpmrfcxxiouxj  │                                                    │
+│  │                         │                                                    │
+│  │   Edge Functions:       │                                                    │
+│  │   - sync-to-ga360       │ (existente)                                        │
+│  │   - sync-to-gapagam.    │ (NOVO)                                             │
+│  └───────────┬─────────────┘                                                    │
+│              │                                                                  │
+│              │ Escrita via Service Key                                          │
+│              ▼                                                                  │
+│  ┌─────────────────────────┐                                                    │
+│  │   GA PAGAMENTOS         │                                                    │
+│  │   rdccyabdhaemwhmtoniy  │                                                    │
+│  │                         │                                                    │
+│  │   companies             │                                                    │
+│  │   external_employees    │                                                    │
+│  └─────────────────────────┘                                                    │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Por que isso causa problemas?
+## Etapas de Implementação
 
-| Uso | Comportamento | Resultado |
-|-----|---------------|-----------|
-| `useState(() => fn())` | Executa apenas 1x na montagem | Busca nunca é sincronizada |
-| `useEffect(() => fn(), [deps])` | Executa quando deps mudam | Busca é sincronizada corretamente |
+### 1. Configurar Secrets
 
-Este uso incorreto impede que a lista seja atualizada quando o componente é renderizado, causando a impressão de que os funcionários "sumiram".
+Adicionar dois novos secrets no Lovable Cloud:
 
-## Solução
+| Secret | Valor |
+|--------|-------|
+| `GAPAGAMENTOS_SUPABASE_URL` | `https://rdccyabdhaemwhmtoniy.supabase.co` |
+| `GAPAGAMENTOS_SUPABASE_SERVICE_KEY` | `eyJhbGciOiJI...` (service_role key) |
 
-Substituir as chamadas incorretas de `useState` por `useEffect`:
+### 2. Criar Edge Function
 
-### Arquivo: `src/pages/Funcionarios.tsx`
+**Arquivo:** `supabase/functions/sync-to-gapagamentos/index.ts`
 
-**Mudanças:**
+Baseado no `sync-to-ga360`, com as seguintes diferenças:
 
-1. **Adicionar `useEffect` aos imports** (linha 1)
-2. **Remover as duas chamadas incorretas de `useState`** (linhas 73-75 e 110-112)
-3. **Adicionar um único `useEffect` correto** para sincronizar o debounce:
+| Aspecto | GA360 | GA Pagamentos |
+|---------|-------|---------------|
+| Secret URL | `GA360_SUPABASE_URL` | `GAPAGAMENTOS_SUPABASE_URL` |
+| Secret Key | `GA360_SUPABASE_SERVICE_KEY` | `GAPAGAMENTOS_SUPABASE_SERVICE_KEY` |
+| Campos adicionais | - | `is_vendedor`, `codigo_vendedor`, CNH completa |
 
-```typescript
-import { useState, useEffect } from "react";
+#### Mapeamento de Campos (Funcionários)
 
-// ...
+| Campo Origem | Campo Destino | Novo |
+|--------------|---------------|------|
+| id | external_id | |
+| nome | full_name | |
+| cpf | cpf | |
+| email | email | |
+| telefone | phone | |
+| departamento | department | |
+| cargo | position | |
+| empresa_id | company_id | |
+| empresas.nome | unidade | |
+| is_condutor | is_condutor | |
+| cnh_numero | cnh_numero | Sim |
+| cnh_categoria | cnh_categoria | Sim |
+| cnh_validade | cnh_validade | Sim |
+| is_vendedor | is_vendedor | Sim |
+| codigo_vendedor | codigo_vendedor | Sim |
+| whatsapp_phone_e164 | whatsapp_phone_e164 | Sim |
+| whatsapp_opt_in | whatsapp_opt_in | Sim |
+| active | is_active | |
 
-export default function Funcionarios() {
-  const [searchInput, setSearchInput] = useState("");
-  const debouncedSearch = useDebounce(searchInput, 300);
-  const [pageSize, setPageSize] = useState(25);
-  
-  const {
-    funcionarios,
-    isLoading,
-    page,
-    totalCount,
-    totalPages,
-    setPage,
-    setSearch,
-    createFuncionario,
-    updateFuncionario,
-    deleteFuncionario,
-  } = useFuncionariosPaginated({ pageSize });
+### 3. Atualizar Config.toml
 
-  // CORRETO: useEffect para sincronizar debounce
-  useEffect(() => {
-    setSearch(debouncedSearch);
-  }, [debouncedSearch, setSearch]);
-  
-  // ... resto do código
+Adicionar configuração para a nova função:
+
+```toml
+[functions.sync-to-gapagamentos]
+verify_jwt = false
 ```
 
-4. **Remover código morto** (linhas 105-112):
-```typescript
-// REMOVER ESTAS LINHAS:
-// Effect to sync debounced search
-if (debouncedSearch !== searchInput) {
-  // This will trigger on next render cycle
-}
+### 4. Criar Hook React
 
-// Update search in hook when debounce changes
-useState(() => {
-  setSearch(debouncedSearch);
-});
+**Arquivo:** `src/hooks/useSyncToGAPagamentos.ts`
+
+Cópia do `useSyncToGA360.ts` com endpoint alterado para `sync-to-gapagamentos`.
+
+### 5. Criar Componente de UI
+
+**Arquivo:** `src/components/SyncToGAPagamentos.tsx`
+
+Similar ao `SyncToGA360.tsx`, com:
+- Título: "Sincronização GA Pagamentos"
+- Descrição: "Sincronize empresas e funcionários com o sistema GA Pagamentos"
+- Mesma UI de progresso e resultados
+
+### 6. Adicionar na Página de Configurações
+
+Adicionar o componente `<SyncToGAPagamentos />` na página de configurações, abaixo do `<SyncToGA360 />`.
+
+## Detalhes Técnicos
+
+### Edge Function (sync-to-gapagamentos)
+
+```typescript
+// Campos adicionais no mapeamento de funcionários
+const employeeData = {
+  external_id: func.id,
+  source_system: 'gestao_ativos',
+  company_id: targetCompanyId,
+  unidade: func.empresas?.nome || null,
+  full_name: func.nome,
+  email: func.email,
+  phone: func.telefone,
+  department: func.departamento,
+  position: func.cargo,
+  cpf: func.cpf,
+  is_active: func.active ?? true,
+  // Condutor
+  is_condutor: func.is_condutor ?? false,
+  cnh_numero: func.cnh_numero,
+  cnh_categoria: func.cnh_categoria,
+  cnh_validade: func.cnh_validade,
+  // Vendedor (NOVOS)
+  is_vendedor: func.is_vendedor ?? false,
+  codigo_vendedor: func.codigo_vendedor,
+  // WhatsApp
+  whatsapp_phone_e164: func.whatsapp_phone_e164,
+  whatsapp_opt_in: func.whatsapp_opt_in ?? true,
+  // Sync
+  synced_at: new Date().toISOString()
+};
 ```
 
-## Resumo das Alterações
+### Arquivos a Criar/Modificar
 
-| Linha | Antes | Depois |
-|-------|-------|--------|
-| 1 | `import { useState } from "react"` | `import { useState, useEffect } from "react"` |
-| 73-75 | `useState(() => { setSearch... })` | **REMOVER** |
-| 105-112 | Código de sincronização morto | **REMOVER** |
-| Novo | - | `useEffect(() => { setSearch(debouncedSearch) }, [debouncedSearch, setSearch])` |
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `supabase/functions/sync-to-gapagamentos/index.ts` | Criar | Edge Function de sincronização |
+| `supabase/config.toml` | Modificar | Adicionar config da função |
+| `src/hooks/useSyncToGAPagamentos.ts` | Criar | Hook para chamar a função |
+| `src/components/SyncToGAPagamentos.tsx` | Criar | Componente de UI |
+| `src/pages/Configuracoes.tsx` | Modificar | Adicionar componente na página |
 
 ## Resultado Esperado
 
-Após a correção:
-- Os 839 funcionários voltarão a aparecer na listagem
-- A busca com debounce funcionará corretamente
-- O componente sincronizará corretamente o estado de busca
+Após a implementação:
+- Nova seção "Sincronização GA Pagamentos" na página de Configurações
+- Botões para sincronizar Empresas, Funcionários ou Tudo
+- Barra de progresso em tempo real via SSE
+- Relatório de registros inseridos/atualizados
+- Campos de vendedor e CNH completos sincronizados
