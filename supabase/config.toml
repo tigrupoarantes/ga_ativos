@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.sync-to-ga360]
 verify_jwt = false
+
+[functions.sync-to-gapagamentos]
+verify_jwt = false
