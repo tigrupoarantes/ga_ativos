@@ -131,8 +131,10 @@ export function ImportAreasDialog({
         return;
       }
 
-      // Group by empresa from Excel
+      // Group by empresa from Excel, deduplicating by cost_center
       const byEmpresa = new Map<string, PreviewRow[]>();
+      // Track seen cost centers per empresa to avoid duplicates
+      const seenCostCenters = new Map<string, Set<string>>();
 
       for (const row of rows) {
         const empresaExcel = String(row["EMPRESA"] || "").trim();
@@ -141,6 +143,19 @@ export function ImportAreasDialog({
         const name = String(row["DESCRIÇÃO CENTRO DE CUSTO"] || row["DESCRICAO CENTRO DE CUSTO"] || row["name"] || "").trim();
 
         if (!costCenter || !name) continue;
+
+        // Check for duplicate CCUSTO within same empresa
+        const empresaKey = empresaExcel.toLowerCase();
+        if (!seenCostCenters.has(empresaKey)) {
+          seenCostCenters.set(empresaKey, new Set());
+        }
+        
+        const empresaCostCenters = seenCostCenters.get(empresaKey)!;
+        if (empresaCostCenters.has(costCenter)) {
+          // Skip duplicate cost center
+          continue;
+        }
+        empresaCostCenters.add(costCenter);
 
         // Try to match with registered companies
         const empresaMatch = matchEmpresa(empresaExcel, empresas);
