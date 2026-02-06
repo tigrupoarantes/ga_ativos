@@ -180,7 +180,8 @@ export function ImportLinhasDialog({ onImportComplete, trigger }: ImportLinhasDi
   };
 
   const normalizeCpf = (cpf: string): string => {
-    return cpf.replace(/\D/g, "");
+    // Remove non-digits and pad with leading zeros to ensure 11 digits
+    return cpf.replace(/\D/g, "").padStart(11, '0');
   };
 
   const normalizePhone = (phone: string): string => {
