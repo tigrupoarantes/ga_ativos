@@ -17,10 +17,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 
 // CSV Template headers and example data
-const CSV_HEADERS = ['CPF', 'NOME', 'EMAIL', 'TELEFONE', 'CARGO', 'DEPARTAMENTO', 'EMPRESA', 'ATIVO'];
+const CSV_HEADERS = ['CPF', 'NOME', 'EMAIL', 'TELEFONE', 'CARGO', 'DEPARTAMENTO', 'EMPRESA', 'ATIVO', 'CODIGO_VENDEDOR'];
 const CSV_EXAMPLE_ROWS = [
-  ['12345678901', 'Maria da Silva', 'maria@email.com', '11999999999', 'Analista', 'Financeiro', 'Empresa ABC', 'Ativo'],
-  ['98765432100', 'João Santos', 'joao@email.com', '11988888888', 'Gerente', 'TI', 'Empresa XYZ', 'Ativo'],
+  ['12345678901', 'Maria da Silva', 'maria@email.com', '11999999999', 'Analista', 'Financeiro', 'Empresa ABC', 'Ativo', ''],
+  ['98765432100', 'João Santos', 'joao@email.com', '11988888888', 'Gerente', 'TI', 'Empresa XYZ', 'Ativo', '123'],
 ];
 
 // Generate and download CSV file
@@ -53,7 +53,7 @@ const exportFuncionarios = async () => {
     const { data, error } = await supabase
       .from('funcionarios')
       .select(`
-        cpf, nome, email, telefone, cargo, departamento,
+        cpf, nome, email, telefone, cargo, departamento, codigo_vendedor,
         empresa:empresas!funcionarios_empresa_id_fkey(nome)
       `)
       .eq('active', true)
@@ -74,7 +74,8 @@ const exportFuncionarios = async () => {
       f.cargo || '',
       f.departamento || '',
       (f.empresa as any)?.nome || '',
-      'Ativo'
+      'Ativo',
+      (f as any).codigo_vendedor || ''
     ].join(';'));
     
     const csvContent = [CSV_HEADERS.join(';'), ...rows].join('\n');
@@ -109,6 +110,7 @@ interface CsvRow {
   cnh_numero?: string;
   cnh_categoria?: string;
   cnh_validade?: string;
+  codigo_vendedor?: string;
 }
 
 // Normalize CPF: remove non-digits and pad to 11 digits with leading zeros
@@ -293,6 +295,12 @@ const headerMappings: Record<string, keyof CsvRow> = {
   'categoria_cnh': 'cnh_categoria',
   'cnh_validade': 'cnh_validade',
   'validade_cnh': 'cnh_validade',
+  
+  // Código do Vendedor
+  'codigo_vendedor': 'codigo_vendedor',
+  'codigovendedor': 'codigo_vendedor',
+  'cod_vendedor': 'codigo_vendedor',
+  'codvendedor': 'codigo_vendedor',
 };
 
 // Parse CSV with fixed column positions (no header)
@@ -320,6 +328,7 @@ const parseWithFixedColumns = (lines: string[]): CsvRow[] => {
       cnh_numero: '',
       cnh_categoria: '',
       cnh_validade: '',
+      codigo_vendedor: '',
     };
     
     if (row.cpf) {
@@ -367,6 +376,7 @@ const parseWithHeader = (lines: string[], headerLineIndex: number): CsvRow[] => 
       cnh_numero: '',
       cnh_categoria: '',
       cnh_validade: '',
+      codigo_vendedor: '',
     };
     
     headers.forEach((header, index) => {
@@ -628,6 +638,15 @@ export function ImportFuncionariosDialog() {
         if (row.cnh_categoria) updateData.cnh_categoria = row.cnh_categoria.toUpperCase();
         if (row.cnh_validade) updateData.cnh_validade = row.cnh_validade;
         
+        // Código do vendedor - se preenchido, ativa is_vendedor
+        if (row.codigo_vendedor) {
+          const codigo = row.codigo_vendedor.replace(/\D/g, ''); // apenas números
+          if (codigo) {
+            updateData.is_vendedor = true;
+            updateData.codigo_vendedor = codigo;
+          }
+        }
+        
         if (existing) {
           // Update existing
           const { error } = await supabase
@@ -764,7 +783,7 @@ export function ImportFuncionariosDialog() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Formato: CPF;NOME;EMAIL;TELEFONE;CARGO;DEPARTAMENTO;EMPRESA;ATIVO
+              Formato: CPF;NOME;EMAIL;TELEFONE;CARGO;DEPARTAMENTO;EMPRESA;ATIVO;CODIGO_VENDEDOR
             </p>
           </div>
           
