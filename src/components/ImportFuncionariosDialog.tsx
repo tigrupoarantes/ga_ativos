@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, UserMinus, Download, FileDown, Plus, RefreshCw, ArrowRight } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, UserMinus, Download, FileDown, Plus, RefreshCw, ArrowRight, AlertTriangle, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,6 +18,9 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // CSV Template headers and example data
 const CSV_HEADERS = ['CPF', 'NOME', 'EMAIL', 'TELEFONE', 'CARGO', 'DEPARTAMENTO', 'EMPRESA', 'ATIVO', 'CODIGO_VENDEDOR'];
@@ -95,6 +98,7 @@ interface ImportResult {
   created: number;
   skipped: number;
   deactivated: number;
+  reactivated: number;
   assetsReleased: number;
   errors: string[];
 }
@@ -140,10 +144,17 @@ interface FieldChange {
 interface PreviewRecord {
   cpf: string;
   nome: string;
-  action: 'insert' | 'update' | 'deactivate' | 'skip';
+  action: 'insert' | 'update' | 'deactivate' | 'skip' | 'reactivate';
   changes?: FieldChange[];
   row: CsvRow;
   existingData?: Record<string, any>;
+}
+
+// Employee to be deactivated (for full-sync mode)
+interface EmployeeToDeactivate {
+  id: string;
+  cpf: string;
+  nome: string;
 }
 
 // Consolidate duplicate CPFs before processing
@@ -499,6 +510,8 @@ const fieldLabels: Record<string, string> = {
   codigo_vendedor: 'Cód. Vendedor',
 };
 
+type ImportMode = 'update-only' | 'full-sync';
+
 export function ImportFuncionariosDialog() {
   const [open, setOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -511,9 +524,13 @@ export function ImportFuncionariosDialog() {
   const [empresasMap, setEmpresasMap] = useState<Map<string, { id: string, nome: string }>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  
+  // NEW: Import mode state
+  const [importMode, setImportMode] = useState<ImportMode>('update-only');
+  const [toDeactivateList, setToDeactivateList] = useState<EmployeeToDeactivate[]>([]);
 
   // Analyze CSV and compare with existing data
-  const analyzePreview = async (rows: CsvRow[]) => {
+  const analyzePreview = async (rows: CsvRow[], mode: ImportMode) => {
     setIsAnalyzing(true);
     
     try {
@@ -540,7 +557,9 @@ export function ImportFuncionariosDialog() {
         .map(r => normalizeCpf(r.cpf))
         .filter(cpf => cpf && cpf.length === 11);
       
-      // Fetch existing employees by CPF
+      const csvCpfsSet = new Set(cpfList);
+      
+      // Fetch existing employees by CPF (both active and inactive for reactivation detection)
       const { data: existingEmployees } = await supabase
         .from('funcionarios')
         .select('id, cpf, nome, email, telefone, cargo, departamento, empresa_id, equipe_id, is_condutor, cnh_numero, cnh_categoria, cnh_validade, is_vendedor, codigo_vendedor, active')
@@ -549,6 +568,27 @@ export function ImportFuncionariosDialog() {
       const existingMap = new Map(
         (existingEmployees || []).map(e => [e.cpf, e])
       );
+      
+      // FULL-SYNC: Fetch all active employees to identify who will be deactivated
+      let willDeactivate: EmployeeToDeactivate[] = [];
+      if (mode === 'full-sync') {
+        const { data: allActiveEmployees } = await supabase
+          .from('funcionarios')
+          .select('id, cpf, nome')
+          .eq('active', true)
+          .not('cpf', 'is', null)
+          .neq('cpf', '');
+        
+        willDeactivate = (allActiveEmployees || []).filter(emp => {
+          const normalizedCpf = normalizeCpf(emp.cpf || '');
+          return normalizedCpf && !csvCpfsSet.has(normalizedCpf);
+        }).map(emp => ({
+          id: emp.id,
+          cpf: emp.cpf || '',
+          nome: emp.nome || 'Sem nome',
+        }));
+      }
+      setToDeactivateList(willDeactivate);
       
       // Analyze each row
       const records: PreviewRecord[] = [];
@@ -596,6 +636,9 @@ export function ImportFuncionariosDialog() {
         }
         
         if (existing) {
+          // Check if employee is currently inactive - will be reactivated
+          const isReactivation = existing.active === false;
+          
           // Compare fields to find changes
           const changes: FieldChange[] = [];
           
@@ -653,7 +696,7 @@ export function ImportFuncionariosDialog() {
           records.push({
             cpf,
             nome: row.nome?.toUpperCase() || existing.nome || '-',
-            action: 'update',
+            action: isReactivation ? 'reactivate' : 'update',
             changes: changes.length > 0 ? changes : undefined,
             row,
             existingData: existing,
@@ -698,11 +741,20 @@ export function ImportFuncionariosDialog() {
       setConsolidationInfo(info);
       setResult(null);
       setPreviewRecords([]);
+      setToDeactivateList([]);
       
       // Analyze and compare with existing data
-      await analyzePreview(consolidated);
+      await analyzePreview(consolidated, importMode);
     } catch (error) {
       toast.error("Erro ao ler arquivo CSV");
+    }
+  };
+
+  // Re-analyze when import mode changes
+  const handleImportModeChange = async (mode: ImportMode) => {
+    setImportMode(mode);
+    if (previewData.length > 0) {
+      await analyzePreview(previewData, mode);
     }
   };
 
@@ -718,6 +770,7 @@ export function ImportFuncionariosDialog() {
       created: 0,
       skipped: 0,
       deactivated: 0,
+      reactivated: 0,
       assetsReleased: 0,
       errors: [],
     };
@@ -747,7 +800,7 @@ export function ImportFuncionariosDialog() {
       }
       
       try {
-        // Check if funcionario exists by CPF
+        // Check if funcionario exists by CPF (include inactive for reactivation)
         const { data: existing } = await supabase
           .from('funcionarios')
           .select('id, active')
@@ -808,6 +861,7 @@ export function ImportFuncionariosDialog() {
           if (equipeId) updateData.equipe_id = equipeId;
         }
         
+        // ALWAYS force active = true for records in CSV marked as active
         updateData.active = true;
         
         // Parse is_condutor
@@ -831,13 +885,21 @@ export function ImportFuncionariosDialog() {
         }
         
         if (existing) {
+          const wasInactive = existing.active === false;
+          
           const { error } = await supabase
             .from('funcionarios')
             .update(updateData)
             .eq('id', existing.id);
           
           if (error) throw error;
-          result.updated++;
+          
+          // Count reactivations separately
+          if (wasInactive) {
+            result.reactivated++;
+          } else {
+            result.updated++;
+          }
         } else {
           const { error } = await supabase
             .from('funcionarios')
@@ -858,40 +920,42 @@ export function ImportFuncionariosDialog() {
       setProgress(((i + 1) / previewData.length) * 100);
     }
     
-    // STEP 2: Deactivate employees whose CPFs are NOT in the spreadsheet
-    const importedCpfs = new Set<string>();
-    previewData.forEach(row => {
-      const cpf = normalizeCpf(row.cpf);
-      if (cpf && cpf.length === 11) {
-        importedCpfs.add(cpf);
-      }
-    });
-    
-    const { data: activeEmployees } = await supabase
-      .from('funcionarios')
-      .select('id, cpf, nome')
-      .eq('active', true)
-      .not('cpf', 'is', null)
-      .neq('cpf', '');
-    
-    if (activeEmployees && activeEmployees.length > 0) {
-      const toDeactivate = activeEmployees.filter(emp => {
-        const normalizedCpf = normalizeCpf(emp.cpf || '');
-        return normalizedCpf && !importedCpfs.has(normalizedCpf);
+    // STEP 2: Deactivate employees ONLY if full-sync mode is selected
+    if (importMode === 'full-sync') {
+      const importedCpfs = new Set<string>();
+      previewData.forEach(row => {
+        const cpf = normalizeCpf(row.cpf);
+        if (cpf && cpf.length === 11) {
+          importedCpfs.add(cpf);
+        }
       });
       
-      for (const emp of toDeactivate) {
-        try {
-          await supabase
-            .from('funcionarios')
-            .update({ active: false })
-            .eq('id', emp.id);
-          
-          const releasedCount = await releaseAssetsFromFuncionario(emp.id);
-          result.deactivated++;
-          result.assetsReleased += releasedCount;
-        } catch (error: any) {
-          result.errors.push(`Erro ao desativar ${emp.nome}: ${error.message}`);
+      const { data: activeEmployees } = await supabase
+        .from('funcionarios')
+        .select('id, cpf, nome')
+        .eq('active', true)
+        .not('cpf', 'is', null)
+        .neq('cpf', '');
+      
+      if (activeEmployees && activeEmployees.length > 0) {
+        const toDeactivate = activeEmployees.filter(emp => {
+          const normalizedCpf = normalizeCpf(emp.cpf || '');
+          return normalizedCpf && !importedCpfs.has(normalizedCpf);
+        });
+        
+        for (const emp of toDeactivate) {
+          try {
+            await supabase
+              .from('funcionarios')
+              .update({ active: false })
+              .eq('id', emp.id);
+            
+            const releasedCount = await releaseAssetsFromFuncionario(emp.id);
+            result.deactivated++;
+            result.assetsReleased += releasedCount;
+          } catch (error: any) {
+            result.errors.push(`Erro ao desativar ${emp.nome}: ${error.message}`);
+          }
         }
       }
     }
@@ -909,6 +973,7 @@ export function ImportFuncionariosDialog() {
       const parts = [];
       if (result.updated > 0) parts.push(`${result.updated} atualizados`);
       if (result.created > 0) parts.push(`${result.created} criados`);
+      if (result.reactivated > 0) parts.push(`${result.reactivated} reativados`);
       if (result.deactivated > 0) parts.push(`${result.deactivated} inativados`);
       toast.success(`Importação concluída: ${parts.join(', ')}`);
     } else {
@@ -923,13 +988,16 @@ export function ImportFuncionariosDialog() {
     setConsolidationInfo(null);
     setResult(null);
     setProgress(0);
+    setImportMode('update-only');
+    setToDeactivateList([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Count records by action
   const insertCount = previewRecords.filter(r => r.action === 'insert').length;
   const updateCount = previewRecords.filter(r => r.action === 'update').length;
-  const updateWithChangesCount = previewRecords.filter(r => r.action === 'update' && r.changes && r.changes.length > 0).length;
+  const reactivateCount = previewRecords.filter(r => r.action === 'reactivate').length;
+  const updateWithChangesCount = previewRecords.filter(r => (r.action === 'update' || r.action === 'reactivate') && r.changes && r.changes.length > 0).length;
   const deactivateCount = previewRecords.filter(r => r.action === 'deactivate').length;
   const skipCount = previewRecords.filter(r => r.action === 'skip').length;
 
@@ -974,6 +1042,46 @@ export function ImportFuncionariosDialog() {
           
           <Separator />
           
+          {/* Import Mode Selector */}
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              Modo de Importação
+            </Label>
+            <RadioGroup 
+              value={importMode} 
+              onValueChange={(value) => handleImportModeChange(value as ImportMode)} 
+              className="space-y-3"
+            >
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem value="update-only" id="update-only" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="update-only" className="font-medium cursor-pointer">
+                    Apenas Atualizar/Inserir (Recomendado)
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Processa apenas os registros do CSV. Funcionários que não estão 
+                    na planilha <span className="font-medium">permanecem inalterados</span>.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem value="full-sync" id="full-sync" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="full-sync" className="font-medium text-destructive cursor-pointer">
+                    Sincronização Total (Cuidado!)
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Funcionários que não estão na planilha serão <span className="font-medium text-destructive">INATIVADOS</span> e 
+                    seus ativos serão liberados.
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          <Separator />
+          
           {/* File Input */}
           <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
             <input
@@ -1000,6 +1108,32 @@ export function ImportFuncionariosDialog() {
             </div>
           )}
           
+          {/* FULL-SYNC WARNING: Show employees that will be deactivated */}
+          {importMode === 'full-sync' && toDeactivateList.length > 0 && !result && !isAnalyzing && (
+            <Alert variant="destructive" className="border-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle className="text-base">
+                ATENÇÃO: {toDeactivateList.length} funcionários serão INATIVADOS!
+              </AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">
+                  Estes funcionários não constam na planilha e serão desativados, 
+                  liberando todos os ativos vinculados:
+                </p>
+                <ScrollArea className="h-[120px] border rounded bg-destructive/5 p-2">
+                  <ul className="text-xs space-y-1">
+                    {toDeactivateList.map(emp => (
+                      <li key={emp.id} className="flex justify-between">
+                        <span>{emp.nome}</span>
+                        <span className="font-mono text-muted-foreground">{emp.cpf}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {/* Preview with Tabs */}
           {previewRecords.length > 0 && !result && !isAnalyzing && (
             <div className="space-y-3">
@@ -1018,10 +1152,22 @@ export function ImportFuncionariosDialog() {
                   <RefreshCw className="h-3 w-3 mr-1" />
                   {updateCount} existentes ({updateWithChangesCount} com alterações)
                 </Badge>
+                {reactivateCount > 0 && (
+                  <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    {reactivateCount} a reativar
+                  </Badge>
+                )}
                 {deactivateCount > 0 && (
                   <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/20">
                     <UserMinus className="h-3 w-3 mr-1" />
-                    {deactivateCount} a inativar
+                    {deactivateCount} a inativar (CSV)
+                  </Badge>
+                )}
+                {importMode === 'full-sync' && toDeactivateList.length > 0 && (
+                  <Badge className="bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {toDeactivateList.length} ausentes (serão inativados)
                   </Badge>
                 )}
                 {skipCount > 0 && (
@@ -1033,18 +1179,24 @@ export function ImportFuncionariosDialog() {
               
               {/* Tabbed Preview */}
               <Tabs defaultValue="insert" className="w-full">
-                <TabsList className="w-full grid grid-cols-3">
+                <TabsList className="w-full grid grid-cols-4">
                   <TabsTrigger value="insert" className="text-xs">
                     <Plus className="h-3 w-3 mr-1" />
                     Novos ({insertCount})
                   </TabsTrigger>
                   <TabsTrigger value="update" className="text-xs">
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Atualizar ({updateCount})
+                    Atualizar ({updateCount + reactivateCount})
                   </TabsTrigger>
                   <TabsTrigger value="other" className="text-xs">
                     Outros ({deactivateCount + skipCount})
                   </TabsTrigger>
+                  {importMode === 'full-sync' && (
+                    <TabsTrigger value="missing" className="text-xs text-destructive">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Ausentes ({toDeactivateList.length})
+                    </TabsTrigger>
+                  )}
                 </TabsList>
                 
                 {/* New Records Tab */}
@@ -1084,18 +1236,26 @@ export function ImportFuncionariosDialog() {
                 {/* Update Records Tab */}
                 <TabsContent value="update" className="mt-2">
                   <ScrollArea className="h-[200px] border rounded">
-                    {updateCount === 0 ? (
+                    {updateCount + reactivateCount === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-8">
                         Nenhum funcionário existente para atualizar
                       </p>
                     ) : (
                       <div className="divide-y">
                         {previewRecords
-                          .filter(r => r.action === 'update')
+                          .filter(r => r.action === 'update' || r.action === 'reactivate')
                           .map((record, idx) => (
                             <div key={idx} className="p-3 text-xs">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-medium">{record.nome}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{record.nome}</span>
+                                  {record.action === 'reactivate' && (
+                                    <Badge className="bg-green-500/10 text-green-600 text-[10px]">
+                                      <RotateCcw className="h-2.5 w-2.5 mr-1" />
+                                      Será reativado
+                                    </Badge>
+                                  )}
+                                </div>
                                 <span className="font-mono text-muted-foreground">{record.cpf}</span>
                               </div>
                               {record.changes && record.changes.length > 0 ? (
@@ -1116,7 +1276,9 @@ export function ImportFuncionariosDialog() {
                                   ))}
                                 </div>
                               ) : (
-                                <p className="text-muted-foreground italic">Sem alterações detectadas</p>
+                                <p className="text-muted-foreground italic">
+                                  {record.action === 'reactivate' ? 'Será reativado (sem outras alterações)' : 'Sem alterações detectadas'}
+                                </p>
                               )}
                             </div>
                           ))}
@@ -1168,6 +1330,42 @@ export function ImportFuncionariosDialog() {
                     )}
                   </ScrollArea>
                 </TabsContent>
+                
+                {/* Missing Employees Tab (Full-Sync Only) */}
+                {importMode === 'full-sync' && (
+                  <TabsContent value="missing" className="mt-2">
+                    <ScrollArea className="h-[200px] border border-destructive/50 rounded bg-destructive/5">
+                      {toDeactivateList.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">
+                          Todos os funcionários ativos estão na planilha
+                        </p>
+                      ) : (
+                        <table className="w-full text-xs">
+                          <thead className="bg-destructive/10 sticky top-0">
+                            <tr>
+                              <th className="p-2 text-left">CPF</th>
+                              <th className="p-2 text-left">Nome</th>
+                              <th className="p-2 text-left">Ação</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {toDeactivateList.map((emp, idx) => (
+                              <tr key={idx} className="border-t border-destructive/20">
+                                <td className="p-2 font-mono">{emp.cpf}</td>
+                                <td className="p-2">{emp.nome}</td>
+                                <td className="p-2">
+                                  <Badge variant="destructive" className="text-[10px]">
+                                    Será inativado
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </ScrollArea>
+                  </TabsContent>
+                )}
               </Tabs>
             </div>
           )}
@@ -1185,16 +1383,21 @@ export function ImportFuncionariosDialog() {
           {/* Results */}
           {result && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div className="bg-green-500/10 text-green-600 rounded-lg p-3 text-center">
                   <CheckCircle2 className="h-5 w-5 mx-auto mb-1" />
                   <p className="text-lg font-bold">{result.updated}</p>
                   <p className="text-xs">Atualizados</p>
                 </div>
                 <div className="bg-blue-500/10 text-blue-600 rounded-lg p-3 text-center">
-                  <CheckCircle2 className="h-5 w-5 mx-auto mb-1" />
+                  <Plus className="h-5 w-5 mx-auto mb-1" />
                   <p className="text-lg font-bold">{result.created}</p>
                   <p className="text-xs">Criados</p>
+                </div>
+                <div className="bg-emerald-500/10 text-emerald-600 rounded-lg p-3 text-center">
+                  <RotateCcw className="h-5 w-5 mx-auto mb-1" />
+                  <p className="text-lg font-bold">{result.reactivated}</p>
+                  <p className="text-xs">Reativados</p>
                 </div>
                 <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-center">
                   <UserMinus className="h-5 w-5 mx-auto mb-1" />
@@ -1233,7 +1436,11 @@ export function ImportFuncionariosDialog() {
             {result ? 'Fechar' : 'Cancelar'}
           </Button>
           {previewRecords.length > 0 && !result && !isAnalyzing && (
-            <Button onClick={processImport} disabled={isProcessing}>
+            <Button 
+              onClick={processImport} 
+              disabled={isProcessing}
+              variant={importMode === 'full-sync' && toDeactivateList.length > 0 ? 'destructive' : 'default'}
+            >
               {isProcessing ? 'Processando...' : `Importar ${previewData.length} registros`}
             </Button>
           )}
