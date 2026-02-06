@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings, Shield, Users, Bell, Database, Plug, Building2, Plus, Search } from "lucide-react";
+import { Settings, Shield, Users, Bell, Database, Plug, Building2, Plus, Search, Upload } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
@@ -19,9 +19,12 @@ import { useEmpresas } from "@/hooks/useEmpresas";
 import { CompanyCard } from "@/components/admin/CompanyCard";
 import { CompanyFormDialog } from "@/components/admin/CompanyFormDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
+import { ImportAreasDialog } from "@/components/admin/ImportAreasDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Configuracoes() {
   const { userRole } = useAuth();
+  const queryClient = useQueryClient();
   const isAdmin = userRole === "admin" || userRole === "diretor";
   
   // State for companies management
@@ -31,6 +34,7 @@ export default function Configuracoes() {
   const [editingCompany, setEditingCompany] = useState<typeof empresas[0] | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<typeof empresas[0] | null>(null);
+  const [importAreasDialogOpen, setImportAreasDialogOpen] = useState(false);
 
   const filteredEmpresas = empresas.filter(
     (e) =>
@@ -166,10 +170,16 @@ export default function Configuracoes() {
                     className="pl-10 w-[300px]"
                   />
                 </div>
-                <Button onClick={handleAddCompany}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Empresa
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => setImportAreasDialogOpen(true)}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar Centros de Custo
+                  </Button>
+                  <Button onClick={handleAddCompany}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nova Empresa
+                  </Button>
+                </div>
               </div>
 
               {/* Grid of Company Cards */}
@@ -406,6 +416,16 @@ export default function Configuracoes() {
         itemName={companyToDelete?.nome || ""}
         itemType="empresa"
         isLoading={deleteEmpresa.isPending}
+      />
+
+      {/* Global Import Areas Dialog */}
+      <ImportAreasDialog
+        open={importAreasDialogOpen}
+        onOpenChange={setImportAreasDialogOpen}
+        empresas={empresas}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["areas"] });
+        }}
       />
     </AppLayout>
   );

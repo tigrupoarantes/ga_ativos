@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { Building2, Edit, Trash2, Plus, Upload } from "lucide-react";
+import { Building2, Edit, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AreaTreeView } from "./AreaTreeView";
 import { AreaFormDialog } from "./AreaFormDialog";
-import { ImportAreasDialog } from "./ImportAreasDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { Area, useAreas } from "@/hooks/useAreas";
-import { useQueryClient } from "@tanstack/react-query";
 
 interface Empresa {
   id: string;
@@ -25,14 +23,12 @@ interface CompanyCardProps {
 }
 
 export function CompanyCard({ empresa, onEdit, onDelete }: CompanyCardProps) {
-  const queryClient = useQueryClient();
   const { areasTree, areasFlat, createArea, updateArea, deleteArea } = useAreas(empresa.id);
   
   const [areaDialogOpen, setAreaDialogOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [deleteAreaDialog, setDeleteAreaDialog] = useState(false);
   const [areaToDelete, setAreaToDelete] = useState<Area | null>(null);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const themeColor = empresa.color || "#0B3D91";
 
@@ -144,16 +140,10 @@ export function CompanyCard({ empresa, onEdit, onDelete }: CompanyCardProps) {
               <span className="text-sm font-medium text-muted-foreground">
                 Áreas/Setores
               </span>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
-                  <Upload className="h-3.5 w-3.5 mr-1" />
-                  Importar
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleAddArea}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Nova Área
-                </Button>
-              </div>
+              <Button variant="outline" size="sm" onClick={handleAddArea}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Nova Área
+              </Button>
             </div>
 
             {/* TreeView de Áreas */}
@@ -196,17 +186,6 @@ export function CompanyCard({ empresa, onEdit, onDelete }: CompanyCardProps) {
         itemName={areaToDelete?.name || ""}
         itemType="área"
         isLoading={deleteArea.isPending}
-      />
-
-      {/* Dialog de Importação de Áreas */}
-      <ImportAreasDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        companyId={empresa.id}
-        companyName={empresa.nome}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["areas"] });
-        }}
       />
     </>
   );
