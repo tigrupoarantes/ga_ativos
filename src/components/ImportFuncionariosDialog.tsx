@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,11 +10,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, UserMinus, Download, FileDown } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, UserMinus, Download, FileDown, Plus, RefreshCw, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // CSV Template headers and example data
 const CSV_HEADERS = ['CPF', 'NOME', 'EMAIL', 'TELEFONE', 'CARGO', 'DEPARTAMENTO', 'EMPRESA', 'ATIVO', 'CODIGO_VENDEDOR'];
@@ -126,9 +129,24 @@ interface ConsolidationInfo {
   duplicatesConsolidated: number;
 }
 
+// Field change info for preview
+interface FieldChange {
+  field: string;
+  oldValue: string;
+  newValue: string;
+}
+
+// Preview record with action type
+interface PreviewRecord {
+  cpf: string;
+  nome: string;
+  action: 'insert' | 'update' | 'deactivate' | 'skip';
+  changes?: FieldChange[];
+  row: CsvRow;
+  existingData?: Record<string, any>;
+}
+
 // Consolidate duplicate CPFs before processing
-// If ANY record for a CPF is active -> employee stays ACTIVE
-// If ALL records for a CPF are inactive -> employee is DEACTIVATED
 const consolidateByCpf = (rows: CsvRow[]): { consolidated: CsvRow[], info: ConsolidationInfo } => {
   const cpfMap = new Map<string, CsvRow[]>();
   
@@ -182,19 +200,13 @@ const consolidateByCpf = (rows: CsvRow[]): { consolidated: CsvRow[], info: Conso
 // CSV line parser - handles special format with ',' as delimiter
 const parseCSVLine = (line: string): string[] => {
   // Check if line uses ',' as delimiter pattern (common in some exports)
-  // Format: NOME','CPF','CARGO','DEPTO','EMPRESA','Ativo'
-  // First field has NO leading quote, last field has trailing quote
   if (line.includes("','")) {
-    // Split by ',' pattern
     const parts = line.split("','");
-    // Clean each element
     return parts.map((v, idx) => {
       let cleaned = v.trim();
-      // Only the LAST element has a trailing quote to remove: "Ativo'" -> "Ativo"
       if (idx === parts.length - 1) {
         cleaned = cleaned.replace(/'$/, '');
       }
-      // Clean any remaining surrounding quotes (safety)
       cleaned = cleaned.replace(/^['"]|['"]$/g, '');
       return cleaned.trim();
     });
@@ -209,7 +221,6 @@ const parseCSVLine = (line: string): string[] => {
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     
-    // Handle both single and double quotes
     if ((char === '"' || char === "'") && (!inQuotes || char === quoteChar)) {
       if (!inQuotes) {
         inQuotes = true;
@@ -227,7 +238,6 @@ const parseCSVLine = (line: string): string[] => {
   }
   result.push(current.trim());
   
-  // Clean remaining quotes from values
   return result.map(v => v.replace(/^['"]|['"]$/g, ''));
 };
 
@@ -305,14 +315,13 @@ const headerMappings: Record<string, keyof CsvRow> = {
 
 // Parse CSV with fixed column positions (no header)
 const parseWithFixedColumns = (lines: string[]): CsvRow[] => {
-  // Fixed column order: NOME, CPF, CARGO, DEPARTAMENTO, EMPRESA, SITUACAO
   const rows: CsvRow[] = [];
   
   for (const line of lines) {
     if (!line.trim()) continue;
     
     const values = parseCSVLine(line);
-    if (values.length < 2) continue; // At least name and CPF required
+    if (values.length < 2) continue;
     
     const row: CsvRow = {
       nome: values[0] || '',
@@ -344,10 +353,9 @@ const parseWithHeader = (lines: string[], headerLineIndex: number): CsvRow[] => 
   const headerLine = lines[headerLineIndex];
   const rawHeaders = parseCSVLine(headerLine);
   
-  // Normalize headers: lowercase, remove accents, remove underscores for matching
   const headers = rawHeaders.map(h => {
     const normalized = h.trim().toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/['"]/g, '');
     return normalized;
   });
@@ -358,10 +366,8 @@ const parseWithHeader = (lines: string[], headerLineIndex: number): CsvRow[] => 
     const line = lines[i].trim();
     if (!line) continue;
     
-    // Parse line using quote-aware parser
     const values = parseCSVLine(line);
     
-    // Build row using header mappings
     const mappedRow: CsvRow = {
       cpf: '',
       nome: '',
@@ -382,10 +388,8 @@ const parseWithHeader = (lines: string[], headerLineIndex: number): CsvRow[] => 
     headers.forEach((header, index) => {
       const value = values[index] || '';
       
-      // Try exact match first
       let targetField = headerMappings[header];
       
-      // Try without underscores
       if (!targetField) {
         const headerNoUnderscore = header.replace(/_/g, '');
         targetField = headerMappings[headerNoUnderscore];
@@ -411,8 +415,6 @@ const parseCsv = (text: string): CsvRow[] => {
   const firstLine = lines[0];
   const firstValues = parseCSVLine(firstLine);
   
-  // Check if this looks like a header or data
-  // Headers usually have keywords like "CPF", "NOME", "CARGO", etc.
   const looksLikeHeader = firstValues.some(v => {
     const lower = v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     return ['cpf', 'nome', 'cargo', 'empresa', 'situacao', 'ativo', 'funcionario', 
@@ -420,7 +422,6 @@ const parseCsv = (text: string): CsvRow[] => {
   });
   
   if (looksLikeHeader) {
-    // Check if first line is malformed and we should use line 2 as header
     let headerLineIndex = 0;
     if (firstLine.startsWith("'") || firstLine.includes("\"'") || firstLine.includes("'\"")) {
       headerLineIndex = 1;
@@ -428,7 +429,6 @@ const parseCsv = (text: string): CsvRow[] => {
     }
     return parseWithHeader(lines, headerLineIndex);
   } else {
-    // Process with fixed column positions (no header)
     return parseWithFixedColumns(lines);
   }
 };
@@ -437,7 +437,6 @@ const parseCsv = (text: string): CsvRow[] => {
 const releaseAssetsFromFuncionario = async (funcionarioId: string) => {
   let releasedCount = 0;
 
-  // Release assets (notebooks, celulares)
   const { data: assets } = await supabase
     .from('assets')
     .select('id')
@@ -452,7 +451,6 @@ const releaseAssetsFromFuncionario = async (funcionarioId: string) => {
     releasedCount += assets.length;
   }
 
-  // Release phone lines
   const { data: linhas } = await supabase
     .from('linhas_telefonicas')
     .select('id')
@@ -467,7 +465,6 @@ const releaseAssetsFromFuncionario = async (funcionarioId: string) => {
     releasedCount += linhas.length;
   }
 
-  // Release vehicles
   const { data: veiculos } = await supabase
     .from('veiculos')
     .select('id')
@@ -485,15 +482,201 @@ const releaseAssetsFromFuncionario = async (funcionarioId: string) => {
   return releasedCount;
 };
 
+// Field labels for display
+const fieldLabels: Record<string, string> = {
+  nome: 'Nome',
+  email: 'Email',
+  telefone: 'Telefone',
+  cargo: 'Cargo',
+  departamento: 'Departamento',
+  empresa_id: 'Empresa',
+  equipe_id: 'Equipe',
+  is_condutor: 'Condutor',
+  cnh_numero: 'CNH Número',
+  cnh_categoria: 'CNH Categoria',
+  cnh_validade: 'CNH Validade',
+  is_vendedor: 'Vendedor',
+  codigo_vendedor: 'Cód. Vendedor',
+};
+
 export function ImportFuncionariosDialog() {
   const [open, setOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [previewData, setPreviewData] = useState<CsvRow[]>([]);
+  const [previewRecords, setPreviewRecords] = useState<PreviewRecord[]>([]);
   const [consolidationInfo, setConsolidationInfo] = useState<ConsolidationInfo | null>(null);
+  const [empresasMap, setEmpresasMap] = useState<Map<string, { id: string, nome: string }>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+
+  // Analyze CSV and compare with existing data
+  const analyzePreview = async (rows: CsvRow[]) => {
+    setIsAnalyzing(true);
+    
+    try {
+      // Fetch empresas for name matching and display
+      const [empresasRes, equipesRes] = await Promise.all([
+        supabase.from('empresas').select('id, nome').eq('active', true),
+        supabase.from('equipes').select('id, nome').eq('active', true),
+      ]);
+      
+      const empresasMapLocal = new Map(
+        (empresasRes.data || []).map(e => [e.nome.toLowerCase(), { id: e.id, nome: e.nome }])
+      );
+      const empresasIdMap = new Map(
+        (empresasRes.data || []).map(e => [e.id, e.nome])
+      );
+      setEmpresasMap(empresasMapLocal);
+      
+      const equipesMap = new Map(
+        (equipesRes.data || []).map(e => [e.nome.toLowerCase(), e.id])
+      );
+      
+      // Get all CPFs from the CSV
+      const cpfList = rows
+        .map(r => normalizeCpf(r.cpf))
+        .filter(cpf => cpf && cpf.length === 11);
+      
+      // Fetch existing employees by CPF
+      const { data: existingEmployees } = await supabase
+        .from('funcionarios')
+        .select('id, cpf, nome, email, telefone, cargo, departamento, empresa_id, equipe_id, is_condutor, cnh_numero, cnh_categoria, cnh_validade, is_vendedor, codigo_vendedor, active')
+        .in('cpf', cpfList);
+      
+      const existingMap = new Map(
+        (existingEmployees || []).map(e => [e.cpf, e])
+      );
+      
+      // Analyze each row
+      const records: PreviewRecord[] = [];
+      
+      for (const row of rows) {
+        const cpf = normalizeCpf(row.cpf);
+        
+        if (!cpf || cpf.length !== 11) {
+          records.push({
+            cpf: row.cpf,
+            nome: row.nome || '-',
+            action: 'skip',
+            row,
+          });
+          continue;
+        }
+        
+        // Determine if CSV marks this as inactive
+        let isActiveInCsv = true;
+        if (row.ativo) {
+          const ativoLower = row.ativo.toLowerCase();
+          isActiveInCsv = ['sim', 'ativo', 'yes', 'true', '1', 's'].includes(ativoLower);
+        }
+        
+        const existing = existingMap.get(cpf);
+        
+        if (!isActiveInCsv) {
+          if (existing) {
+            records.push({
+              cpf,
+              nome: existing.nome || row.nome || '-',
+              action: 'deactivate',
+              row,
+              existingData: existing,
+            });
+          } else {
+            records.push({
+              cpf,
+              nome: row.nome || '-',
+              action: 'skip',
+              row,
+            });
+          }
+          continue;
+        }
+        
+        if (existing) {
+          // Compare fields to find changes
+          const changes: FieldChange[] = [];
+          
+          // Nome
+          if (row.nome && row.nome.toUpperCase() !== (existing.nome || '').toUpperCase()) {
+            changes.push({ field: 'nome', oldValue: existing.nome || '', newValue: row.nome.toUpperCase() });
+          }
+          
+          // Email
+          if (row.email && row.email.toLowerCase() !== (existing.email || '').toLowerCase()) {
+            changes.push({ field: 'email', oldValue: existing.email || '', newValue: row.email.toLowerCase() });
+          }
+          
+          // Telefone
+          if (row.telefone && row.telefone !== (existing.telefone || '')) {
+            changes.push({ field: 'telefone', oldValue: existing.telefone || '', newValue: row.telefone });
+          }
+          
+          // Cargo
+          if (row.cargo && row.cargo.toUpperCase() !== (existing.cargo || '').toUpperCase()) {
+            changes.push({ field: 'cargo', oldValue: existing.cargo || '', newValue: row.cargo.toUpperCase() });
+          }
+          
+          // Departamento
+          if (row.departamento && row.departamento.toUpperCase() !== (existing.departamento || '').toUpperCase()) {
+            changes.push({ field: 'departamento', oldValue: existing.departamento || '', newValue: row.departamento.toUpperCase() });
+          }
+          
+          // Empresa
+          if (row.empresa) {
+            const empresaAliases: Record<string, string> = {
+              'cdf com de produtos alimenticios ltda': 'chokdoce loja 2',
+              'jjgf com de produtos alimenticios ltda': 'chokdoce loja 3',
+            };
+            const empresaNormalizada = row.empresa.toLowerCase();
+            const empresaNomeFinal = empresaAliases[empresaNormalizada] || empresaNormalizada;
+            const empresaInfo = empresasMapLocal.get(empresaNomeFinal);
+            if (empresaInfo && empresaInfo.id !== existing.empresa_id) {
+              const oldEmpresa = existing.empresa_id ? empresasIdMap.get(existing.empresa_id) || '' : '';
+              changes.push({ field: 'empresa_id', oldValue: oldEmpresa, newValue: empresaInfo.nome });
+            }
+          }
+          
+          // Código do vendedor
+          if (row.codigo_vendedor) {
+            const codigo = row.codigo_vendedor.replace(/\D/g, '');
+            if (codigo && codigo !== (existing.codigo_vendedor || '')) {
+              changes.push({ field: 'codigo_vendedor', oldValue: existing.codigo_vendedor || '', newValue: codigo });
+              if (!existing.is_vendedor) {
+                changes.push({ field: 'is_vendedor', oldValue: 'Não', newValue: 'Sim' });
+              }
+            }
+          }
+          
+          records.push({
+            cpf,
+            nome: row.nome?.toUpperCase() || existing.nome || '-',
+            action: 'update',
+            changes: changes.length > 0 ? changes : undefined,
+            row,
+            existingData: existing,
+          });
+        } else {
+          // New record
+          records.push({
+            cpf,
+            nome: row.nome?.toUpperCase() || 'SEM NOME',
+            action: 'insert',
+            row,
+          });
+        }
+      }
+      
+      setPreviewRecords(records);
+    } catch (error) {
+      console.error('Error analyzing preview:', error);
+      toast.error('Erro ao analisar prévia');
+    }
+    
+    setIsAnalyzing(false);
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -514,6 +697,10 @@ export function ImportFuncionariosDialog() {
       setPreviewData(consolidated);
       setConsolidationInfo(info);
       setResult(null);
+      setPreviewRecords([]);
+      
+      // Analyze and compare with existing data
+      await analyzePreview(consolidated);
     } catch (error) {
       toast.error("Erro ao ler arquivo CSV");
     }
@@ -541,10 +728,10 @@ export function ImportFuncionariosDialog() {
       supabase.from('equipes').select('id, nome').eq('active', true),
     ]);
     
-    const empresasMap = new Map(
+    const empresasMapLocal = new Map(
       (empresasRes.data || []).map(e => [e.nome.toLowerCase(), e.id])
     );
-    const equipesMap = new Map(
+    const equipesMapLocal = new Map(
       (equipesRes.data || []).map(e => [e.nome.toLowerCase(), e.id])
     );
     
@@ -577,7 +764,6 @@ export function ImportFuncionariosDialog() {
         // Handle inactive employee logic
         if (!isActiveInCsv) {
           if (existing) {
-            // Deactivate existing employee and release their assets
             const { error } = await supabase
               .from('funcionarios')
               .update({ active: false })
@@ -585,12 +771,10 @@ export function ImportFuncionariosDialog() {
             
             if (error) throw error;
             
-            // Release all assets associated with this employee
             const releasedCount = await releaseAssetsFromFuncionario(existing.id);
             result.deactivated++;
             result.assetsReleased += releasedCount;
           } else {
-            // Don't create inactive employees - just skip
             result.skipped++;
           }
           setProgress(((i + 1) / previewData.length) * 100);
@@ -606,7 +790,7 @@ export function ImportFuncionariosDialog() {
         if (row.cargo) updateData.cargo = row.cargo.toUpperCase();
         if (row.departamento) updateData.departamento = row.departamento.toUpperCase();
         
-        // Match empresa by name (with aliases for alternative company names)
+        // Match empresa by name
         if (row.empresa) {
           const empresaAliases: Record<string, string> = {
             'cdf com de produtos alimenticios ltda': 'chokdoce loja 2',
@@ -614,17 +798,16 @@ export function ImportFuncionariosDialog() {
           };
           const empresaNormalizada = row.empresa.toLowerCase();
           const empresaNomeFinal = empresaAliases[empresaNormalizada] || empresaNormalizada;
-          const empresaId = empresasMap.get(empresaNomeFinal);
+          const empresaId = empresasMapLocal.get(empresaNomeFinal);
           if (empresaId) updateData.empresa_id = empresaId;
         }
         
         // Match equipe by name
         if (row.equipe) {
-          const equipeId = equipesMap.get(row.equipe.toLowerCase());
+          const equipeId = equipesMapLocal.get(row.equipe.toLowerCase());
           if (equipeId) updateData.equipe_id = equipeId;
         }
         
-        // Active status - already handled above, always true here
         updateData.active = true;
         
         // Parse is_condutor
@@ -640,7 +823,7 @@ export function ImportFuncionariosDialog() {
         
         // Código do vendedor - se preenchido, ativa is_vendedor
         if (row.codigo_vendedor) {
-          const codigo = row.codigo_vendedor.replace(/\D/g, ''); // apenas números
+          const codigo = row.codigo_vendedor.replace(/\D/g, '');
           if (codigo) {
             updateData.is_vendedor = true;
             updateData.codigo_vendedor = codigo;
@@ -648,7 +831,6 @@ export function ImportFuncionariosDialog() {
         }
         
         if (existing) {
-          // Update existing
           const { error } = await supabase
             .from('funcionarios')
             .update(updateData)
@@ -657,7 +839,6 @@ export function ImportFuncionariosDialog() {
           if (error) throw error;
           result.updated++;
         } else {
-          // Create new - CPF is required
           const { error } = await supabase
             .from('funcionarios')
             .insert({
@@ -678,7 +859,6 @@ export function ImportFuncionariosDialog() {
     }
     
     // STEP 2: Deactivate employees whose CPFs are NOT in the spreadsheet
-    // Build set of all valid CPFs from the import file
     const importedCpfs = new Set<string>();
     previewData.forEach(row => {
       const cpf = normalizeCpf(row.cpf);
@@ -687,7 +867,6 @@ export function ImportFuncionariosDialog() {
       }
     });
     
-    // Fetch all active employees with CPF from database
     const { data: activeEmployees } = await supabase
       .from('funcionarios')
       .select('id, cpf, nome')
@@ -696,13 +875,11 @@ export function ImportFuncionariosDialog() {
       .neq('cpf', '');
     
     if (activeEmployees && activeEmployees.length > 0) {
-      // Find employees NOT in the imported list
       const toDeactivate = activeEmployees.filter(emp => {
         const normalizedCpf = normalizeCpf(emp.cpf || '');
         return normalizedCpf && !importedCpfs.has(normalizedCpf);
       });
       
-      // Deactivate each employee and release their assets
       for (const emp of toDeactivate) {
         try {
           await supabase
@@ -742,11 +919,19 @@ export function ImportFuncionariosDialog() {
   const handleClose = () => {
     setOpen(false);
     setPreviewData([]);
+    setPreviewRecords([]);
     setConsolidationInfo(null);
     setResult(null);
     setProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Count records by action
+  const insertCount = previewRecords.filter(r => r.action === 'insert').length;
+  const updateCount = previewRecords.filter(r => r.action === 'update').length;
+  const updateWithChangesCount = previewRecords.filter(r => r.action === 'update' && r.changes && r.changes.length > 0).length;
+  const deactivateCount = previewRecords.filter(r => r.action === 'deactivate').length;
+  const skipCount = previewRecords.filter(r => r.action === 'skip').length;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => isOpen ? setOpen(true) : handleClose()}>
@@ -756,7 +941,7 @@ export function ImportFuncionariosDialog() {
           Importar CSV
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Importar Funcionários via CSV</DialogTitle>
           <DialogDescription>
@@ -765,7 +950,7 @@ export function ImportFuncionariosDialog() {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4">
           {/* Download Template Section */}
           <div className="bg-muted/50 rounded-lg p-4">
             <p className="text-sm font-medium mb-3 flex items-center gap-2">
@@ -807,46 +992,183 @@ export function ImportFuncionariosDialog() {
             </label>
           </div>
           
-          {/* Preview */}
-          {previewData.length > 0 && !result && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium">
-                <p>Prévia: {previewData.length} funcionários únicos</p>
+          {/* Analyzing indicator */}
+          {isAnalyzing && (
+            <div className="flex items-center justify-center gap-2 py-4">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              <span className="text-sm text-muted-foreground">Analisando arquivo...</span>
+            </div>
+          )}
+          
+          {/* Preview with Tabs */}
+          {previewRecords.length > 0 && !result && !isAnalyzing && (
+            <div className="space-y-3">
+              {/* Summary badges */}
+              <div className="flex flex-wrap gap-2">
                 {consolidationInfo && consolidationInfo.duplicatesConsolidated > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    ({consolidationInfo.originalCount} linhas no CSV → {consolidationInfo.duplicatesConsolidated} CPFs duplicados consolidados)
-                  </p>
+                  <Badge variant="secondary" className="text-xs">
+                    {consolidationInfo.duplicatesConsolidated} CPFs duplicados consolidados
+                  </Badge>
+                )}
+                <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20">
+                  <Plus className="h-3 w-3 mr-1" />
+                  {insertCount} novos
+                </Badge>
+                <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  {updateCount} existentes ({updateWithChangesCount} com alterações)
+                </Badge>
+                {deactivateCount > 0 && (
+                  <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/20">
+                    <UserMinus className="h-3 w-3 mr-1" />
+                    {deactivateCount} a inativar
+                  </Badge>
+                )}
+                {skipCount > 0 && (
+                  <Badge variant="outline">
+                    {skipCount} ignorados
+                  </Badge>
                 )}
               </div>
-              <div className="max-h-40 overflow-y-auto border rounded">
-                <table className="w-full text-xs">
-                  <thead className="bg-muted sticky top-0">
-                    <tr>
-                      <th className="p-2 text-left">CPF</th>
-                      <th className="p-2 text-left">Nome</th>
-                      <th className="p-2 text-left">Cargo</th>
-                      <th className="p-2 text-left">Empresa</th>
-                      <th className="p-2 text-left">Ativo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewData.slice(0, 10).map((row, idx) => (
-                      <tr key={idx} className="border-t">
-                        <td className="p-2">{normalizeCpf(row.cpf)}</td>
-                        <td className="p-2">{row.nome || '-'}</td>
-                        <td className="p-2">{row.cargo || '-'}</td>
-                        <td className="p-2">{row.empresa || '-'}</td>
-                        <td className="p-2">{row.ativo || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {previewData.length > 10 && (
-                  <p className="text-xs text-muted-foreground p-2 text-center">
-                    ... e mais {previewData.length - 10} registros
-                  </p>
-                )}
-              </div>
+              
+              {/* Tabbed Preview */}
+              <Tabs defaultValue="insert" className="w-full">
+                <TabsList className="w-full grid grid-cols-3">
+                  <TabsTrigger value="insert" className="text-xs">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Novos ({insertCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="update" className="text-xs">
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Atualizar ({updateCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="other" className="text-xs">
+                    Outros ({deactivateCount + skipCount})
+                  </TabsTrigger>
+                </TabsList>
+                
+                {/* New Records Tab */}
+                <TabsContent value="insert" className="mt-2">
+                  <ScrollArea className="h-[200px] border rounded">
+                    {insertCount === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Nenhum novo funcionário para inserir
+                      </p>
+                    ) : (
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted sticky top-0">
+                          <tr>
+                            <th className="p-2 text-left">CPF</th>
+                            <th className="p-2 text-left">Nome</th>
+                            <th className="p-2 text-left">Cargo</th>
+                            <th className="p-2 text-left">Empresa</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewRecords
+                            .filter(r => r.action === 'insert')
+                            .map((record, idx) => (
+                              <tr key={idx} className="border-t">
+                                <td className="p-2 font-mono">{record.cpf}</td>
+                                <td className="p-2">{record.row.nome || '-'}</td>
+                                <td className="p-2">{record.row.cargo || '-'}</td>
+                                <td className="p-2">{record.row.empresa || '-'}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+                
+                {/* Update Records Tab */}
+                <TabsContent value="update" className="mt-2">
+                  <ScrollArea className="h-[200px] border rounded">
+                    {updateCount === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Nenhum funcionário existente para atualizar
+                      </p>
+                    ) : (
+                      <div className="divide-y">
+                        {previewRecords
+                          .filter(r => r.action === 'update')
+                          .map((record, idx) => (
+                            <div key={idx} className="p-3 text-xs">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium">{record.nome}</span>
+                                <span className="font-mono text-muted-foreground">{record.cpf}</span>
+                              </div>
+                              {record.changes && record.changes.length > 0 ? (
+                                <div className="space-y-1 mt-2">
+                                  {record.changes.map((change, cIdx) => (
+                                    <div key={cIdx} className="flex items-center gap-2 text-[11px] bg-amber-500/5 rounded px-2 py-1">
+                                      <span className="font-medium text-muted-foreground w-24 shrink-0">
+                                        {fieldLabels[change.field] || change.field}:
+                                      </span>
+                                      <span className="text-destructive line-through truncate max-w-[100px]" title={change.oldValue}>
+                                        {change.oldValue || '(vazio)'}
+                                      </span>
+                                      <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                      <span className="text-green-600 font-medium truncate max-w-[100px]" title={change.newValue}>
+                                        {change.newValue}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-muted-foreground italic">Sem alterações detectadas</p>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+                
+                {/* Other (Deactivate/Skip) Tab */}
+                <TabsContent value="other" className="mt-2">
+                  <ScrollArea className="h-[200px] border rounded">
+                    {deactivateCount + skipCount === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Nenhum registro para inativar ou ignorar
+                      </p>
+                    ) : (
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted sticky top-0">
+                          <tr>
+                            <th className="p-2 text-left">CPF</th>
+                            <th className="p-2 text-left">Nome</th>
+                            <th className="p-2 text-left">Ação</th>
+                            <th className="p-2 text-left">Motivo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewRecords
+                            .filter(r => r.action === 'deactivate' || r.action === 'skip')
+                            .map((record, idx) => (
+                              <tr key={idx} className="border-t">
+                                <td className="p-2 font-mono">{record.cpf}</td>
+                                <td className="p-2">{record.nome}</td>
+                                <td className="p-2">
+                                  {record.action === 'deactivate' ? (
+                                    <Badge variant="destructive" className="text-[10px]">Inativar</Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="text-[10px]">Ignorar</Badge>
+                                  )}
+                                </td>
+                                <td className="p-2 text-muted-foreground">
+                                  {record.action === 'deactivate' 
+                                    ? 'Marcado como inativo no CSV' 
+                                    : 'CPF inválido ou registro não existente'}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
           
@@ -906,11 +1228,11 @@ export function ImportFuncionariosDialog() {
           )}
         </div>
         
-        <DialogFooter>
+        <DialogFooter className="mt-4">
           <Button variant="outline" onClick={handleClose}>
             {result ? 'Fechar' : 'Cancelar'}
           </Button>
-          {previewData.length > 0 && !result && (
+          {previewRecords.length > 0 && !result && !isAnalyzing && (
             <Button onClick={processImport} disabled={isProcessing}>
               {isProcessing ? 'Processando...' : `Importar ${previewData.length} registros`}
             </Button>
