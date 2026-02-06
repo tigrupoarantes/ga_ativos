@@ -270,9 +270,13 @@ export function ImportLinhasDialog({ onImportComplete, trigger }: ImportLinhasDi
           );
 
           if (!funcionario) {
+            // CPF não encontrado - linha será importada como disponível
             status = "warning";
-            message = "Funcionário não encontrado";
+            message = "CPF não encontrado - será disponível";
           }
+        } else {
+          // Sem CPF informado - linha disponível
+          message = "Sem funcionário - disponível";
         }
 
         if (!normalizedPhone || normalizedPhone.length < 10) {
@@ -284,7 +288,7 @@ export function ImportLinhasDialog({ onImportComplete, trigger }: ImportLinhasDi
           numero: normalizedPhone,
           funcionario_id: funcionario?.id || null,
           funcionario_cpf: row.cpf_funcionario || "",
-          funcionario_nome: funcionario?.nome || "",
+          funcionario_nome: funcionario?.nome || (normalizedCpf ? "" : "Disponível"),
           operadora: row.operadora || null,
           plano: row.plano || null,
           observacoes: row.observacoes || null,
