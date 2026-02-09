@@ -22,11 +22,13 @@ import {
   FileText,
   Boxes,
   UsersRound,
+  Bug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
+import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { useCurrentUserPermissions } from "@/hooks/useModulePermissions";
 import {
   Breadcrumb,
@@ -131,6 +133,7 @@ const navStructure: NavEntry[] = [
 const adminItems: NavItem[] = [
   { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
   { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
+  { icon: Bug, label: "Bugs e Melhorias", path: "/admin/bugs", module: "admin" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
 ];
 
@@ -316,6 +319,24 @@ function NavContent() {
   );
 }
 
+function BugReportButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-full"
+        onClick={() => setOpen(true)}
+        title="Reportar Bug ou Melhoria"
+      >
+        <Bug className="h-4 w-4" />
+      </Button>
+      <BugReportDialog open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -420,7 +441,10 @@ export function AppLayout({ children }: AppLayoutProps) {
               {breadcrumbs[breadcrumbs.length - 1]?.label || "Dashboard"}
             </span>
           </div>
-          <NotificationBell />
+          <div className="flex items-center gap-2">
+            <BugReportButton />
+            <NotificationBell />
+          </div>
         </header>
 
         {/* Main content */}
