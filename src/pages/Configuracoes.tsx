@@ -50,11 +50,11 @@ export default function Configuracoes() {
   const [importAreasDialogOpen, setImportAreasDialogOpen] = useState(false);
   const [bugDialogOpen, setBugDialogOpen] = useState(false);
 
-  const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-    aberto: { label: "Aberto", variant: "default" },
-    em_analise: { label: "Em Análise", variant: "secondary" },
-    resolvido: { label: "Resolvido", variant: "outline" },
-    recusado: { label: "Recusado", variant: "destructive" },
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    aberto: { label: "Aberto", className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300" },
+    em_analise: { label: "Em Análise", className: "bg-blue-500/10 text-blue-700 dark:text-blue-300" },
+    resolvido: { label: "Resolvido", className: "bg-green-500/10 text-green-700 dark:text-green-300" },
+    recusado: { label: "Recusado", className: "bg-red-500/10 text-red-700 dark:text-red-300" },
   };
 
   const filteredEmpresas = empresas.filter(
@@ -233,7 +233,7 @@ export default function Configuracoes() {
             </TabsContent>
           )}
 
-          <TabsContent value="notificacoes" className="space-y-6">
+          <TabsContent value="notificacoes" className="space-y-6 animate-fade-in">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -337,7 +337,9 @@ export default function Configuracoes() {
                             <TableCell className="font-medium">{report.title}</TableCell>
                             <TableCell className="capitalize text-sm">{report.priority}</TableCell>
                             <TableCell>
-                              <Badge variant={status.variant}>{status.label}</Badge>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border border-transparent ${status.className}`}>
+                                {status.label}
+                              </span>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {format(new Date(report.created_at), "dd/MM/yyyy")}
@@ -367,34 +369,36 @@ export default function Configuracoes() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-6 md:grid-cols-2">
                     <Link to="/permissoes">
-                      <Card className="cursor-pointer hover:bg-accent transition-colors">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Shield className="h-4 w-4" />
-                            Permissões de Módulos
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground">
-                            Configure quais perfis podem acessar cada módulo
-                          </p>
+                      <Card className="cursor-pointer card-hover">
+                        <CardContent className="p-6 flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Shield className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold">Permissões de Módulos</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Configure quais perfis podem acessar cada módulo
+                            </p>
+                            <span className="text-sm text-primary font-medium mt-2 inline-block">Gerenciar →</span>
+                          </div>
                         </CardContent>
                       </Card>
                     </Link>
                     <Link to="/usuarios">
-                      <Card className="cursor-pointer hover:bg-accent transition-colors">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Usuários
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground">
-                            Gerencie usuários e seus perfis de acesso
-                          </p>
+                      <Card className="cursor-pointer card-hover">
+                        <CardContent className="p-6 flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+                            <Users className="h-6 w-6 text-accent" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold">Usuários</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Gerencie usuários e seus perfis de acesso
+                            </p>
+                            <span className="text-sm text-primary font-medium mt-2 inline-block">Gerenciar →</span>
+                          </div>
                         </CardContent>
                       </Card>
                     </Link>

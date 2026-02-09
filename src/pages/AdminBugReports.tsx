@@ -3,7 +3,6 @@ import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useBugReports, BugReport } from "@/hooks/useBugReports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -24,18 +23,18 @@ import {
 import { Bug, Lightbulb, AlertCircle, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  aberto: { label: "Aberto", variant: "default" },
-  em_analise: { label: "Em Análise", variant: "secondary" },
-  resolvido: { label: "Resolvido", variant: "outline" },
-  recusado: { label: "Recusado", variant: "destructive" },
+const statusConfig: Record<string, { label: string; className: string }> = {
+  aberto: { label: "Aberto", className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300" },
+  em_analise: { label: "Em Análise", className: "bg-blue-500/10 text-blue-700 dark:text-blue-300" },
+  resolvido: { label: "Resolvido", className: "bg-green-500/10 text-green-700 dark:text-green-300" },
+  recusado: { label: "Recusado", className: "bg-red-500/10 text-red-700 dark:text-red-300" },
 };
 
 const priorityConfig: Record<string, { label: string; className: string }> = {
   baixa: { label: "Baixa", className: "bg-muted text-muted-foreground" },
-  media: { label: "Média", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
-  alta: { label: "Alta", className: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
-  critica: { label: "Crítica", className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  media: { label: "Média", className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300" },
+  alta: { label: "Alta", className: "bg-orange-500/10 text-orange-700 dark:text-orange-300" },
+  critica: { label: "Crítica", className: "bg-red-500/10 text-red-700 dark:text-red-300" },
 };
 
 export default function AdminBugReports() {
@@ -72,45 +71,40 @@ export default function AdminBugReports() {
     }
   };
 
+  const kpis = [
+    { label: "Abertos", value: abertos, icon: AlertCircle, iconBg: "bg-yellow-500/10", iconColor: "text-yellow-600 dark:text-yellow-400" },
+    { label: "Bugs", value: bugs, icon: Bug, iconBg: "bg-red-500/10", iconColor: "text-red-600 dark:text-red-400" },
+    { label: "Melhorias", value: melhorias, icon: Lightbulb, iconBg: "bg-blue-500/10", iconColor: "text-blue-600 dark:text-blue-400" },
+  ];
+
   return (
     <AppLayout>
       <PageHeader title="Bugs e Melhorias" subtitle="Gerencie reports enviados pelos usuários" />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Abertos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
-              <span className="text-2xl font-bold">{abertos}</span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Bugs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Bug className="h-5 w-5 text-destructive" />
-              <span className="text-2xl font-bold">{bugs}</span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Melhorias</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-yellow-500" />
-              <span className="text-2xl font-bold">{melhorias}</span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+        {kpis.map((kpi, index) => {
+          const Icon = kpi.icon;
+          return (
+            <Card
+              key={kpi.label}
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${index * 100}ms`, animationFillMode: "backwards" }}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className={`h-12 w-12 rounded-lg ${kpi.iconBg} flex items-center justify-center`}>
+                    <Icon className={`h-6 w-6 ${kpi.iconColor}`} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{kpi.value}</p>
+                    <p className="text-sm text-muted-foreground">{kpi.label}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Filters */}
@@ -140,7 +134,7 @@ export default function AdminBugReports() {
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="animate-fade-in">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -196,12 +190,14 @@ export default function AdminBugReports() {
                           {report.user_email || "—"}
                         </TableCell>
                         <TableCell>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${priority.className}`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border border-transparent ${priority.className}`}>
                             {priority.label}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={status.variant}>{status.label}</Badge>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border border-transparent ${status.className}`}>
+                            {status.label}
+                          </span>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {format(new Date(report.created_at), "dd/MM/yyyy")}

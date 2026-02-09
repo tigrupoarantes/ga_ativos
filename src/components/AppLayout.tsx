@@ -134,6 +134,7 @@ const adminItems: NavItem[] = [
   { icon: UserCog, label: "Usuários", path: "/usuarios", module: "admin" },
   { icon: Shield, label: "Permissões", path: "/permissoes", module: "admin" },
   { icon: Settings, label: "Configurações", path: "/configuracoes", module: "admin" },
+  { icon: Bug, label: "Bugs e Melhorias", path: "/admin/bugs", module: "admin" },
 ];
 
 function NavContent() {
