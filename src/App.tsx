@@ -37,7 +37,6 @@ import Lavagens from "./pages/Lavagens";
 import KmColetas from "./pages/KmColetas";
 import Notificacoes from "./pages/Notificacoes";
 import Relatorios from "./pages/Relatorios";
-import AdminBugReports from "./pages/AdminBugReports";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -101,7 +100,6 @@ const App = () => (
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/permissoes" element={<ProtectedRoute><Permissoes /></ProtectedRoute>} />
             <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
-            <Route path="/admin/bugs" element={<ProtectedRoute><AdminBugReports /></ProtectedRoute>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

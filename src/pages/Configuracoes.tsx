@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings, Shield, Users, Bell, Database, Plug, Building2, Plus, Search, Upload } from "lucide-react";
+import { Settings, Shield, Users, Bell, Database, Plug, Building2, Plus, Search, Upload, Bug, Lightbulb } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
@@ -21,6 +21,18 @@ import { CompanyFormDialog } from "@/components/admin/CompanyFormDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { ImportAreasDialog } from "@/components/admin/ImportAreasDialog";
 import { useQueryClient } from "@tanstack/react-query";
+import { useBugReports } from "@/hooks/useBugReports";
+import { BugReportDialog } from "@/components/feedback/BugReportDialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
 
 export default function Configuracoes() {
   const { userRole } = useAuth();
@@ -29,12 +41,21 @@ export default function Configuracoes() {
   
   // State for companies management
   const { empresas, isLoading, createEmpresa, updateEmpresa, deleteEmpresa } = useEmpresas();
+  const { reports, isLoading: reportsLoading, updateReport, deleteReport } = useBugReports();
   const [search, setSearch] = useState("");
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<typeof empresas[0] | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<typeof empresas[0] | null>(null);
   const [importAreasDialogOpen, setImportAreasDialogOpen] = useState(false);
+  const [bugDialogOpen, setBugDialogOpen] = useState(false);
+
+  const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+    aberto: { label: "Aberto", variant: "default" },
+    em_analise: { label: "Em Análise", variant: "secondary" },
+    resolvido: { label: "Resolvido", variant: "outline" },
+    recusado: { label: "Recusado", variant: "destructive" },
+  };
 
   const filteredEmpresas = empresas.filter(
     (e) =>
@@ -262,6 +283,75 @@ export default function Configuracoes() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Bug Reports Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bug className="h-5 w-5" />
+                    <CardTitle>Bugs e Melhorias</CardTitle>
+                  </div>
+                  <Button size="sm" onClick={() => setBugDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Report
+                  </Button>
+                </div>
+                <CardDescription>
+                  Reporte bugs ou sugira melhorias para o sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {reportsLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : reports.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    Nenhum report enviado ainda
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">Tipo</TableHead>
+                        <TableHead>Título</TableHead>
+                        <TableHead>Prioridade</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Data</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reports.map((report) => {
+                        const status = statusConfig[report.status] || statusConfig.aberto;
+                        return (
+                          <TableRow key={report.id}>
+                            <TableCell>
+                              {report.type === "bug" ? (
+                                <Bug className="h-4 w-4 text-destructive" />
+                              ) : (
+                                <Lightbulb className="h-4 w-4 text-yellow-500" />
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium">{report.title}</TableCell>
+                            <TableCell className="capitalize text-sm">{report.priority}</TableCell>
+                            <TableCell>
+                              <Badge variant={status.variant}>{status.label}</Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(report.created_at), "dd/MM/yyyy")}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            <BugReportDialog open={bugDialogOpen} onOpenChange={setBugDialogOpen} />
           </TabsContent>
 
           {isAdmin && (
