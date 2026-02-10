@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useContratos } from "@/hooks/useContratos";
+import { useEmpresas } from "@/hooks/useEmpresas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ const statusColors: Record<string, string> = {
 
 export default function Contratos() {
   const { contratos, isLoading, createContrato, updateContrato, deleteContrato } = useContratos();
+  const { empresas } = useEmpresas();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -39,6 +41,7 @@ export default function Contratos() {
     descricao: "",
     tipo: "",
     fornecedor: "",
+    empresa_id: "",
     data_inicio: "",
     data_fim: "",
     valor_mensal: "",
@@ -58,6 +61,7 @@ export default function Contratos() {
     e.preventDefault();
     const data = {
       ...formData,
+      empresa_id: formData.empresa_id || null,
       valor_mensal: formData.valor_mensal ? parseFloat(formData.valor_mensal) : null,
       valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
     };
@@ -77,6 +81,7 @@ export default function Contratos() {
       descricao: "",
       tipo: "",
       fornecedor: "",
+      empresa_id: "",
       data_inicio: "",
       data_fim: "",
       valor_mensal: "",
@@ -93,6 +98,7 @@ export default function Contratos() {
       descricao: contrato.descricao || "",
       tipo: contrato.tipo || "",
       fornecedor: contrato.fornecedor || "",
+      empresa_id: (contrato as any).empresa_id || "",
       data_inicio: contrato.data_inicio || "",
       data_fim: contrato.data_fim || "",
       valor_mensal: contrato.valor_mensal?.toString() || "",
@@ -199,6 +205,19 @@ export default function Contratos() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="empresa_id">Empresa</Label>
+                      <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a empresa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {empresas.map((emp) => (
+                            <SelectItem key={emp.id} value={emp.id}>{emp.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="status">Status</Label>
                       <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
                         <SelectTrigger>
@@ -282,6 +301,7 @@ export default function Contratos() {
                   <TableRow>
                     <TableHead>Número</TableHead>
                     <TableHead>Descrição</TableHead>
+                    <TableHead>Empresa</TableHead>
                     <TableHead>Fornecedor</TableHead>
                     <TableHead>Vencimento</TableHead>
                     <TableHead>Valor Mensal</TableHead>
@@ -296,6 +316,7 @@ export default function Contratos() {
                       <TableRow key={contrato.id}>
                         <TableCell className="font-medium">{contrato.numero}</TableCell>
                         <TableCell>{contrato.descricao || "-"}</TableCell>
+                        <TableCell>{empresas.find(e => e.id === (contrato as any).empresa_id)?.nome || "-"}</TableCell>
                         <TableCell>{contrato.fornecedor || "-"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -331,7 +352,7 @@ export default function Contratos() {
                   })}
                   {filteredContratos.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Nenhum contrato encontrado
                       </TableCell>
                     </TableRow>

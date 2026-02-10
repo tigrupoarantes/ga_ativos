@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useContratos } from "@/hooks/useContratos";
+import { useEmpresas } from "@/hooks/useEmpresas";
 import { useContratoMetricas } from "@/hooks/useContratoMetricas";
 import { useContratoConsumo } from "@/hooks/useContratoConsumo";
 import { ContratoKPIs } from "@/components/contratos/ContratoKPIs";
@@ -12,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Calendar, Building2, DollarSign } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, Building2, DollarSign, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,10 +29,12 @@ export default function ContratoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { contratos, isLoading: loadingContratos } = useContratos();
+  const { empresas } = useEmpresas();
   const { metricas, isLoading: loadingMetricas, createMetrica, deleteMetrica } = useContratoMetricas(id);
   const { consumos, isLoading: loadingConsumos, invalidate } = useContratoConsumo(id);
 
   const contrato = contratos.find((c) => c.id === id);
+  const empresaNome = empresas.find(e => e.id === (contrato as any)?.empresa_id)?.nome;
 
   if (loadingContratos) {
     return (
@@ -75,7 +78,7 @@ export default function ContratoDetalhe() {
                 {contrato.status}
               </Badge>
             </div>
-            <p className="text-muted-foreground">{contrato.descricao || contrato.fornecedor || "Sem descrição"}</p>
+            <p className="text-muted-foreground">{contrato.descricao || contrato.fornecedor || "Sem descrição"}{empresaNome ? ` • ${empresaNome}` : ""}</p>
           </div>
         </div>
 

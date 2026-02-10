@@ -356,6 +356,7 @@ export type Database = {
           data_fim: string | null
           data_inicio: string | null
           descricao: string | null
+          empresa_id: string | null
           fornecedor: string | null
           id: string
           numero: string
@@ -373,6 +374,7 @@ export type Database = {
           data_fim?: string | null
           data_inicio?: string | null
           descricao?: string | null
+          empresa_id?: string | null
           fornecedor?: string | null
           id?: string
           numero: string
@@ -390,6 +392,7 @@ export type Database = {
           data_fim?: string | null
           data_inicio?: string | null
           descricao?: string | null
+          empresa_id?: string | null
           fornecedor?: string | null
           id?: string
           numero?: string
@@ -400,7 +403,15 @@ export type Database = {
           valor_mensal?: number | null
           valor_total?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contratos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       empresas: {
         Row: {
