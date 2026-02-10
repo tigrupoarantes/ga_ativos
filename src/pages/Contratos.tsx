@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, FileText, AlertCircle } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FileText, AlertCircle, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
@@ -27,6 +28,7 @@ const statusColors: Record<string, string> = {
 
 export default function Contratos() {
   const { contratos, isLoading, createContrato, updateContrato, deleteContrato } = useContratos();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -168,6 +170,10 @@ export default function Contratos() {
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
+                    <SelectItem value="outsourcing_impressao">Outsourcing Impressão</SelectItem>
+                          <SelectItem value="software_erp">Software ERP</SelectItem>
+                          <SelectItem value="software_licenca">Software Licença</SelectItem>
+                          <SelectItem value="telefonia">Telefonia</SelectItem>
                           <SelectItem value="servico">Serviço</SelectItem>
                           <SelectItem value="fornecimento">Fornecimento</SelectItem>
                           <SelectItem value="locacao">Locação</SelectItem>
@@ -310,6 +316,9 @@ export default function Contratos() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/contratos/${contrato.id}`)} title="Ver detalhe">
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(contrato)}>
                             <Edit className="h-4 w-4" />
                           </Button>
