@@ -22,6 +22,7 @@ import Veiculos from "./pages/Veiculos";
 import VeiculosMultas from "./pages/VeiculosMultas";
 import VeiculosHistorico from "./pages/VeiculosHistorico";
 import Contratos from "./pages/Contratos";
+import ContratoDetalhe from "./pages/ContratoDetalhe";
 import Telefonia from "./pages/Telefonia";
 import LinhasTelefonicas from "./pages/LinhasTelefonicas";
 import Configuracoes from "./pages/Configuracoes";
@@ -94,6 +95,7 @@ const App = () => (
             <Route path="/telefonia" element={<ProtectedRoute><Telefonia /></ProtectedRoute>} />
             <Route path="/linhas-telefonicas" element={<ProtectedRoute><LinhasTelefonicas /></ProtectedRoute>} />
             <Route path="/contratos" element={<ProtectedRoute><Contratos /></ProtectedRoute>} />
+            <Route path="/contratos/:id" element={<ProtectedRoute><ContratoDetalhe /></ProtectedRoute>} />
             <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
             <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
             
