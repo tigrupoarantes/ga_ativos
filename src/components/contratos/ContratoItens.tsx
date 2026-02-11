@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useContratoItens, ContratoItem } from "@/hooks/useContratoItens";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useEmpresas } from "@/hooks/useEmpresas";
@@ -10,10 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box } from "lucide-react";
+import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
@@ -46,10 +45,9 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
   const [selectedFuncionarioId, setSelectedFuncionarioId] = useState("");
 
   const [formData, setFormData] = useState({
+    modelo: "",
     identificador: "",
-    descricao: "",
     funcionario_id: "",
-    empresa_id: "",
     valor_mensal: "",
     observacoes: "",
   });
@@ -58,17 +56,16 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
 
   const resetForm = () => {
     setEditingItem(null);
-    setFormData({ identificador: "", descricao: "", funcionario_id: "", empresa_id: "", valor_mensal: "", observacoes: "" });
+    setFormData({ modelo: "", identificador: "", funcionario_id: "", valor_mensal: "", observacoes: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
       contrato_id: contratoId,
+      modelo: formData.modelo || null,
       identificador: formData.identificador || null,
-      descricao: formData.descricao || null,
       funcionario_id: formData.funcionario_id || null,
-      empresa_id: formData.empresa_id || null,
       valor_mensal: formData.valor_mensal ? parseFloat(formData.valor_mensal) : null,
       observacoes: formData.observacoes || null,
     };
@@ -89,10 +86,9 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
   const handleEdit = (item: ContratoItem) => {
     setEditingItem(item);
     setFormData({
+      modelo: item.modelo || "",
       identificador: item.identificador || "",
-      descricao: item.descricao || "",
       funcionario_id: item.funcionario_id || "",
-      empresa_id: item.empresa_id || "",
       valor_mensal: item.valor_mensal?.toString() || "",
       observacoes: item.observacoes || "",
     });
@@ -112,6 +108,44 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
     }
   };
 
+  // Helper: get empresa name from funcionario
+  const getEmpresaFromFuncionario = (funcionarioId: string | null) => {
+    if (!funcionarioId) return null;
+    const func = funcionarios.find((f) => f.id === funcionarioId);
+    if (!func?.empresa_id) return null;
+    return empresas.find((e) => e.id === func.empresa_id) || null;
+  };
+
+  // Rateio por empresa
+  const rateio = useMemo(() => {
+    const map = new Map<string, { nome: string; qtd: number; valor: number }>();
+    let semAtribuicaoQtd = 0;
+    let semAtribuicaoValor = 0;
+
+    for (const item of itens) {
+      const empresa = getEmpresaFromFuncionario(item.funcionario_id);
+      const valor = item.valor_mensal || 0;
+      if (!empresa) {
+        semAtribuicaoQtd++;
+        semAtribuicaoValor += valor;
+      } else {
+        const existing = map.get(empresa.id);
+        if (existing) {
+          existing.qtd++;
+          existing.valor += valor;
+        } else {
+          map.set(empresa.id, { nome: empresa.nome, qtd: 1, valor });
+        }
+      }
+    }
+
+    const rows = Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+    if (semAtribuicaoQtd > 0) {
+      rows.push({ nome: "Sem atribuição", qtd: semAtribuicaoQtd, valor: semAtribuicaoValor });
+    }
+    return rows;
+  }, [itens, funcionarios, empresas]);
+
   // KPIs
   const totalItens = itens.length;
   const emUso = itens.filter((i) => i.status === "em_uso").length;
@@ -126,6 +160,8 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
   ];
 
   if (isLoading) return <Skeleton className="h-48" />;
+
+  const fmtCurrency = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
   return (
     <>
@@ -146,21 +182,58 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
         ))}
       </div>
 
+      {/* Rateio por Empresa */}
+      {rateio.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building2 className="h-5 w-5" /> Rateio por Empresa
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead className="text-center">Qtd Equipamentos</TableHead>
+                  <TableHead className="text-right">Valor Mensal</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rateio.map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{row.nome}</TableCell>
+                    <TableCell className="text-center">{row.qtd}</TableCell>
+                    <TableCell className="text-right">{fmtCurrency(row.valor)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="font-semibold border-t-2">
+                  <TableCell>Total</TableCell>
+                  <TableCell className="text-center">{totalItens}</TableCell>
+                  <TableCell className="text-right">{fmtCurrency(custoMensal)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabela */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-lg">Itens do Contrato</CardTitle>
+          <CardTitle className="text-lg">Coletores de Dados</CardTitle>
           <Button size="sm" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" /> Adicionar Item
+            <Plus className="h-4 w-4 mr-2" /> Novo Coletor
           </Button>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Identificador</TableHead>
-                <TableHead>Descrição</TableHead>
+                <TableHead>Modelo</TableHead>
+                <TableHead>N. Série</TableHead>
                 <TableHead>Responsável</TableHead>
+                <TableHead>Empresa</TableHead>
                 <TableHead>Valor Mensal</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -169,13 +242,15 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
             <TableBody>
               {itens.map((item) => {
                 const func = funcionarios.find((f) => f.id === item.funcionario_id);
+                const empresa = getEmpresaFromFuncionario(item.funcionario_id);
                 return (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.identificador || "-"}</TableCell>
-                    <TableCell>{item.descricao || "-"}</TableCell>
+                    <TableCell className="font-medium">{item.modelo || "-"}</TableCell>
+                    <TableCell>{item.identificador || "-"}</TableCell>
                     <TableCell>{func?.nome || "-"}</TableCell>
+                    <TableCell>{empresa?.nome || "-"}</TableCell>
                     <TableCell>
-                      {item.valor_mensal ? `R$ ${item.valor_mensal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "-"}
+                      {item.valor_mensal ? fmtCurrency(item.valor_mensal) : "-"}
                     </TableCell>
                     <TableCell>
                       <Badge className={cn("capitalize", statusColors[item.status] || "")}>
@@ -205,8 +280,8 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
               })}
               {itens.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Nenhum item cadastrado
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    Nenhum coletor cadastrado
                   </TableCell>
                 </TableRow>
               )}
@@ -215,34 +290,25 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
         </CardContent>
       </Card>
 
-      {/* Dialog criar/editar item */}
+      {/* Dialog criar/editar coletor */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingItem ? "Editar Item" : "Adicionar Item"}</DialogTitle>
+            <DialogTitle>{editingItem ? "Editar Coletor" : "Novo Coletor"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Identificador (Série/Tag)</Label>
+                <Label>Modelo</Label>
+                <Input value={formData.modelo} onChange={(e) => setFormData({ ...formData, modelo: e.target.value })} placeholder="Ex: Honeywell CT60" />
+              </div>
+              <div className="space-y-2">
+                <Label>Número de Série</Label>
                 <Input value={formData.identificador} onChange={(e) => setFormData({ ...formData, identificador: e.target.value })} placeholder="Ex: SN-12345" />
               </div>
               <div className="space-y-2">
                 <Label>Valor Mensal (R$)</Label>
                 <Input type="number" step="0.01" value={formData.valor_mensal} onChange={(e) => setFormData({ ...formData, valor_mensal: e.target.value })} />
-              </div>
-              <div className="col-span-2 space-y-2">
-                <Label>Descrição</Label>
-                <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Ex: Coletor Honeywell CT60" />
-              </div>
-              <div className="space-y-2">
-                <Label>Empresa</Label>
-                <Select value={formData.empresa_id} onValueChange={(v) => setFormData({ ...formData, empresa_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {empresas.map((e) => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Responsável</Label>
@@ -271,7 +337,7 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
       <Dialog open={atribuirDialogOpen} onOpenChange={setAtribuirDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Atribuir Item</DialogTitle>
+            <DialogTitle>Atribuir Coletor</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
