@@ -63,6 +63,12 @@ export default function Contratos() {
       ...formData,
       numero: formData.numero || null,
       empresa_id: formData.empresa_id || null,
+      descricao: formData.descricao || null,
+      tipo: formData.tipo || null,
+      fornecedor: formData.fornecedor || null,
+      data_inicio: formData.data_inicio || null,
+      data_fim: formData.data_fim || null,
+      observacoes: formData.observacoes || null,
       valor_mensal: formData.valor_mensal ? parseFloat(formData.valor_mensal) : null,
       valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
     };
