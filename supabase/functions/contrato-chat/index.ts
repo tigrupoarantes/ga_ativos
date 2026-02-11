@@ -19,23 +19,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Try to get OpenAI key from app_config table first, fallback to env
-    let OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    try {
-      const { data: configData } = await supabase
-        .from("app_config")
-        .select("value")
-        .eq("key", "OPENAI_API_KEY")
-        .single();
-      if (configData?.value) {
-        OPENAI_API_KEY = configData.value;
-      }
-    } catch { /* use env fallback */ }
-
-    if (!OPENAI_API_KEY) {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "Token da IA não configurado. Vá em Configurações > Integrações." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -71,7 +59,6 @@ serve(async (req) => {
     let excelData = "";
     if (file?.base64) {
       try {
-        // Decode base64 to binary
         const binaryStr = atob(file.base64);
         const bytes = new Uint8Array(binaryStr.length);
         for (let i = 0; i < binaryStr.length; i++) {
@@ -84,7 +71,6 @@ serve(async (req) => {
         for (const sheetName of workbook.SheetNames.slice(0, 3)) {
           const sheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-          // Limit to first 100 rows
           const limited = (jsonData as any[][]).slice(0, 100);
           sheets.push(`\n--- Aba: ${sheetName} ---\n${limited.map((row: any[]) => row.join(" | ")).join("\n")}`);
         }
@@ -147,15 +133,15 @@ E pergunte: "Deseja que eu salve esses dados no sistema?"
 
 5. Compare com meses anteriores quando possível e forneça insights sobre tendências.`;
 
-    // Call OpenAI API
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Call Lovable AI Gateway
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
@@ -170,8 +156,13 @@ E pergunte: "Deseja que eu salve esses dados no sistema?"
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes para IA." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const errorText = await response.text();
-      console.error("OpenAI error:", response.status, errorText);
+      console.error("AI gateway error:", response.status, errorText);
       return new Response(JSON.stringify({ error: "Erro ao processar." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

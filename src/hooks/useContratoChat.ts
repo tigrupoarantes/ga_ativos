@@ -1,13 +1,12 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { EXTERNAL_SUPABASE_CONFIG } from "@/config/supabase.config";
 
 export interface ContratoChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
-const CHAT_URL = `${EXTERNAL_SUPABASE_CONFIG.url}/functions/v1/contrato-chat`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contrato-chat`;
 
 export function useContratoChat(contratoId: string) {
   const [messages, setMessages] = useState<ContratoChatMessage[]>([]);
@@ -48,7 +47,7 @@ export function useContratoChat(contratoId: string) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${EXTERNAL_SUPABASE_CONFIG.anonKey}`,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify(body),
       });

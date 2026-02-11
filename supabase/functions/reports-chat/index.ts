@@ -19,23 +19,11 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Try to get OpenAI key from app_config table first, fallback to env
-    let OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    try {
-      const { data: configData } = await supabase
-        .from("app_config")
-        .select("value")
-        .eq("key", "OPENAI_API_KEY")
-        .single();
-      if (configData?.value) {
-        OPENAI_API_KEY = configData.value;
-      }
-    } catch { /* use env fallback */ }
-
-    if (!OPENAI_API_KEY) {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "Token da IA não configurado. Vá em Configurações > Integrações para configurar." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -250,15 +238,15 @@ ${linhas.map(l => `- ${l.numero}: ${l.operadora || 'N/D'} | Plano: ${l.plano || 
 
 ═══════════════════════════════════════════════════════════`;
 
-    // Call OpenAI API with streaming
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Call Lovable AI Gateway
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemContext },
           ...messages,
@@ -270,18 +258,18 @@ ${linhas.map(l => `- ${l.numero}: ${l.operadora || 'N/D'} | Plano: ${l.plano || 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Limite de requisições da OpenAI excedido. Tente novamente em alguns segundos." }),
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 401) {
+      if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Chave da API OpenAI inválida ou expirada." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Créditos insuficientes para IA." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const errorText = await response.text();
-      console.error("OpenAI API error:", response.status, errorText);
+      console.error("AI gateway error:", response.status, errorText);
       return new Response(
         JSON.stringify({ error: "Erro ao processar sua pergunta. Tente novamente." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
