@@ -9,6 +9,9 @@ export interface ContratoItem {
   identificador: string | null;
   descricao: string | null;
   modelo: string | null;
+  endereco_mac: string | null;
+  data_entrega: string | null;
+  acessorios: string[] | null;
   funcionario_id: string | null;
   empresa_id: string | null;
   valor_mensal: number | null;
@@ -24,6 +27,9 @@ interface CreateItemData {
   identificador?: string | null;
   descricao?: string | null;
   modelo?: string | null;
+  endereco_mac?: string | null;
+  data_entrega?: string | null;
+  acessorios?: string[] | null;
   funcionario_id?: string | null;
   valor_mensal?: number | null;
   observacoes?: string | null;

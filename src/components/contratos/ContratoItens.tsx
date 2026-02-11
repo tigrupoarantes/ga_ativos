@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,8 @@ const statusLabels: Record<string, string> = {
   manutencao: "Manutenção",
   devolvido: "Devolvido",
 };
+
+const ACESSORIOS_OPTIONS = ["Capa", "Coldre", "Gatilho", "Bateria Reserva"];
 
 interface ContratoItensProps {
   contratoId: string;
@@ -47,8 +50,11 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
   const [formData, setFormData] = useState({
     modelo: "",
     identificador: "",
-    funcionario_id: "",
+    endereco_mac: "",
     valor_mensal: "",
+    data_entrega: "",
+    funcionario_id: "",
+    acessorios: [] as string[],
     observacoes: "",
   });
 
@@ -56,7 +62,16 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
 
   const resetForm = () => {
     setEditingItem(null);
-    setFormData({ modelo: "", identificador: "", funcionario_id: "", valor_mensal: "", observacoes: "" });
+    setFormData({ modelo: "", identificador: "", endereco_mac: "", valor_mensal: "", data_entrega: "", funcionario_id: "", acessorios: [], observacoes: "" });
+  };
+
+  const toggleAcessorio = (acessorio: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      acessorios: prev.acessorios.includes(acessorio)
+        ? prev.acessorios.filter((a) => a !== acessorio)
+        : [...prev.acessorios, acessorio],
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,6 +80,9 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
       contrato_id: contratoId,
       modelo: formData.modelo || null,
       identificador: formData.identificador || null,
+      endereco_mac: formData.endereco_mac || null,
+      data_entrega: formData.data_entrega || null,
+      acessorios: formData.acessorios.length > 0 ? formData.acessorios : null,
       funcionario_id: formData.funcionario_id || null,
       valor_mensal: formData.valor_mensal ? parseFloat(formData.valor_mensal) : null,
       observacoes: formData.observacoes || null,
@@ -88,8 +106,11 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
     setFormData({
       modelo: item.modelo || "",
       identificador: item.identificador || "",
-      funcionario_id: item.funcionario_id || "",
+      endereco_mac: item.endereco_mac || "",
       valor_mensal: item.valor_mensal?.toString() || "",
+      data_entrega: item.data_entrega || "",
+      funcionario_id: item.funcionario_id || "",
+      acessorios: item.acessorios || [],
       observacoes: item.observacoes || "",
     });
     setIsDialogOpen(true);
@@ -108,7 +129,6 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
     }
   };
 
-  // Helper: get empresa name from funcionario
   const getEmpresaFromFuncionario = (funcionarioId: string | null) => {
     if (!funcionarioId) return null;
     const func = funcionarios.find((f) => f.id === funcionarioId);
@@ -227,72 +247,84 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
           </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Modelo</TableHead>
-                <TableHead>N. Série</TableHead>
-                <TableHead>Responsável</TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Valor Mensal</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {itens.map((item) => {
-                const func = funcionarios.find((f) => f.id === item.funcionario_id);
-                const empresa = getEmpresaFromFuncionario(item.funcionario_id);
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.modelo || "-"}</TableCell>
-                    <TableCell>{item.identificador || "-"}</TableCell>
-                    <TableCell>{func?.nome || "-"}</TableCell>
-                    <TableCell>{empresa?.nome || "-"}</TableCell>
-                    <TableCell>
-                      {item.valor_mensal ? fmtCurrency(item.valor_mensal) : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cn("capitalize", statusColors[item.status] || "")}>
-                        {statusLabels[item.status] || item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {item.status !== "em_uso" && (
-                        <Button variant="ghost" size="icon" onClick={() => handleAtribuir(item.id)} title="Atribuir">
-                          <UserPlus className="h-4 w-4" />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Modelo</TableHead>
+                  <TableHead>N. Série</TableHead>
+                  <TableHead>MAC</TableHead>
+                  <TableHead>Responsável</TableHead>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>Valor Locação</TableHead>
+                  <TableHead>Acessórios</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {itens.map((item) => {
+                  const func = funcionarios.find((f) => f.id === item.funcionario_id);
+                  const empresa = getEmpresaFromFuncionario(item.funcionario_id);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.modelo || "-"}</TableCell>
+                      <TableCell>{item.identificador || "-"}</TableCell>
+                      <TableCell className="font-mono text-xs">{item.endereco_mac || "-"}</TableCell>
+                      <TableCell>{func?.nome || "-"}</TableCell>
+                      <TableCell>{empresa?.nome || "-"}</TableCell>
+                      <TableCell>{item.valor_mensal ? fmtCurrency(item.valor_mensal) : "-"}</TableCell>
+                      <TableCell>
+                        {item.acessorios && item.acessorios.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.acessorios.map((a) => (
+                              <Badge key={a} variant="secondary" className="text-xs">{a}</Badge>
+                            ))}
+                          </div>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={cn("capitalize", statusColors[item.status] || "")}>
+                          {statusLabels[item.status] || item.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        {item.status !== "em_uso" && (
+                          <Button variant="ghost" size="icon" onClick={() => handleAtribuir(item.id)} title="Atribuir">
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {item.status === "em_uso" && (
+                          <Button variant="ghost" size="icon" onClick={() => devolverItem.mutate(item.id)} title="Devolver">
+                            <Undo2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
+                          <Edit className="h-4 w-4" />
                         </Button>
-                      )}
-                      {item.status === "em_uso" && (
-                        <Button variant="ghost" size="icon" onClick={() => devolverItem.mutate(item.id)} title="Devolver">
-                          <Undo2 className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={() => deleteItem.mutate(item.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
-                      )}
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteItem.mutate(item.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {itens.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      Nenhum coletor cadastrado
                     </TableCell>
                   </TableRow>
-                );
-              })}
-              {itens.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Nenhum coletor cadastrado
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Dialog criar/editar coletor */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Editar Coletor" : "Novo Coletor"}</DialogTitle>
           </DialogHeader>
@@ -300,15 +332,23 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Modelo</Label>
-                <Input value={formData.modelo} onChange={(e) => setFormData({ ...formData, modelo: e.target.value })} placeholder="Ex: Honeywell CT60" />
+                <Input value={formData.modelo} onChange={(e) => setFormData({ ...formData, modelo: e.target.value })} placeholder="Ex: AUTOID9N" />
               </div>
               <div className="space-y-2">
                 <Label>Número de Série</Label>
-                <Input value={formData.identificador} onChange={(e) => setFormData({ ...formData, identificador: e.target.value })} placeholder="Ex: SN-12345" />
+                <Input value={formData.identificador} onChange={(e) => setFormData({ ...formData, identificador: e.target.value })} placeholder="Ex: 90B221101432" />
               </div>
               <div className="space-y-2">
-                <Label>Valor Mensal (R$)</Label>
+                <Label>Endereço MAC</Label>
+                <Input value={formData.endereco_mac} onChange={(e) => setFormData({ ...formData, endereco_mac: e.target.value })} placeholder="Ex: 78:8e:33:35:3e:f3" />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor de Locação (R$)</Label>
                 <Input type="number" step="0.01" value={formData.valor_mensal} onChange={(e) => setFormData({ ...formData, valor_mensal: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Data da Entrega</Label>
+                <Input type="date" value={formData.data_entrega} onChange={(e) => setFormData({ ...formData, data_entrega: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Responsável</Label>
@@ -317,6 +357,20 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
                   onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}
                   funcionarios={activeFuncionarios}
                 />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Acessórios</Label>
+                <div className="flex flex-wrap gap-4">
+                  {ACESSORIOS_OPTIONS.map((acessorio) => (
+                    <label key={acessorio} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={formData.acessorios.includes(acessorio)}
+                        onCheckedChange={() => toggleAcessorio(acessorio)}
+                      />
+                      <span className="text-sm">{acessorio}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
               <div className="col-span-2 space-y-2">
                 <Label>Observações</Label>
