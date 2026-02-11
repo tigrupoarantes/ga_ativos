@@ -35,10 +35,10 @@ interface UpdateLinhaData extends Partial<CreateLinhaData> {
 export function useLinhasTelefonicas(searchTerm?: string) {
   const queryClient = useQueryClient();
 
-  const { data: linhas, isLoading, error } = useQuery({
-    queryKey: ["linhas-telefonicas", searchTerm],
+  const { data: allLinhas, isLoading, error } = useQuery({
+    queryKey: ["linhas-telefonicas"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("linhas_telefonicas")
         .select(`
           *,
@@ -47,25 +47,18 @@ export function useLinhasTelefonicas(searchTerm?: string) {
         .eq("active", true)
         .order("numero");
 
-      if (searchTerm) {
-        query = query.or(`numero.ilike.%${searchTerm}%`);
-      }
-
-      const { data, error } = await query;
-
       if (error) throw error;
-
-      // Filter by funcionario name if searchTerm provided
-      if (searchTerm) {
-        return (data as LinhaTelefonica[]).filter(linha => 
-          linha.numero.includes(searchTerm) ||
-          linha.funcionario?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          linha.funcionario?.cpf?.includes(searchTerm)
-        );
-      }
-
       return data as LinhaTelefonica[];
     },
+  });
+
+  // Client-side filtering by numero or funcionario nome
+  const linhas = allLinhas?.filter((linha) => {
+    if (!searchTerm?.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    const numero = linha.numero.toLowerCase();
+    const nome = (linha.funcionario?.nome || "").toLowerCase();
+    return numero.includes(term) || nome.includes(term);
   });
 
   const createLinha = useMutation({
@@ -147,8 +140,8 @@ export function useLinhasTelefonicas(searchTerm?: string) {
   });
 
   // Stats
-  const totalLinhas = linhas?.length || 0;
-  const linhasAtribuidas = linhas?.filter(l => l.funcionario_id)?.length || 0;
+  const totalLinhas = allLinhas?.length || 0;
+  const linhasAtribuidas = allLinhas?.filter(l => l.funcionario_id)?.length || 0;
   const linhasDisponiveis = totalLinhas - linhasAtribuidas;
 
   return {
