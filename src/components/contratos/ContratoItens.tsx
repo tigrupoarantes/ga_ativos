@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2, Upload } from "lucide-react";
+import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2, Upload, Search } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,7 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
   const [selectedFuncionarioId, setSelectedFuncionarioId] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     modelo: "",
@@ -311,6 +312,17 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nº série ou responsável..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -327,7 +339,16 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {itens.map((item) => {
+                {itens
+                  .filter((item) => {
+                    if (!searchTerm.trim()) return true;
+                    const term = searchTerm.toLowerCase();
+                    const serie = (item.identificador || "").toLowerCase();
+                    const func = funcionarios.find((f) => f.id === item.funcionario_id);
+                    const responsavel = (func?.nome || "").toLowerCase();
+                    return serie.includes(term) || responsavel.includes(term);
+                  })
+                  .map((item) => {
                   const func = funcionarios.find((f) => f.id === item.funcionario_id);
                   const empresa = getEmpresaFromFuncionario(item.funcionario_id);
                   return (
