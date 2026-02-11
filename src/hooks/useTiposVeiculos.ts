@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface TipoVeiculo {
   id: string;
@@ -57,7 +58,7 @@ export function useTiposVeiculos() {
       toast.success("Tipo de veículo criado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar tipo de veículo: " + error.message);
+      toast.error(friendlyErrorMessage("criar tipo de veículo", error));
     },
   });
 
@@ -78,7 +79,7 @@ export function useTiposVeiculos() {
       toast.success("Tipo de veículo atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar tipo de veículo: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar tipo de veículo", error));
     },
   });
 
@@ -96,7 +97,7 @@ export function useTiposVeiculos() {
       toast.success("Tipo de veículo excluído!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir tipo de veículo: " + error.message);
+      toast.error(friendlyErrorMessage("excluir tipo de veículo", error));
     },
   });
 

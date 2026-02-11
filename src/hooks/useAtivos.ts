@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 type Asset = Tables<"assets">;
 type AssetInsert = TablesInsert<"assets">;
@@ -59,7 +60,7 @@ export function useAtivos() {
       toast.success("Ativo criado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar ativo: " + error.message);
+      toast.error(friendlyErrorMessage("criar ativo", error));
     },
   });
 
@@ -80,7 +81,7 @@ export function useAtivos() {
       toast.success("Ativo atualizado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar ativo: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar ativo", error));
     },
   });
 
@@ -98,7 +99,7 @@ export function useAtivos() {
       toast.success("Ativo excluído com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir ativo: " + error.message);
+      toast.error(friendlyErrorMessage("excluir ativo", error));
     },
   });
 
@@ -122,7 +123,7 @@ export function useAtivos() {
       toast.success("Ativo devolvido com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao devolver ativo: " + error.message);
+      toast.error(friendlyErrorMessage("devolver ativo", error));
     },
   });
 
@@ -170,7 +171,7 @@ export function useTiposAtivos() {
       toast.success("Tipo de ativo criado!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar tipo: " + error.message);
+      toast.error(friendlyErrorMessage("criar tipo de ativo", error));
     },
   });
 
@@ -191,7 +192,7 @@ export function useTiposAtivos() {
       toast.success("Tipo atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar tipo: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar tipo de ativo", error));
     },
   });
 
@@ -209,7 +210,7 @@ export function useTiposAtivos() {
       toast.success("Tipo excluído!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir tipo: " + error.message);
+      toast.error(friendlyErrorMessage("excluir tipo de ativo", error));
     },
   });
 

@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, CheckCircle2, XCircle, AlertCircle, Download, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import { useQueryClient } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -441,7 +442,7 @@ export function ImportVeiculosDialog() {
       
       toast.success(`${mapped.length} registros carregados: ${validCount} válidos, ${warningCount} avisos, ${errorCount} erros`);
     } catch (error: any) {
-      toast.error("Erro ao processar arquivo: " + error.message);
+      toast.error(friendlyErrorMessage("processar arquivo de importação", error));
     }
   };
 

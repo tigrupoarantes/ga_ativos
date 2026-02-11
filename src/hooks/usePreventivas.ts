@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import { addDays, differenceInDays, isPast } from "date-fns";
 
 export interface Preventiva {
@@ -30,7 +31,6 @@ export interface Preventiva {
 export type PreventivaInsert = Omit<Preventiva, "id" | "created_at" | "updated_at" | "veiculos">;
 
 export function usePreventivas() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: preventivas = [], isLoading, error } = useQuery({
@@ -52,7 +52,6 @@ export function usePreventivas() {
 
   const createPreventiva = useMutation({
     mutationFn: async (preventiva: PreventivaInsert) => {
-      // Calcular próxima realização
       let proxima_realizacao = preventiva.proxima_realizacao;
       let proximo_km = preventiva.proximo_km;
 
@@ -76,10 +75,10 @@ export function usePreventivas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["preventivas"] });
-      toast({ title: "Preventiva agendada com sucesso!" });
+      toast.success("Preventiva agendada com sucesso!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao agendar preventiva", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("agendar preventiva", error));
     },
   });
 
@@ -97,10 +96,10 @@ export function usePreventivas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["preventivas"] });
-      toast({ title: "Preventiva atualizada!" });
+      toast.success("Preventiva atualizada!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao atualizar preventiva", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("atualizar preventiva", error));
     },
   });
 
@@ -115,10 +114,10 @@ export function usePreventivas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["preventivas"] });
-      toast({ title: "Preventiva removida!" });
+      toast.success("Preventiva removida!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao remover preventiva", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("remover preventiva", error));
     },
   });
 
@@ -157,14 +156,13 @@ export function usePreventivas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["preventivas"] });
-      toast({ title: "Preventiva realizada!" });
+      toast.success("Preventiva realizada!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao registrar realização", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("registrar realização da preventiva", error));
     },
   });
 
-  // Calcular preventivas vencidas ou próximas do vencimento
   const preventivasVencidas = preventivas.filter((p) => {
     if (p.status === "realizada") return false;
     if (p.proxima_realizacao && isPast(new Date(p.proxima_realizacao))) return true;

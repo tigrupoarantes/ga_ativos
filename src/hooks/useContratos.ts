@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 type ContratoInsert = TablesInsert<"contratos">;
 type ContratoUpdate = TablesUpdate<"contratos">;
@@ -39,7 +40,7 @@ export function useContratos() {
       toast.success("Contrato criado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar contrato: " + error.message);
+      toast.error(friendlyErrorMessage("criar contrato", error));
     },
   });
 
@@ -60,7 +61,7 @@ export function useContratos() {
       toast.success("Contrato atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar contrato: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar contrato", error));
     },
   });
 
@@ -78,7 +79,7 @@ export function useContratos() {
       toast.success("Contrato excluído!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir contrato: " + error.message);
+      toast.error(friendlyErrorMessage("excluir contrato", error));
     },
   });
 

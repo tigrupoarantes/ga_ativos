@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface VeiculoMulta {
   id: string;
@@ -61,7 +62,6 @@ export function useVeiculosMultas(veiculoPlaca?: string) {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
       return data as VeiculoMulta[];
     },
@@ -83,7 +83,7 @@ export function useVeiculosMultas(veiculoPlaca?: string) {
       toast.success("Multa registrada com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar multa: " + error.message);
+      toast.error(friendlyErrorMessage("registrar multa", error));
     },
   });
 
@@ -104,7 +104,7 @@ export function useVeiculosMultas(veiculoPlaca?: string) {
       toast.success("Multa atualizada!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar multa: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar multa", error));
     },
   });
 
@@ -122,7 +122,7 @@ export function useVeiculosMultas(veiculoPlaca?: string) {
       toast.success("Multa excluída!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir multa: " + error.message);
+      toast.error(friendlyErrorMessage("excluir multa", error));
     },
   });
 
@@ -139,7 +139,6 @@ export function useVeiculosMultas(veiculoPlaca?: string) {
     createMulta,
     updateMulta,
     deleteMulta,
-    // Estatísticas
     totalMultas,
     valorTotalMultas,
     pontosTotais,

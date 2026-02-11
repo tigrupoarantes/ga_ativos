@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface ContratoItem {
   id: string;
@@ -62,7 +63,7 @@ export function useContratoItens(contratoId?: string) {
       return data;
     },
     onSuccess: () => { invalidate(); toast.success("Item adicionado!"); },
-    onError: (e: Error) => toast.error("Erro ao adicionar item: " + e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage("adicionar item", e)),
   });
 
   const updateItem = useMutation({
@@ -73,7 +74,7 @@ export function useContratoItens(contratoId?: string) {
       if (error) throw error;
     },
     onSuccess: () => { invalidate(); toast.success("Item atualizado!"); },
-    onError: (e: Error) => toast.error("Erro ao atualizar: " + e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage("atualizar item", e)),
   });
 
   const deleteItem = useMutation({
@@ -84,7 +85,7 @@ export function useContratoItens(contratoId?: string) {
       if (error) throw error;
     },
     onSuccess: () => { invalidate(); toast.success("Item removido!"); },
-    onError: (e: Error) => toast.error("Erro ao remover: " + e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage("remover item", e)),
   });
 
   const atribuirItem = useMutation({
@@ -95,7 +96,7 @@ export function useContratoItens(contratoId?: string) {
       if (error) throw error;
     },
     onSuccess: () => { invalidate(); toast.success("Item atribuído ao funcionário!"); },
-    onError: (e: Error) => toast.error("Erro ao atribuir: " + e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage("atribuir item", e)),
   });
 
   const devolverItem = useMutation({
@@ -106,7 +107,7 @@ export function useContratoItens(contratoId?: string) {
       if (error) throw error;
     },
     onSuccess: () => { invalidate(); toast.success("Item devolvido!"); },
-    onError: (e: Error) => toast.error("Erro ao devolver: " + e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage("devolver item", e)),
   });
 
   return { itens, isLoading, createItem, updateItem, deleteItem, atribuirItem, devolverItem };

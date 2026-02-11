@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 type EquipeInsert = TablesInsert<"equipes">;
 type EquipeUpdate = TablesUpdate<"equipes">;
@@ -43,7 +44,7 @@ export function useEquipes() {
       toast.success("Equipe criada com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar equipe: " + error.message);
+      toast.error(friendlyErrorMessage("criar equipe", error));
     },
   });
 
@@ -64,7 +65,7 @@ export function useEquipes() {
       toast.success("Equipe atualizada!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar equipe: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar equipe", error));
     },
   });
 
@@ -82,7 +83,7 @@ export function useEquipes() {
       toast.success("Equipe excluída!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir equipe: " + error.message);
+      toast.error(friendlyErrorMessage("excluir equipe", error));
     },
   });
 

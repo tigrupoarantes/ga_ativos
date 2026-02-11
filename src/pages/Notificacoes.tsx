@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import { OficinaLayout } from "@/components/OficinaLayout";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -71,7 +72,7 @@ export default function Notificacoes() {
       );
       refetch();
     } catch (error) {
-      toast.error("Erro ao processar fila: " + String(error));
+      toast.error(friendlyErrorMessage("processar fila de notificações", error));
     } finally {
       setIsProcessing(false);
     }
@@ -91,7 +92,7 @@ export default function Notificacoes() {
       );
       refetch();
     } catch (error) {
-      toast.error("Erro ao executar scheduler: " + String(error));
+      toast.error(friendlyErrorMessage("executar agendador", error));
     } finally {
       setIsScheduling(false);
     }

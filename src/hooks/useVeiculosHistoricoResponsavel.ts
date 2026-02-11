@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface VeiculoHistoricoResponsavel {
   id: string;
@@ -48,7 +49,6 @@ export function useVeiculosHistoricoResponsavel(veiculoPlaca?: string) {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
       return data as VeiculoHistoricoResponsavel[];
     },
@@ -73,7 +73,7 @@ export function useVeiculosHistoricoResponsavel(veiculoPlaca?: string) {
       toast.success("Alteração de responsável registrada!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar alteração: " + error.message);
+      toast.error(friendlyErrorMessage("registrar alteração de responsável", error));
     },
   });
 

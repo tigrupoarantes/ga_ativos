@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -128,8 +129,7 @@ export function DynamicAssetForm({ tipoId, tipoNome, formFields, onSuccess, onCa
       queryClient.invalidateQueries({ queryKey: ["ativos"] });
       onSuccess();
     } catch (error: any) {
-      console.error("Erro ao criar ativo:", error);
-      toast.error("Erro ao criar ativo: " + (error.message || "Erro desconhecido"));
+      toast.error(friendlyErrorMessage("criar ativo", error));
     } finally {
       setIsSubmitting(false);
     }

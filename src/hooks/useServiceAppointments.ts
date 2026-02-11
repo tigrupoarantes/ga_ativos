@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export type ServiceType = "preventiva" | "revisao" | "corretiva" | "lavagem";
 export type AppointmentOrigin = "manual" | "preventiva_plan" | "wash_plan" | "whatsapp_km_rule";
@@ -134,7 +135,7 @@ export function useServiceAppointments(filters?: ServiceAppointmentFilters) {
     onError: (error: Error) => {
       toast({
         title: "Erro ao criar agendamento",
-        description: error.message,
+        description: friendlyErrorMessage("criar agendamento", error),
         variant: "destructive",
       });
     },
@@ -164,7 +165,7 @@ export function useServiceAppointments(filters?: ServiceAppointmentFilters) {
     onError: (error: Error) => {
       toast({
         title: "Erro ao atualizar agendamento",
-        description: error.message,
+        description: friendlyErrorMessage("atualizar agendamento", error),
         variant: "destructive",
       });
     },
@@ -188,7 +189,7 @@ export function useServiceAppointments(filters?: ServiceAppointmentFilters) {
     onError: (error: Error) => {
       toast({
         title: "Erro ao excluir agendamento",
-        description: error.message,
+        description: friendlyErrorMessage("excluir agendamento", error),
         variant: "destructive",
       });
     },

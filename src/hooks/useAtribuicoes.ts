@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface Atribuicao {
   id: string;
@@ -77,7 +78,7 @@ export function useAtribuicoes() {
       toast.success("Atribuição criada com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar atribuição: " + error.message);
+      toast.error(friendlyErrorMessage("criar atribuição", error));
     },
   });
 
@@ -98,7 +99,7 @@ export function useAtribuicoes() {
       toast.success("Atribuição atualizada!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar atribuição: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar atribuição", error));
     },
   });
 
@@ -116,7 +117,7 @@ export function useAtribuicoes() {
       toast.success("Atribuição excluída!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir atribuição: " + error.message);
+      toast.error(friendlyErrorMessage("excluir atribuição", error));
     },
   });
 
@@ -140,7 +141,7 @@ export function useAtribuicoes() {
       toast.success("Ativo devolvido com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao devolver ativo: " + error.message);
+      toast.error(friendlyErrorMessage("devolver ativo", error));
     },
   });
 
