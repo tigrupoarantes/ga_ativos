@@ -1,97 +1,62 @@
 
 
-# Plano: Alinhar Identidade Visual com o Padrao GA360
+# Mensagens de Erro Amigáveis
 
-## Resumo
+## Problema
+Atualmente, quando ocorre um erro (ex: "invalid input syntax for type date", "Could not find column..."), a mensagem técnica do banco de dados é exibida diretamente ao usuário. Isso confunde quem não é técnico.
 
-O app ja possui boa parte da base de design (cores HSL, glassmorphism, animacoes, tipografia Apple). A documentacao descreve um layout com **AppleNav horizontal fixa no topo** + **barra de empresa**, enquanto o app atual usa um **sidebar lateral fixa**. Como o sidebar lateral ja e o padrao consolidado deste app, o foco sera alinhar os **componentes visuais** (cards admin, badges de status, KPIs, animacoes staggered) sem alterar a estrutura de navegacao.
+## Solução
+Criar uma função utilitária centralizada que traduz erros técnicos em mensagens amigáveis, e aplicá-la em todos os hooks e componentes do sistema.
 
----
+## O que muda para o usuário
+- Em vez de "invalid input syntax for type date: ''" verá: "Verifique os campos de data preenchidos."
+- Em vez de "Could not find column..." verá: "Ocorreu um problema no servidor. Tente novamente ou contate o suporte."
+- Em vez de "duplicate key value violates unique constraint" verá: "Este registro já existe no sistema."
+- Mensagens sempre em português, curtas e orientadas a ação.
 
-## Itens que ja estao alinhados (nenhuma acao necessaria)
+## Detalhes Técnicos
 
-- Paleta de cores HSL (primary violet, accent, etc.)
-- Tipografia `-apple-system`
-- `--radius: 0.75rem`
-- Glassmorphism (`.glass`, `.glass-card`)
-- Animacoes (`animate-fade-in`, `animate-scale-in`, `animate-slide-up`, stagger classes)
-- Hover effects (`.hover-scale`, `.hover-lift`, `.card-hover`)
-- BugReportDialog ja implementado
-- Botao Bug no header ja implementado
+### 1. Criar `src/lib/error-handler.ts`
+Uma função `friendlyErrorMessage(action: string, error: Error): string` que:
+- Recebe a acao (ex: "criar contrato") e o erro original
+- Faz match com padrões conhecidos de erros do PostgreSQL/Supabase:
+  - `invalid input syntax` -> "Verifique os dados preenchidos e tente novamente."
+  - `duplicate key` / `unique constraint` -> "Este registro já existe no sistema."
+  - `violates foreign key` -> "Este registro está vinculado a outros dados e não pode ser alterado."
+  - `permission denied` / `RLS` -> "Você não tem permissão para esta ação."
+  - `Could not find` / `schema cache` -> "Ocorreu um problema temporário. Tente novamente em alguns instantes."
+  - `network` / `fetch` / `Failed to fetch` -> "Sem conexão com o servidor. Verifique sua internet."
+- Para erros não mapeados: "Não foi possível {acao}. Tente novamente ou contate o suporte."
+- Registra o erro técnico original no `console.error` para depuração
 
----
+### 2. Atualizar todos os hooks (25 arquivos)
+Substituir o padrão:
+```typescript
+toast.error("Erro ao criar veículo: " + error.message);
+```
+Por:
+```typescript
+toast.error(friendlyErrorMessage("criar veículo", error));
+```
 
-## Itens a implementar
+Arquivos afetados:
+- `useVeiculos.ts`, `useTiposVeiculos.ts`, `useAtribuicoes.ts`, `useEmpresas.ts`
+- `useEquipes.ts`, `useFuncionarios.ts`, `useContratos.ts`, `useContratoItens.ts`
+- `useContratoConsumo.ts`, `useContratoMetricas.ts`, `useContratoChat.ts`
+- `useLinhasTelefonicas.ts`, `useAtivos.ts`, `useAreas.ts`
+- `useVeiculosDocumentos.ts`, `useVeiculosHistoricoResponsavel.ts`, `useVeiculosMultas.ts`
+- `useOrdensServico.ts`, `usePreventivas.ts`, `usePecas.ts`
+- `useNotificationJobs.ts`, `useBugReports.ts`, `useWashPlans.ts`
+- `useFipeConsulta.ts`, `useHistoricoAtivo.ts`
 
-### 1. AdminBugReports - Alinhar visual dos KPIs e status badges
+### 3. Atualizar componentes com tratamento inline
+- `DynamicAssetForm.tsx`, `NotebookForm.tsx`, `CelularForm.tsx`
+- `ImportVeiculosDialog.tsx`, `ImportFuncionariosDialog.tsx`, `ImportLinhasDialog.tsx`
+- `WhatsAppConfigForm.tsx`, `SmtpConfigForm.tsx`, `AssetFormBuilder.tsx`
+- `Permissoes.tsx`, `Contratos.tsx`
 
-**Arquivo**: `src/pages/AdminBugReports.tsx`
-
-Ajustes:
-- **KPI cards**: Adicionar icone com fundo colorido (ex: `h-12 w-12 rounded-lg bg-yellow-500/10`) conforme documentacao
-- **Status badges**: Trocar as variants do shadcn Badge por classes customizadas com cores semi-transparentes conforme a doc:
-  - `aberto` -> `bg-yellow-500/10 text-yellow-700 dark:text-yellow-300`
-  - `em_analise` -> `bg-blue-500/10 text-blue-700 dark:text-blue-300`
-  - `resolvido` -> `bg-green-500/10 text-green-700 dark:text-green-300`
-  - `recusado` -> `bg-red-500/10 text-red-700 dark:text-red-300`
-- **Animacoes staggered** nos KPI cards: `animate-fade-in-up` com `animationDelay` incremental
-- **Animacao na tabela**: `animate-fade-in` no card da tabela
-
-### 2. AdminBugReports - Alinhar badges de prioridade
-
-Usar o mesmo padrao de cores semi-transparentes:
-- `baixa` -> `bg-muted text-muted-foreground`
-- `media` -> `bg-yellow-500/10 text-yellow-700`
-- `alta` -> `bg-orange-500/10 text-orange-700`
-- `critica` -> `bg-red-500/10 text-red-700`
-
-### 3. Configuracoes - Alinhar visual da secao Bugs na aba Notificacoes
-
-**Arquivo**: `src/pages/Configuracoes.tsx`
-
-- Aplicar os mesmos badges de status customizados (cores semi-transparentes) na tabela de reports do usuario
-- Adicionar animacao `animate-fade-in` nos cards
-
-### 4. Rota admin/bugs - Restaurar acesso via rota dedicada
-
-**Arquivos**: `src/App.tsx`, `src/components/AppLayout.tsx`
-
-A documentacao mostra "Bugs e Melhorias" como card no painel Admin (com icone vermelho `bg-red-500/10`). Precisamos:
-- Restaurar a rota `/admin/bugs` em `App.tsx`
-- Adicionar item "Bugs e Melhorias" no sidebar sob "Administracao" em `AppLayout.tsx`
-- O card de admin seguiria o padrao visual: icone com fundo colorido, titulo, descricao, link "Gerenciar"
-
-### 5. Cards admin na pagina de Configuracoes - Padrao visual
-
-Alinhar os cards de links (Permissoes, Usuarios) na aba "Seguranca" com o padrao documentado:
-- Icone com fundo colorido (`h-12 w-12 rounded-lg bg-primary/10`)
-- Hover com `card-hover` (lift + shadow)
-- Texto "Gerenciar" como link visual
-
----
-
-## Detalhes tecnicos
-
-### Arquivos a modificar
-
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/pages/AdminBugReports.tsx` | KPIs com icone colorido, badges customizados, animacoes staggered |
-| `src/pages/Configuracoes.tsx` | Badges de status alinhados, animacoes |
-| `src/App.tsx` | Restaurar rota `/admin/bugs` |
-| `src/components/AppLayout.tsx` | Adicionar item "Bugs e Melhorias" no admin sidebar |
-
-### Nenhum arquivo novo sera criado
-
-### Nenhuma alteracao de banco de dados necessaria
-
----
-
-## Resultado esperado
-
-- KPIs do AdminBugReports com icones em fundo semi-transparente colorido
-- Badges de status e prioridade com cores consistentes entre GA360 e este app
-- Animacoes staggered nos cards
-- Acesso ao painel admin de bugs via sidebar
-- Visual coeso seguindo o padrao Apple-inspired documentado
+### 4. Resultado
+- Erros técnicos ficam apenas no console (para desenvolvedores)
+- Usuários veem mensagens claras, em português, orientadas a ação
+- Manutenção centralizada: novos padrões de erro são adicionados em um único arquivo
 
