@@ -9,6 +9,7 @@ import { ContratoKPIs } from "@/components/contratos/ContratoKPIs";
 import { ContratoChart } from "@/components/contratos/ContratoChart";
 import { ContratoChat } from "@/components/contratos/ContratoChat";
 import { MetricasForm } from "@/components/contratos/MetricasForm";
+import { ContratoItens } from "@/components/contratos/ContratoItens";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +74,7 @@ export default function ContratoDetalhe() {
           </Button>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">Contrato {contrato.numero}</h1>
+              <h1 className="text-2xl font-bold">{contrato.numero ? `Contrato ${contrato.numero}` : (contrato.descricao || "Contrato")}</h1>
               <Badge className={cn("capitalize", statusColors[contrato.status || "ativo"])}>
                 {contrato.status}
               </Badge>
@@ -125,6 +126,9 @@ export default function ContratoDetalhe() {
 
         {/* Chart */}
         <ContratoChart metricas={metricas} consumos={consumos} />
+
+        {/* Itens do Contrato */}
+        <ContratoItens contratoId={id!} />
 
         {/* Chat IA */}
         <ContratoChat

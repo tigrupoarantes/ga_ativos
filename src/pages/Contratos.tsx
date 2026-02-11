@@ -61,6 +61,7 @@ export default function Contratos() {
     e.preventDefault();
     const data = {
       ...formData,
+      numero: formData.numero || null,
       empresa_id: formData.empresa_id || null,
       valor_mensal: formData.valor_mensal ? parseFloat(formData.valor_mensal) : null,
       valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
@@ -110,7 +111,7 @@ export default function Contratos() {
   };
 
   const handleDeleteClick = (contrato: typeof contratos[0]) => {
-    setItemToDelete({ id: contrato.id, numero: contrato.numero });
+    setItemToDelete({ id: contrato.id, numero: contrato.numero || contrato.descricao || "sem número" });
     setDeleteDialogOpen(true);
   };
 
@@ -161,12 +162,12 @@ export default function Contratos() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="numero">Número *</Label>
+                      <Label htmlFor="numero">Número</Label>
                       <Input
                         id="numero"
                         value={formData.numero}
                         onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                        required
+                        placeholder="Opcional"
                       />
                     </div>
                     <div className="space-y-2">
@@ -314,7 +315,7 @@ export default function Contratos() {
                     const daysToExpire = getDaysToExpire(contrato.data_fim);
                     return (
                       <TableRow key={contrato.id}>
-                        <TableCell className="font-medium">{contrato.numero}</TableCell>
+                        <TableCell className="font-medium">{contrato.numero || "-"}</TableCell>
                         <TableCell>{contrato.descricao || "-"}</TableCell>
                         <TableCell>{empresas.find(e => e.id === (contrato as any).empresa_id)?.nome || "-"}</TableCell>
                         <TableCell>{contrato.fornecedor || "-"}</TableCell>
