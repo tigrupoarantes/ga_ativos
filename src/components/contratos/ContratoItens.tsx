@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useContratoItens, ContratoItem } from "@/hooks/useContratoItens";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useEmpresas } from "@/hooks/useEmpresas";
@@ -13,7 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2 } from "lucide-react";
+import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2, Upload } from "lucide-react";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
@@ -46,6 +48,8 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
   const [atribuirDialogOpen, setAtribuirDialogOpen] = useState(false);
   const [atribuirItemId, setAtribuirItemId] = useState<string | null>(null);
   const [selectedFuncionarioId, setSelectedFuncionarioId] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     modelo: "",
@@ -126,6 +130,54 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
     if (atribuirItemId && selectedFuncionarioId) {
       await atribuirItem.mutateAsync({ itemId: atribuirItemId, funcionarioId: selectedFuncionarioId });
       setAtribuirDialogOpen(false);
+    }
+  };
+
+  const handleImportXLS = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+
+      if (rows.length === 0) {
+        toast.error("Planilha vazia");
+        return;
+      }
+
+      let imported = 0;
+      for (const row of rows) {
+        const modelo = String(row["MODELO"] || row["modelo"] || "").trim();
+        const serie = String(row["NUM SERIE"] || row["NEM SERIE"] || row["N. SERIE"] || row["NUMERO SERIE"] || row["num serie"] || row["serie"] || "").trim();
+        const mac = String(row["ENDEREÇO MAC"] || row["ENDERECO MAC"] || row["MAC"] || row["endereço mac"] || row["mac"] || "").trim();
+
+        if (!modelo && !serie && !mac) continue;
+
+        await createItem.mutateAsync({
+          contrato_id: contratoId,
+          modelo: modelo || null,
+          identificador: serie || null,
+          endereco_mac: mac || null,
+          valor_mensal: null,
+          data_entrega: null,
+          funcionario_id: null,
+          acessorios: null,
+          observacoes: null,
+        });
+        imported++;
+      }
+
+      toast.success(`${imported} coletor(es) importado(s) com sucesso!`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao importar planilha");
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -242,9 +294,21 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-lg">Coletores de Dados</CardTitle>
-          <Button size="sm" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" /> Novo Coletor
-          </Button>
+          <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={handleImportXLS}
+            />
+            <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+              <Upload className="h-4 w-4 mr-2" /> {isImporting ? "Importando..." : "Importar XLS"}
+            </Button>
+            <Button size="sm" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" /> Novo Coletor
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
