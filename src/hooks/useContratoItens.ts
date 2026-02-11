@@ -8,6 +8,7 @@ export interface ContratoItem {
   contrato_id: string;
   identificador: string | null;
   descricao: string | null;
+  modelo: string | null;
   funcionario_id: string | null;
   empresa_id: string | null;
   valor_mensal: number | null;
@@ -22,8 +23,8 @@ interface CreateItemData {
   contrato_id: string;
   identificador?: string | null;
   descricao?: string | null;
+  modelo?: string | null;
   funcionario_id?: string | null;
-  empresa_id?: string | null;
   valor_mensal?: number | null;
   observacoes?: string | null;
 }
@@ -62,8 +63,8 @@ export function useContratoItens(contratoId?: string) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { invalidate(); toast.success("Item adicionado!"); },
-    onError: (e: Error) => toast.error(friendlyErrorMessage("adicionar item", e)),
+    onSuccess: () => { invalidate(); toast.success("Coletor adicionado!"); },
+    onError: (e: Error) => toast.error(friendlyErrorMessage("adicionar coletor", e)),
   });
 
   const updateItem = useMutation({
@@ -73,8 +74,8 @@ export function useContratoItens(contratoId?: string) {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast.success("Item atualizado!"); },
-    onError: (e: Error) => toast.error(friendlyErrorMessage("atualizar item", e)),
+    onSuccess: () => { invalidate(); toast.success("Coletor atualizado!"); },
+    onError: (e: Error) => toast.error(friendlyErrorMessage("atualizar coletor", e)),
   });
 
   const deleteItem = useMutation({
@@ -84,8 +85,8 @@ export function useContratoItens(contratoId?: string) {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast.success("Item removido!"); },
-    onError: (e: Error) => toast.error(friendlyErrorMessage("remover item", e)),
+    onSuccess: () => { invalidate(); toast.success("Coletor removido!"); },
+    onError: (e: Error) => toast.error(friendlyErrorMessage("remover coletor", e)),
   });
 
   const atribuirItem = useMutation({
@@ -95,8 +96,8 @@ export function useContratoItens(contratoId?: string) {
         .eq("id", itemId);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast.success("Item atribuído ao funcionário!"); },
-    onError: (e: Error) => toast.error(friendlyErrorMessage("atribuir item", e)),
+    onSuccess: () => { invalidate(); toast.success("Coletor atribuído!"); },
+    onError: (e: Error) => toast.error(friendlyErrorMessage("atribuir coletor", e)),
   });
 
   const devolverItem = useMutation({
@@ -106,8 +107,8 @@ export function useContratoItens(contratoId?: string) {
         .eq("id", itemId);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast.success("Item devolvido!"); },
-    onError: (e: Error) => toast.error(friendlyErrorMessage("devolver item", e)),
+    onSuccess: () => { invalidate(); toast.success("Coletor devolvido!"); },
+    onError: (e: Error) => toast.error(friendlyErrorMessage("devolver coletor", e)),
   });
 
   return { itens, isLoading, createItem, updateItem, deleteItem, atribuirItem, devolverItem };
