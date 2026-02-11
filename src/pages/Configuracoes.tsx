@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { SmtpConfigForm } from "@/components/SmtpConfigForm";
 import { WhatsAppConfigForm } from "@/components/WhatsAppConfigForm";
+import { AIConfigForm } from "@/components/AIConfigForm";
 import { SyncToGA360 } from "@/components/SyncToGA360";
 import { SyncToGAPagamentos } from "@/components/SyncToGAPagamentos";
 import { useEmpresas } from "@/hooks/useEmpresas";
@@ -474,6 +475,9 @@ export default function Configuracoes() {
 
               {/* WhatsApp Configuration */}
               <WhatsAppConfigForm />
+
+              {/* AI Configuration */}
+              <AIConfigForm />
             </TabsContent>
           )}
         </Tabs>
