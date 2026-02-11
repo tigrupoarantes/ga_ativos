@@ -13,16 +13,31 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
-    }
 
     // Create Supabase client with service role for data access
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Try to get OpenAI key from app_config table first, fallback to env
+    let OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    try {
+      const { data: configData } = await supabase
+        .from("app_config")
+        .select("value")
+        .eq("key", "OPENAI_API_KEY")
+        .single();
+      if (configData?.value) {
+        OPENAI_API_KEY = configData.value;
+      }
+    } catch { /* use env fallback */ }
+
+    if (!OPENAI_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Token da IA não configurado. Vá em Configurações > Integrações para configurar." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Fetch all relevant data from database
     const [
