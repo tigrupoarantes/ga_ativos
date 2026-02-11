@@ -1,65 +1,48 @@
 
 
-# Formulário Dedicado para Coletores de Dados
+# Migrar IA para Lovable AI (gratuito)
 
-## Problema Atual
-O formulário de itens do contrato é genérico -- usa campos como "Identificador" e "Descrição" que não refletem o modelo de gestão de coletores de dados. Além disso, não existe o rateio automático por empresa baseado nos funcionários atribuídos.
+O projeto ja possui o **LOVABLE_API_KEY** configurado automaticamente pelo Lovable Cloud. Vamos migrar as duas edge functions (`contrato-chat` e `reports-chat`) para usar o gateway gratuito do Lovable AI em vez da OpenAI, eliminando a necessidade de creditos na OpenAI.
 
-## O que muda para o usuário
+## O que muda
 
-1. **Formulário simplificado**: campos Modelo, Número de Série e Valor Mensal
-2. **Rateio automático por empresa**: card mostrando quanto cada empresa paga, calculado pela soma dos valores mensais dos equipamentos cujos funcionários pertencem a cada empresa
-3. **Coluna "Empresa" na tabela** derivada do funcionário atribuído (sem campo manual)
-4. **Título "Coletores de Dados"** em vez de "Itens do Contrato"
+- **Endpoint**: De `https://api.openai.com/v1/chat/completions` para `https://ai.gateway.lovable.dev/v1/chat/completions`
+- **Modelo**: De `gpt-4o-mini` para `google/gemini-3-flash-preview` (rapido e gratuito)
+- **Autenticacao**: De `OPENAI_API_KEY` para `LOVABLE_API_KEY` (ja configurado)
+- **Hooks do frontend**: Precisam apontar para o Lovable Cloud (`aahtjjolpmrfcxxiouxj`) para chamar as edge functions, pois e la que o `LOVABLE_API_KEY` esta disponivel. Os dados do banco continuam sendo buscados do Supabase externo via `EXTERNAL_SUPABASE_URL`.
 
-## Detalhes Técnicos
+## Arquivos a serem alterados
 
-### 1. SQL no banco externo (ação manual do usuário)
-```sql
-ALTER TABLE public.contrato_itens ADD COLUMN IF NOT EXISTS modelo TEXT;
-NOTIFY pgrst, 'reload schema';
-```
+### 1. `supabase/functions/contrato-chat/index.ts`
+- Trocar `OPENAI_API_KEY` por `LOVABLE_API_KEY`
+- Trocar URL da OpenAI pelo gateway Lovable AI
+- Trocar modelo para `google/gemini-3-flash-preview`
+- Remover logica de buscar token da tabela `app_config`
+- Manter busca de dados do contrato via Supabase externo
 
-### 2. Atualizar `src/hooks/useContratoItens.ts`
-- Adicionar `modelo: string | null` na interface `ContratoItem`
-- Adicionar `modelo` no `CreateItemData`
-- Remover `empresa_id` do payload de criação (empresa vem do funcionário)
+### 2. `supabase/functions/reports-chat/index.ts`
+- Mesmas alteracoes: `LOVABLE_API_KEY`, gateway Lovable AI, modelo `google/gemini-3-flash-preview`
+- Remover logica de `app_config`
+- Manter busca de dados via Supabase externo
 
-### 3. Refatorar `src/components/contratos/ContratoItens.tsx`
+### 3. `src/hooks/useContratoChat.ts`
+- Alterar `CHAT_URL` para apontar para o Lovable Cloud: `` `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contrato-chat` ``
+- Usar `VITE_SUPABASE_PUBLISHABLE_KEY` na autorizacao
 
-**Formulário** -- substituir campos atuais por:
-- Modelo (texto, ex: "Honeywell CT60")
-- Número de Série (usa campo `identificador`)
-- Valor Mensal (R$)
-- Responsável (FuncionarioCombobox, opcional)
-- Observações (opcional)
-- Remover campo "Empresa" e "Descrição" do formulário
+### 4. `src/hooks/useReportsChat.ts`
+- Mesma alteracao: apontar para Lovable Cloud
+- Usar `VITE_SUPABASE_PUBLISHABLE_KEY` na autorizacao
 
-**Tabela** -- colunas:
-| Modelo | N. Série | Responsável | Empresa | Valor Mensal | Status | Ações |
+## O que NAO muda
 
-A coluna "Empresa" busca o `empresa_id` do funcionário atribuído e exibe o nome. Sem funcionário exibe "-".
+- Os prompts do sistema (system prompts) permanecem iguais
+- A logica de streaming SSE permanece igual
+- Os dados continuam sendo buscados do Supabase externo
+- O componente `AIConfigForm` pode ser removido futuramente (nao sera mais necessario configurar token)
 
-**Título da seção**: "Coletores de Dados" em vez de "Itens do Contrato"
+## Secao Tecnica
 
-**Botão**: "Novo Coletor" em vez de "Adicionar Item"
+As edge functions continuarao conectando ao Supabase externo para buscar dados (contratos, veiculos, funcionarios, etc.) usando `EXTERNAL_SUPABASE_URL` e `EXTERNAL_SUPABASE_SERVICE_KEY`. Apenas a chamada ao modelo de IA muda do endpoint OpenAI para o gateway Lovable AI.
 
-### 4. Novo card: Rateio por Empresa
-Abaixo dos KPIs, um card com mini-tabela:
-
-| Empresa | Qtd Equipamentos | Valor Mensal |
-|---------|-------------------|--------------|
-| Arantes Alimentos | 5 | R$ 750,00 |
-| Arantes Logística | 3 | R$ 450,00 |
-| Sem atribuição | 2 | R$ 300,00 |
-| **Total** | **10** | **R$ 1.500,00** |
-
-Lógica: para cada item com `funcionario_id`, busca o `empresa_id` do funcionário, agrupa por empresa e soma `valor_mensal`. Itens sem funcionário vão para "Sem atribuição".
-
-### 5. Mensagens de toast atualizadas
-- "Coletor adicionado!" / "Coletor atualizado!" / "Coletor removido!" / "Coletor atribuído!" / "Coletor devolvido!"
-
-### Arquivos afetados
-- `src/hooks/useContratoItens.ts`
-- `src/components/contratos/ContratoItens.tsx`
+Tratamento de erros 429 (rate limit) e 402 (creditos) sera mantido, pois o Lovable AI tambem pode retornar esses codigos.
 
