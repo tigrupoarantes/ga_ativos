@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface SmtpConfig {
   id: string;
@@ -89,7 +90,7 @@ export function useSmtpConfig() {
     onError: (error: Error) => {
       toast({
         title: "Erro ao salvar",
-        description: error.message,
+        description: friendlyErrorMessage("salvar configuração SMTP", error),
         variant: "destructive",
       });
     },
@@ -114,7 +115,7 @@ export function useSmtpConfig() {
     onError: (error: Error) => {
       toast({
         title: "Erro no teste",
-        description: error.message,
+        description: friendlyErrorMessage("testar conexão SMTP", error),
         variant: "destructive",
       });
     },

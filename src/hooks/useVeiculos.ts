@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 type VeiculoInsert = TablesInsert<"veiculos">;
 type VeiculoUpdate = TablesUpdate<"veiculos">;
@@ -43,7 +44,7 @@ export function useVeiculos() {
       toast.success("Veículo criado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar veículo: " + error.message);
+      toast.error(friendlyErrorMessage("criar veículo", error));
     },
   });
 
@@ -64,7 +65,7 @@ export function useVeiculos() {
       toast.success("Veículo atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar veículo: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar veículo", error));
     },
   });
 
@@ -82,7 +83,7 @@ export function useVeiculos() {
       toast.success("Veículo excluído!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir veículo: " + error.message);
+      toast.error(friendlyErrorMessage("excluir veículo", error));
     },
   });
 

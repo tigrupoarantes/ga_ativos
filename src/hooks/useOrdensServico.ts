@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface OrdemServico {
   id: string;
@@ -43,7 +44,6 @@ export interface OrdemServico {
 export type OrdemServicoInsert = Omit<OrdemServico, "id" | "numero" | "created_at" | "updated_at" | "veiculos" | "responsavel" | "solicitante">;
 
 export function useOrdensServico() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: ordensServico = [], isLoading, error } = useQuery({
@@ -78,10 +78,10 @@ export function useOrdensServico() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordens_servico"] });
-      toast({ title: "Ordem de serviço criada com sucesso!" });
+      toast.success("Ordem de serviço criada com sucesso!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao criar ordem", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("criar ordem de serviço", error));
     },
   });
 
@@ -99,10 +99,10 @@ export function useOrdensServico() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordens_servico"] });
-      toast({ title: "Ordem de serviço atualizada!" });
+      toast.success("Ordem de serviço atualizada!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao atualizar ordem", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("atualizar ordem de serviço", error));
     },
   });
 
@@ -117,10 +117,10 @@ export function useOrdensServico() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordens_servico"] });
-      toast({ title: "Ordem de serviço removida!" });
+      toast.success("Ordem de serviço removida!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao remover ordem", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("remover ordem de serviço", error));
     },
   });
 
@@ -143,10 +143,10 @@ export function useOrdensServico() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordens_servico"] });
-      toast({ title: "Ordem de serviço fechada!" });
+      toast.success("Ordem de serviço fechada!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao fechar ordem", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("fechar ordem de serviço", error));
     },
   });
 

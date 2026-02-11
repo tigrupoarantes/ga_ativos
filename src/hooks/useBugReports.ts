@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/external-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { friendlyErrorMessage } from '@/lib/error-handler';
 
 export interface BugReport {
   id: string;
@@ -58,7 +59,7 @@ export function useBugReports() {
       toast.success('Report enviado com sucesso!');
     },
     onError: (err: any) => {
-      toast.error('Erro ao enviar report: ' + err.message);
+      toast.error(friendlyErrorMessage('enviar report', err));
     },
   });
 
@@ -75,7 +76,7 @@ export function useBugReports() {
       toast.success('Report atualizado!');
     },
     onError: (err: any) => {
-      toast.error('Erro ao atualizar: ' + err.message);
+      toast.error(friendlyErrorMessage('atualizar report', err));
     },
   });
 
@@ -92,7 +93,7 @@ export function useBugReports() {
       toast.success('Report removido!');
     },
     onError: (err: any) => {
-      toast.error('Erro ao remover: ' + err.message);
+      toast.error(friendlyErrorMessage('remover report', err));
     },
   });
 

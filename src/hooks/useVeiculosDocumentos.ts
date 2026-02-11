@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface VeiculoDocumento {
   id: string;
@@ -40,7 +41,6 @@ export function useVeiculosDocumentos(veiculoPlaca?: string) {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
       return data as VeiculoDocumento[];
     },
@@ -62,7 +62,7 @@ export function useVeiculosDocumentos(veiculoPlaca?: string) {
       toast.success("Documento adicionado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao adicionar documento: " + error.message);
+      toast.error(friendlyErrorMessage("adicionar documento", error));
     },
   });
 
@@ -83,7 +83,7 @@ export function useVeiculosDocumentos(veiculoPlaca?: string) {
       toast.success("Documento atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar documento: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar documento", error));
     },
   });
 
@@ -101,7 +101,7 @@ export function useVeiculosDocumentos(veiculoPlaca?: string) {
       toast.success("Documento excluído!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir documento: " + error.message);
+      toast.error(friendlyErrorMessage("excluir documento", error));
     },
   });
 

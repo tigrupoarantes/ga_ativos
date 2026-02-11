@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/external-client";
 // Cliente Lovable Cloud para Edge Functions
 import { supabase as supabaseLovable } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 interface FipeMarca {
   code: string;
@@ -32,7 +33,6 @@ interface FipeValor {
 }
 
 async function consultaFipe<T>(body: Record<string, unknown>): Promise<T> {
-  // Usar cliente Lovable Cloud para chamar Edge Functions
   const { data, error } = await supabaseLovable.functions.invoke("consulta-fipe", {
     body,
   });
@@ -47,7 +47,7 @@ export function useFipeMarcas(tipo: string, enabled: boolean = true) {
     queryKey: ["fipe-marcas", tipo],
     queryFn: () => consultaFipe<FipeMarca[]>({ action: "marcas", tipo }),
     enabled: enabled && !!tipo,
-    staleTime: 1000 * 60 * 60 * 24, // 24 horas
+    staleTime: 1000 * 60 * 60 * 24,
   });
 }
 
@@ -81,7 +81,6 @@ export function useFipeConsultaValor() {
       anoId: string;
       codigoFipe?: string;
     }) => {
-      // Consultar valor na FIPE
       const valorData = await consultaFipe<FipeValor>({
         action: "valor",
         tipo: params.tipo,
@@ -94,7 +93,6 @@ export function useFipeConsultaValor() {
         throw new Error("Não foi possível obter o valor FIPE");
       }
 
-      // Atualizar veículo com o valor
       const { error } = await supabase
         .from("veiculos")
         .update({
@@ -113,7 +111,7 @@ export function useFipeConsultaValor() {
       toast.success(`Valor FIPE atualizado: ${data.valor}`);
     },
     onError: (error) => {
-      toast.error("Erro ao consultar FIPE: " + error.message);
+      toast.error(friendlyErrorMessage("consultar FIPE", error));
     },
   });
 }
@@ -128,7 +126,6 @@ export function useFipeConsultaDireta() {
       tipo: string;
       ano: number;
     }) => {
-      // Consulta direta por código FIPE e ano
       const valorData = await consultaFipe<FipeValor & { anoConsultado?: string }>({
         action: "valor-por-codigo-ano",
         codigoFipe: params.codigoFipe,
@@ -140,7 +137,6 @@ export function useFipeConsultaDireta() {
         throw new Error("Não foi possível obter o valor FIPE");
       }
 
-      // Atualizar veículo com o valor
       const { error } = await supabase
         .from("veiculos")
         .update({
@@ -159,7 +155,7 @@ export function useFipeConsultaDireta() {
       toast.success(`Valor FIPE atualizado: ${data.valor}`);
     },
     onError: (error) => {
-      toast.error("Erro ao consultar FIPE: " + error.message);
+      toast.error(friendlyErrorMessage("consultar FIPE", error));
     },
   });
 }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface Area {
   id: string;
@@ -35,12 +36,10 @@ export function buildAreaTree(areas: Area[]): Area[] {
   const map = new Map<string, Area>();
   const roots: Area[] = [];
 
-  // Criar mapa de todos os nós
   areas.forEach(area => {
     map.set(area.id, { ...area, children: [] });
   });
 
-  // Montar hierarquia
   areas.forEach(area => {
     const node = map.get(area.id)!;
     if (area.parent_id && map.has(area.parent_id)) {
@@ -50,7 +49,6 @@ export function buildAreaTree(areas: Area[]): Area[] {
     }
   });
 
-  // Ordenar recursivamente
   const sortTree = (nodes: Area[]): Area[] => {
     return nodes
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -63,7 +61,6 @@ export function buildAreaTree(areas: Area[]): Area[] {
   return sortTree(roots);
 }
 
-// Função para obter todos os descendentes de uma área
 export function getDescendantIds(areaId: string, areas: Area[]): string[] {
   const descendants: string[] = [];
   
@@ -83,7 +80,6 @@ export function getDescendantIds(areaId: string, areas: Area[]): string[] {
 export function useAreas(companyId?: string) {
   const queryClient = useQueryClient();
 
-  // Query para buscar áreas flat (para uso em selects)
   const { data: areasFlat = [], isLoading: isLoadingFlat } = useQuery({
     queryKey: ["areas", "flat", companyId],
     queryFn: async () => {
@@ -103,7 +99,6 @@ export function useAreas(companyId?: string) {
     },
   });
 
-  // Query para buscar áreas em árvore
   const { data: areasTree = [], isLoading: isLoadingTree } = useQuery({
     queryKey: ["areas", "tree", companyId],
     queryFn: async () => {
@@ -139,7 +134,7 @@ export function useAreas(companyId?: string) {
       toast.success("Área criada com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar área: " + error.message);
+      toast.error(friendlyErrorMessage("criar área", error));
     },
   });
 
@@ -160,7 +155,7 @@ export function useAreas(companyId?: string) {
       toast.success("Área atualizada!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar área: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar área", error));
     },
   });
 
@@ -178,7 +173,7 @@ export function useAreas(companyId?: string) {
       toast.success("Área excluída!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir área: " + error.message);
+      toast.error(friendlyErrorMessage("excluir área", error));
     },
   });
 
@@ -193,7 +188,6 @@ export function useAreas(companyId?: string) {
   };
 }
 
-// Hook para todas as áreas (sem filtro de empresa)
 export function useAllAreas() {
   return useAreas();
 }

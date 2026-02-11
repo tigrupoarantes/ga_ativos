@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface Peca {
   id: string;
@@ -22,7 +23,6 @@ export interface Peca {
 export type PecaInsert = Omit<Peca, "id" | "created_at" | "updated_at">;
 
 export function usePecas() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: pecas = [], isLoading, error } = useQuery({
@@ -52,10 +52,10 @@ export function usePecas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pecas"] });
-      toast({ title: "Peça cadastrada com sucesso!" });
+      toast.success("Peça cadastrada com sucesso!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao cadastrar peça", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("cadastrar peça", error));
     },
   });
 
@@ -73,10 +73,10 @@ export function usePecas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pecas"] });
-      toast({ title: "Peça atualizada!" });
+      toast.success("Peça atualizada!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao atualizar peça", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("atualizar peça", error));
     },
   });
 
@@ -91,16 +91,15 @@ export function usePecas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pecas"] });
-      toast({ title: "Peça removida!" });
+      toast.success("Peça removida!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao remover peça", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("remover peça", error));
     },
   });
 
   const ajustarEstoque = useMutation({
     mutationFn: async ({ id, quantidade, tipo, motivo }: { id: string; quantidade: number; tipo: "entrada" | "saida"; motivo?: string }) => {
-      // Buscar quantidade atual
       const { data: peca, error: fetchError } = await supabase
         .from("pecas")
         .select("quantidade_estoque")
@@ -117,7 +116,6 @@ export function usePecas() {
         throw new Error("Estoque insuficiente");
       }
 
-      // Registrar movimentação
       const { error: movError } = await supabase
         .from("movimentacoes_estoque")
         .insert({
@@ -131,7 +129,6 @@ export function usePecas() {
 
       if (movError) throw movError;
 
-      // Atualizar estoque
       const { data, error } = await supabase
         .from("pecas")
         .update({ quantidade_estoque: novaQuantidade })
@@ -144,10 +141,10 @@ export function usePecas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pecas"] });
-      toast({ title: "Estoque ajustado!" });
+      toast.success("Estoque ajustado!");
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao ajustar estoque", description: error.message, variant: "destructive" });
+      toast.error(friendlyErrorMessage("ajustar estoque", error));
     },
   });
 

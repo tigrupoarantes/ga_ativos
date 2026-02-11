@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import { useState, useCallback } from "react";
 
 type FuncionarioInsert = TablesInsert<"funcionarios">;
@@ -24,7 +25,6 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
     setPage(1);
   }, []);
 
-  // Count query
   const { data: countData } = useQuery({
     queryKey: ["funcionarios", "count", search],
     queryFn: async () => {
@@ -44,7 +44,6 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
     staleTime: 2 * 60 * 1000,
   });
 
-  // Data query with pagination
   const { data: funcionarios = [], isLoading, error } = useQuery({
     queryKey: ["funcionarios", page, pageSize, search],
     queryFn: async () => {
@@ -103,11 +102,7 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
       toast.success("Funcionário criado com sucesso!");
     },
     onError: (error) => {
-      if (error.message?.includes('idx_funcionarios_cpf_unique')) {
-        toast.error("Já existe um funcionário com este CPF");
-      } else {
-        toast.error("Erro ao criar funcionário: " + error.message);
-      }
+      toast.error(friendlyErrorMessage("criar funcionário", error));
     },
   });
 
@@ -128,11 +123,7 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
       toast.success("Funcionário atualizado!");
     },
     onError: (error) => {
-      if (error.message?.includes('idx_funcionarios_cpf_unique')) {
-        toast.error("Já existe um funcionário com este CPF");
-      } else {
-        toast.error("Erro ao atualizar funcionário: " + error.message);
-      }
+      toast.error(friendlyErrorMessage("atualizar funcionário", error));
     },
   });
 
@@ -150,7 +141,7 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
       toast.success("Funcionário excluído!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir funcionário: " + error.message);
+      toast.error(friendlyErrorMessage("excluir funcionário", error));
     },
   });
 
@@ -212,7 +203,7 @@ export function useFuncionarios() {
       toast.success("Funcionário criado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar funcionário: " + error.message);
+      toast.error(friendlyErrorMessage("criar funcionário", error));
     },
   });
 
@@ -233,7 +224,7 @@ export function useFuncionarios() {
       toast.success("Funcionário atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar funcionário: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar funcionário", error));
     },
   });
 
@@ -251,7 +242,7 @@ export function useFuncionarios() {
       toast.success("Funcionário excluído!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir funcionário: " + error.message);
+      toast.error(friendlyErrorMessage("excluir funcionário", error));
     },
   });
 

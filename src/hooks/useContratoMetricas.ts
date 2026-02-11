@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface ContratoMetrica {
   id: string;
@@ -50,7 +51,7 @@ export function useContratoMetricas(contratoId?: string) {
       toast.success("Métrica adicionada!");
     },
     onError: (error: Error) => {
-      toast.error("Erro ao adicionar métrica: " + error.message);
+      toast.error(friendlyErrorMessage("adicionar métrica", error));
     },
   });
 
@@ -68,7 +69,7 @@ export function useContratoMetricas(contratoId?: string) {
       toast.success("Métrica removida!");
     },
     onError: (error: Error) => {
-      toast.error("Erro ao remover métrica: " + error.message);
+      toast.error(friendlyErrorMessage("remover métrica", error));
     },
   });
 

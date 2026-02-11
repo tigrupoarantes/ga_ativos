@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import type { Json } from "@/integrations/supabase/types";
 
 export interface NotificationJob {
@@ -87,7 +88,7 @@ export function useNotificationJobs(filters?: {
       queryClient.invalidateQueries({ queryKey: ["notification-jobs"] });
     },
     onError: (error) => {
-      toast.error("Erro ao criar job de notificação: " + error.message);
+      toast.error(friendlyErrorMessage("criar notificação", error));
     },
   });
 
@@ -121,7 +122,7 @@ export function useNotificationJobs(filters?: {
       toast.success("Solicitação de KM enviada para a fila");
     },
     onError: (error) => {
-      toast.error("Erro ao solicitar KM: " + error.message);
+      toast.error(friendlyErrorMessage("solicitar KM via WhatsApp", error));
     },
   });
 

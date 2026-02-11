@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface ContratoConsumo {
   id: string;
@@ -48,7 +49,7 @@ export function useContratoConsumo(contratoId?: string) {
       queryClient.invalidateQueries({ queryKey: ["contrato_consumo", contratoId] });
     },
     onError: (error: Error) => {
-      toast.error("Erro ao salvar consumo: " + error.message);
+      toast.error(friendlyErrorMessage("salvar consumo", error));
     },
   });
 

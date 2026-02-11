@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 export interface Empresa {
   id: string;
@@ -69,7 +70,7 @@ export function useEmpresas() {
       toast.success("Empresa criada com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar empresa: " + error.message);
+      toast.error(friendlyErrorMessage("criar empresa", error));
     },
   });
 
@@ -90,7 +91,7 @@ export function useEmpresas() {
       toast.success("Empresa atualizada!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar empresa: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar empresa", error));
     },
   });
 
@@ -109,7 +110,7 @@ export function useEmpresas() {
       toast.success("Empresa excluída!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir empresa: " + error.message);
+      toast.error(friendlyErrorMessage("excluir empresa", error));
     },
   });
 

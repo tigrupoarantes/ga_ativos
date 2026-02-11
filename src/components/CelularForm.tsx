@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,8 +73,7 @@ export function CelularForm({ onSuccess, onCancel }: CelularFormProps) {
       queryClient.invalidateQueries({ queryKey: ["ativos"] });
       onSuccess();
     } catch (error: any) {
-      console.error("Erro ao cadastrar celular:", error);
-      toast.error("Erro ao cadastrar celular: " + (error.message || "Erro desconhecido"));
+      toast.error(friendlyErrorMessage("cadastrar celular", error));
     } finally {
       setIsSubmitting(false);
     }

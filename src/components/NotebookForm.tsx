@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,8 +79,7 @@ export function NotebookForm({ onSuccess, onCancel }: NotebookFormProps) {
       queryClient.invalidateQueries({ queryKey: ["ativos"] });
       onSuccess();
     } catch (error: any) {
-      console.error("Erro ao cadastrar notebook:", error);
-      toast.error("Erro ao cadastrar notebook: " + (error.message || "Erro desconhecido"));
+      toast.error(friendlyErrorMessage("cadastrar notebook", error));
     } finally {
       setIsSubmitting(false);
     }

@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, UserMinus, Download, FileDown, Plus, RefreshCw, ArrowRight, AlertTriangle, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 import { useQueryClient } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -88,7 +89,7 @@ const exportFuncionarios = async () => {
     downloadCsv(csvContent, `funcionarios_${new Date().toISOString().split('T')[0]}.csv`);
     toast.success(`${data.length} funcionários exportados!`);
   } catch (error: any) {
-    toast.error('Erro ao exportar: ' + error.message);
+    toast.error(friendlyErrorMessage('exportar funcionários', error));
   }
 };
 

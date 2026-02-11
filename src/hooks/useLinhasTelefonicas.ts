@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/error-handler";
 
 interface LinhaTelefonica {
   id: string;
@@ -83,11 +84,7 @@ export function useLinhasTelefonicas(searchTerm?: string) {
       toast.success("Linha telefônica cadastrada com sucesso!");
     },
     onError: (error: Error) => {
-      if (error.message.includes("duplicate key")) {
-        toast.error("Este número de linha já está cadastrado!");
-      } else {
-        toast.error("Erro ao cadastrar linha: " + error.message);
-      }
+      toast.error(friendlyErrorMessage("cadastrar linha telefônica", error));
     },
   });
 
@@ -108,7 +105,7 @@ export function useLinhasTelefonicas(searchTerm?: string) {
       toast.success("Linha telefônica atualizada com sucesso!");
     },
     onError: (error: Error) => {
-      toast.error("Erro ao atualizar linha: " + error.message);
+      toast.error(friendlyErrorMessage("atualizar linha telefônica", error));
     },
   });
 
@@ -126,7 +123,7 @@ export function useLinhasTelefonicas(searchTerm?: string) {
       toast.success("Linha telefônica removida com sucesso!");
     },
     onError: (error: Error) => {
-      toast.error("Erro ao remover linha: " + error.message);
+      toast.error(friendlyErrorMessage("remover linha telefônica", error));
     },
   });
 
@@ -145,7 +142,7 @@ export function useLinhasTelefonicas(searchTerm?: string) {
       toast.success(`${data.length} linhas importadas com sucesso!`);
     },
     onError: (error: Error) => {
-      toast.error("Erro ao importar linhas: " + error.message);
+      toast.error(friendlyErrorMessage("importar linhas", error));
     },
   });
 
