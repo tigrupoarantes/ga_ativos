@@ -90,8 +90,9 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error("Erro ao processar solicitação");
     }
 
-    // Get the app URL from request headers or use default
-    const origin = req.headers.get("origin") || "https://ativosarantes.lovable.app";
+    // Get the app URL from request headers or use configured default
+    const defaultAppUrl = Deno.env.get("APP_BASE_URL") || "http://localhost:4173";
+    const origin = req.headers.get("origin") || defaultAppUrl;
     const resetLink = `${origin}/reset-password?token=${token}`;
 
     console.log(`Link de reset gerado: ${resetLink}`);

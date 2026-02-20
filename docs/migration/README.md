@@ -1,6 +1,6 @@
-# Guia de Migração: Lovable Cloud → Supabase Próprio
+# Guia de Migração: Ambiente Gerenciado → Supabase Próprio
 
-Este guia detalha o processo completo para migrar seu aplicativo do Lovable Cloud para seu próprio projeto Supabase.
+Este guia detalha o processo completo para migrar seu aplicativo de um ambiente gerenciado para seu próprio projeto Supabase.
 
 ## 📋 Pré-requisitos
 
@@ -35,7 +35,7 @@ Este guia detalha o processo completo para migrar seu aplicativo do Lovable Clou
 
 ### 3. Exportar e Importar Dados
 
-#### Exportar do Lovable Cloud:
+#### Exportar do ambiente atual:
 1. Acesse o Cloud Dashboard
 2. Vá em **Database > Export**
 3. Exporte cada tabela como CSV
@@ -113,7 +113,7 @@ No Supabase Dashboard, vá em **Settings > Edge Functions > Secrets**:
 - `WHATSAPP_API_KEY`
 
 **Secrets adicionais (se usar AI/reports-chat):**
-- `LOVABLE_API_KEY` (ou chave da API de IA que usar)
+- `AI_GATEWAY_API_KEY` (ou chave da API de IA que usar)
 
 ### 7. Atualizar Frontend
 

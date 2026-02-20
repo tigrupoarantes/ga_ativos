@@ -1,73 +1,71 @@
-# Welcome to your Lovable project
+# Gestão de Ativos (Vite + React)
 
-## Project info
+Aplicação frontend em Vite/React com integração ao Supabase.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Pré-requisitos
 
-## How can I edit this code?
+- Node.js 20+
+- npm 10+
 
-There are several ways of editing your application.
+## Configuração local
 
-**Use Lovable**
+1. Instale dependências:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+```bash
+npm install
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+2. Crie o arquivo `.env` a partir do exemplo:
 
-**Use your preferred IDE**
+```bash
+cp .env.example .env
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+3. Preencha as variáveis no `.env`:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-Follow these steps:
+## Desenvolvimento
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Deploy local (produção)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. Build de produção:
 
-**Use GitHub Codespaces**
+```bash
+npm run build
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+2. Subir o preview local:
 
-## What technologies are used for this project?
+```bash
+npm run preview -- --host 0.0.0.0 --port 4173
+```
 
-This project is built with:
+A aplicação ficará disponível em `http://localhost:4173`.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Deploy na Vercel
 
-## How can I deploy this project?
+Este projeto já está preparado com `vercel.json` para:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+- Build command: `npm run build`
+- Output directory: `dist`
+- Rewrite SPA para `index.html` (rotas do React Router)
 
-## Can I connect a custom domain to my Lovable project?
+### Passos
 
-Yes, you can!
+1. Importar o repositório na Vercel.
+2. Confirmar framework detectado como **Vite**.
+3. Em **Project Settings > Environment Variables**, cadastrar:
+	- `VITE_SUPABASE_URL`
+	- `VITE_SUPABASE_PUBLISHABLE_KEY`
+4. Fazer o primeiro deploy.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Observações da migração
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- O projeto está preparado para execução e deploy independentes.
+- O deploy está padronizado para Vercel.

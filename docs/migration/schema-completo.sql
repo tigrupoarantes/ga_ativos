@@ -1,5 +1,5 @@
 -- ============================================================
--- SCRIPT DE MIGRAÇÃO COMPLETO - Lovable Cloud para Supabase
+-- SCRIPT DE MIGRAÇÃO COMPLETO - Ambiente Gerenciado para Supabase
 -- Gerado em: 2026-02-01
 -- ============================================================
 -- 

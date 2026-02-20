@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
-    const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN") || "lovable_km_webhook";
+    const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN") || "ga_km_webhook";
 
     if (mode === "subscribe" && token === verifyToken) {
       console.log("Webhook verified successfully");
