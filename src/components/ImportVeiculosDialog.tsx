@@ -17,7 +17,7 @@ import { friendlyErrorMessage } from "@/lib/error-handler";
 import { useQueryClient } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import * as XLSX from "xlsx";
+import { excelSerialToDate, readXlsxAsObjects } from "@/lib/excel";
 
 // Types
 interface VeiculoRow {
@@ -101,21 +101,23 @@ const cleanCurrency = (val: string | number | undefined): number | null => {
   return isNaN(num) ? null : num;
 };
 
-const parseDate = (val: string | number | undefined): string | null => {
+const parseDate = (val: string | number | Date | undefined): string | null => {
   if (val === undefined || val === null || val === '') return null;
   
   let year: number, month: number, day: number;
+
+  if (val instanceof Date) {
+    year = val.getFullYear();
+    month = val.getMonth() + 1;
+    day = val.getDate();
+  }
   
   // Handle Excel serial date
-  if (typeof val === 'number') {
-    const date = XLSX.SSF.parse_date_code(val);
-    if (date) {
-      year = date.y;
-      month = date.m;
-      day = date.d;
-    } else {
-      return null;
-    }
+  else if (typeof val === 'number') {
+    const dt = excelSerialToDate(val);
+    year = dt.getUTCFullYear();
+    month = dt.getUTCMonth() + 1;
+    day = dt.getUTCDate();
   } else {
     const str = val.toString().trim();
     
@@ -229,22 +231,11 @@ const headerMappings: Record<string, keyof VeiculoRow | null> = {
 
 // Parse Excel file
 const parseExcelFile = async (file: File): Promise<Record<string, any>[]> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { raw: true });
-        resolve(jsonData);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-    reader.readAsBinaryString(file);
-  });
+  try {
+    return (await readXlsxAsObjects(file)) as Record<string, any>[];
+  } catch (error) {
+    throw error instanceof Error ? error : new Error('Erro ao ler arquivo');
+  }
 };
 
 // Map raw row to VeiculoRow

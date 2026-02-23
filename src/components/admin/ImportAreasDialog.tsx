@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import * as XLSX from "xlsx";
+import { readXlsxAsObjects } from "@/lib/excel";
 import {
   Dialog,
   DialogContent,
@@ -120,10 +120,10 @@ export function ImportAreasDialog({
   const analyzeFile = async (file: File) => {
     setIsAnalyzing(true);
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet) as Record<string, unknown>[];
+      const rows = (await readXlsxAsObjects(file, { defval: "" })) as Record<
+        string,
+        unknown
+      >[];
 
       if (rows.length === 0) {
         toast.error("Arquivo vazio ou sem dados válidos");

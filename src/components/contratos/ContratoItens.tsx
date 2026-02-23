@@ -15,8 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2, Upload, Search } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
+import { readXlsxAsObjects } from "@/lib/excel";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-green-500/10 text-green-700 dark:text-green-300",
@@ -140,10 +140,10 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
     setIsImporting(true);
 
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+      const rows = (await readXlsxAsObjects(file, { defval: "" })) as Record<
+        string,
+        any
+      >[];
 
       if (rows.length === 0) {
         toast.error("Planilha vazia");
