@@ -32,6 +32,20 @@ interface UpdateLinhaData extends Partial<CreateLinhaData> {
   id: string;
 }
 
+function normalizeForSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 export function useLinhasTelefonicas(searchTerm?: string) {
   const queryClient = useQueryClient();
 
@@ -52,13 +66,23 @@ export function useLinhasTelefonicas(searchTerm?: string) {
     },
   });
 
-  // Client-side filtering by numero or funcionario nome
+  // Client-side filtering by funcionario nome (partial) and/or numero (mask-insensitive)
   const linhas = allLinhas?.filter((linha) => {
     if (!searchTerm?.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    const numero = linha.numero.toLowerCase();
-    const nome = (linha.funcionario?.nome || "").toLowerCase();
-    return numero.includes(term) || nome.includes(term);
+
+    const tokens = normalizeForSearch(searchTerm).split(" ").filter(Boolean);
+    if (tokens.length === 0) return true;
+
+    const numeroDigits = digitsOnly(linha.numero || "");
+    const nome = linha.funcionario?.nome || "";
+    const nomeNormalized = normalizeForSearch(nome);
+
+    return tokens.every((token) => {
+      if (/^\d+$/.test(token)) {
+        return numeroDigits.includes(token);
+      }
+      return nomeNormalized.includes(token);
+    });
   });
 
   const createLinha = useMutation({

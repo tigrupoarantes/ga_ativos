@@ -8,6 +8,15 @@ import { useState, useCallback } from "react";
 type FuncionarioInsert = TablesInsert<"funcionarios">;
 type FuncionarioUpdate = TablesUpdate<"funcionarios">;
 
+async function releaseLinhasTelefonicasFromFuncionario(funcionarioId: string) {
+  const { error } = await supabase
+    .from("linhas_telefonicas")
+    .update({ funcionario_id: null })
+    .eq("funcionario_id", funcionarioId);
+
+  if (error) throw error;
+}
+
 interface UseFuncionariosPaginatedOptions {
   pageSize?: number;
   initialPage?: number;
@@ -129,6 +138,8 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
 
   const deleteFuncionario = useMutation({
     mutationFn: async (id: string) => {
+      await releaseLinhasTelefonicasFromFuncionario(id);
+
       const { error } = await supabase
         .from("funcionarios")
         .update({ active: false })
@@ -138,6 +149,7 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["funcionarios"] });
+      queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas"] });
       toast.success("Funcionário excluído!");
     },
     onError: (error) => {
@@ -230,6 +242,8 @@ export function useFuncionarios() {
 
   const deleteFuncionario = useMutation({
     mutationFn: async (id: string) => {
+      await releaseLinhasTelefonicasFromFuncionario(id);
+
       const { error } = await supabase
         .from("funcionarios")
         .update({ active: false })
@@ -239,6 +253,7 @@ export function useFuncionarios() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["funcionarios"] });
+      queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas"] });
       toast.success("Funcionário excluído!");
     },
     onError: (error) => {

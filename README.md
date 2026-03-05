@@ -26,6 +26,11 @@ cp .env.example .env
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 
+## Documentação
+
+- PRD (as-is): `docs/PRD.md`
+- Documentação técnica: `docs/TECHNICAL.md`
+
 ## Desenvolvimento
 
 ```bash

@@ -312,7 +312,7 @@ export default function LinhasTelefonicas() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por número ou funcionário..."
+            placeholder="Buscar por nome e/ou número da linha..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useAtivos, useTiposAtivos } from "@/hooks/useAtivos";
@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { useQueryClient } from "@tanstack/react-query";
+import { ImportCelularesDialog } from "@/components/ImportCelularesDialog";
+import { DataTablePagination } from "@/components/DataTablePagination";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -28,6 +30,8 @@ const statusColors: Record<string, string> = {
   baixado: "bg-status-error/10 text-status-error",
 };
 
+const PAGE_SIZE = 25;
+
 export default function Ativos() {
   const queryClient = useQueryClient();
   const { ativos, isLoading, createAtivo, updateAtivo, deleteAtivo, devolverAtivo } = useAtivos();
@@ -35,6 +39,7 @@ export default function Ativos() {
   const { funcionarios } = useFuncionariosCombobox();
   const { empresas } = useEmpresas();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedTipoId, setSelectedTipoId] = useState<string | null>(null);
@@ -65,6 +70,20 @@ export default function Ativos() {
       a.patrimonio?.toLowerCase().includes(search.toLowerCase()) ||
       a.numero_serie?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const totalCount = filteredAtivos.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const paginatedAtivos = filteredAtivos.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   // Obter tipo selecionado e seus campos de formulário
   const tipoSelecionado = tipos.find((t) => t.id === selectedTipoId);
@@ -407,17 +426,20 @@ export default function Ativos() {
                 />
               </div>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Ativo
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                {renderDialogContent()}
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-2">
+              <ImportCelularesDialog />
+              <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Ativo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  {renderDialogContent()}
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -427,69 +449,80 @@ export default function Ativos() {
                 ))}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patrimônio</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Marca/Modelo</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAtivos.map((ativo) => (
-                    <TableRow key={ativo.id}>
-                      <TableCell className="font-medium">{ativo.patrimonio}</TableCell>
-                      <TableCell>{ativo.nome}</TableCell>
-                      <TableCell>{(ativo as any).tipo?.name || "-"}</TableCell>
-                      <TableCell>{ativo.marca} {ativo.modelo}</TableCell>
-                      <TableCell>
-                        <Badge className={cn("capitalize", statusColors[ativo.status || "disponivel"])}>
-                          {ativo.status?.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{(ativo as any).funcionario?.nome || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          title="Histórico de movimentação"
-                          onClick={() => handleOpenHistorico(ativo)}
-                        >
-                          <History className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        {(ativo as any).funcionario?.nome && (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Patrimônio</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Marca/Modelo</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Responsável</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedAtivos.map((ativo) => (
+                      <TableRow key={ativo.id}>
+                        <TableCell className="font-medium">{ativo.patrimonio}</TableCell>
+                        <TableCell>{ativo.nome}</TableCell>
+                        <TableCell>{(ativo as any).tipo?.name || "-"}</TableCell>
+                        <TableCell>{ativo.marca} {ativo.modelo}</TableCell>
+                        <TableCell>
+                          <Badge className={cn("capitalize", statusColors[ativo.status || "disponivel"])}>
+                            {ativo.status?.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{(ativo as any).funcionario?.nome || "-"}</TableCell>
+                        <TableCell className="text-right">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            title="Devolver ativo"
-                            onClick={() => handleDevolverAtivo(ativo)}
-                            disabled={devolverAtivo.isPending}
+                            title="Histórico de movimentação"
+                            onClick={() => handleOpenHistorico(ativo)}
                           >
-                            <Undo2 className="h-4 w-4 text-orange-500" />
+                            <History className="h-4 w-4 text-muted-foreground" />
                           </Button>
-                        )}
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(ativo)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(ativo)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredAtivos.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Nenhum ativo encontrado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                          {(ativo as any).funcionario?.nome && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              title="Devolver ativo"
+                              onClick={() => handleDevolverAtivo(ativo)}
+                              disabled={devolverAtivo.isPending}
+                            >
+                              <Undo2 className="h-4 w-4 text-orange-500" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(ativo)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(ativo)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {paginatedAtivos.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          Nenhum ativo encontrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+                {totalCount > PAGE_SIZE && (
+                  <DataTablePagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalCount={totalCount}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setPage}
+                  />
+                )}
+              </>
             )}
           </CardContent>
         </Card>
