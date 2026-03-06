@@ -43,7 +43,7 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
         .eq("active", true);
 
       if (search) {
-        query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%,cargo.ilike.%${search}%,cpf.ilike.%${search}%`);
+        query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%,cargo.ilike.%${search}%,cpf.ilike.%${search}%,telefone.ilike.%${search}%,departamento.ilike.%${search}%,cnh_numero.ilike.%${search}%,codigo_vendedor.ilike.%${search}%`);
       }
 
       const { count, error } = await query;
@@ -74,7 +74,7 @@ export function useFuncionariosPaginated(options: UseFuncionariosPaginatedOption
         .range(from, to);
 
       if (search) {
-        query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%,cargo.ilike.%${search}%,cpf.ilike.%${search}%`);
+        query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%,cargo.ilike.%${search}%,cpf.ilike.%${search}%,telefone.ilike.%${search}%,departamento.ilike.%${search}%,cnh_numero.ilike.%${search}%,codigo_vendedor.ilike.%${search}%`);
       }
 
       const { data, error } = await query;
