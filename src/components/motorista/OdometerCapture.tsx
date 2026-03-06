@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Camera, ImagePlus, ArrowLeft, Loader2 } from "lucide-react";
+import { Camera, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { OcrResult } from "@/hooks/useMotoristaOdometer";
@@ -25,7 +25,6 @@ export function OdometerCapture({
   callOcr,
 }: Props) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFile = async (file: File) => {
@@ -117,7 +116,7 @@ export function OdometerCapture({
             </p>
           </div>
 
-          {/* Inputs de arquivo ocultos */}
+          {/* Input de câmera oculto */}
           <input
             ref={cameraInputRef}
             type="file"
@@ -126,15 +125,8 @@ export function OdometerCapture({
             onChange={handleInputChange}
             className="hidden"
           />
-          <input
-            ref={galleryInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleInputChange}
-            className="hidden"
-          />
 
-          {/* Botões de captura */}
+          {/* Botão de captura */}
           <div className="flex flex-col gap-3">
             <Button
               size="lg"
@@ -143,15 +135,6 @@ export function OdometerCapture({
             >
               <Camera className="h-6 w-6" />
               Abrir Câmera
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full rounded-2xl gap-2"
-              onClick={() => galleryInputRef.current?.click()}
-            >
-              <ImagePlus className="h-5 w-5" />
-              Escolher da Galeria
             </Button>
           </div>
         </>
