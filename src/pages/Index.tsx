@@ -2,37 +2,48 @@ import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { 
-  Car, 
-  Package, 
-  Users, 
-  FileText, 
-  Wrench, 
-  AlertTriangle, 
+import {
+  Car,
+  Package,
+  Users,
+  FileText,
+  Wrench,
+  AlertTriangle,
   Clock,
   TrendingUp,
   ChevronRight
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { format } from "date-fns";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 export default function Index() {
   const { stats, alerts, isLoading } = useDashboardStats();
+  const { isMotorista, loading } = useAuth();
+  const navigate = useNavigate();
+
+  // Motoristas são redirecionados para a tela mobile de registro de KM
+  useEffect(() => {
+    if (!loading && isMotorista) {
+      navigate("/motorista", { replace: true });
+    }
+  }, [isMotorista, loading, navigate]);
 
   // Stats cards usando dados agregados
   const statsCards = [

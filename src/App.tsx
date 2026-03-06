@@ -40,6 +40,7 @@ import KmColetas from "./pages/KmColetas";
 import Notificacoes from "./pages/Notificacoes";
 import Relatorios from "./pages/Relatorios";
 import AdminBugReports from "./pages/AdminBugReports";
+import Motorista from "./pages/Motorista";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,7 +107,10 @@ const App = () => (
             <Route path="/permissoes" element={<ProtectedRoute><Permissoes /></ProtectedRoute>} />
             <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
             <Route path="/admin/bugs" element={<ProtectedRoute><AdminBugReports /></ProtectedRoute>} />
-            
+
+            {/* Motorista — tela mobile-first de registro de KM */}
+            <Route path="/motorista" element={<ProtectedRoute><Motorista /></ProtectedRoute>} />
+
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>

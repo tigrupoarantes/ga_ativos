@@ -8,11 +8,14 @@ export interface OdometerReport {
   employee_id: string;
   reported_km: number;
   reported_at: string;
-  source: "whatsapp" | "manual";
+  source: "whatsapp" | "manual" | "app";
   raw_message?: string;
   validation_status: "ok" | "suspeito" | "rejeitado";
   created_by?: string;
   created_at: string;
+  report_type?: "checkin" | "checkout" | null;
+  photo_url?: string | null;
+  km_diff?: number | null;
   veiculo?: {
     id: string;
     placa: string;
@@ -30,9 +33,12 @@ interface CreateOdometerReportInput {
   vehicle_id: string;
   employee_id: string;
   reported_km: number;
-  source?: "whatsapp" | "manual";
+  source?: "whatsapp" | "manual" | "app";
   raw_message?: string;
   validation_status?: "ok" | "suspeito" | "rejeitado";
+  report_type?: "checkin" | "checkout";
+  photo_url?: string;
+  km_diff?: number;
 }
 
 interface UpdateOdometerReportInput {

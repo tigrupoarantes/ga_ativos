@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Gauge, AlertTriangle, CheckCircle, XCircle, Filter, Smartphone, PenLine, MessageSquare } from "lucide-react";
+import { Plus, Gauge, AlertTriangle, CheckCircle, XCircle, Filter, Smartphone, PenLine, MessageSquare, Camera, MapPin, Home } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RequestKmWhatsAppButton } from "@/components/RequestKmWhatsAppButton";
@@ -44,6 +44,12 @@ const validationStatusConfig = {
 const sourceConfig = {
   manual: { label: "Manual", icon: PenLine, className: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
   whatsapp: { label: "WhatsApp", icon: Smartphone, className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+  app: { label: "App Motorista", icon: Camera, className: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
+};
+
+const reportTypeConfig = {
+  checkin: { label: "Check-in", icon: MapPin, className: "bg-sky-500/10 text-sky-600 border-sky-500/20" },
+  checkout: { label: "Check-out", icon: Home, className: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
 };
 
 export default function KmColetas() {
@@ -307,6 +313,7 @@ export default function KmColetas() {
                     <SelectItem value="all">Todas as origens</SelectItem>
                     <SelectItem value="manual">Manual</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="app">App Motorista</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -338,26 +345,30 @@ export default function KmColetas() {
                   <TableHead>Motorista</TableHead>
                   <TableHead className="text-right">KM Informado</TableHead>
                   <TableHead>Origem</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">KM Percorrido</TableHead>
+                  <TableHead>Foto</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Carregando...
                     </TableCell>
                   </TableRow>
                 ) : reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Nenhuma leitura encontrada
                     </TableCell>
                   </TableRow>
                 ) : (
                   reports.map((report) => {
                     const statusConfig = validationStatusConfig[report.validation_status];
-                    const srcConfig = sourceConfig[report.source];
+                    const srcConfig = sourceConfig[report.source as keyof typeof sourceConfig] ?? sourceConfig.manual;
+                    const typeConfig = report.report_type ? reportTypeConfig[report.report_type as keyof typeof reportTypeConfig] : null;
                     const StatusIcon = statusConfig.icon;
                     const SourceIcon = srcConfig.icon;
 
@@ -386,6 +397,39 @@ export default function KmColetas() {
                             <SourceIcon className="h-3 w-3 mr-1" />
                             {srcConfig.label}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {typeConfig ? (
+                            <Badge variant="outline" className={typeConfig.className}>
+                              <typeConfig.icon className="h-3 w-3 mr-1" />
+                              {typeConfig.label}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {report.km_diff != null ? (
+                            <span className={report.km_diff < 0 ? "text-red-600" : "text-foreground"}>
+                              {report.km_diff >= 0 ? "+" : ""}
+                              {report.km_diff.toLocaleString("pt-BR")} km
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {report.photo_url ? (
+                            <a href={report.photo_url} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={report.photo_url}
+                                alt="Hodômetro"
+                                className="h-10 w-10 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                              />
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={statusConfig.className}>

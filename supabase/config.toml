@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.contrato-chat]
 verify_jwt = false
+
+[functions.odometer-ocr]
+verify_jwt = false

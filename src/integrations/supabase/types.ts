@@ -1347,7 +1347,10 @@ export type Database = {
           created_by: string | null
           employee_id: string
           id: string
+          km_diff: number | null
+          photo_url: string | null
           raw_message: string | null
+          report_type: string | null
           reported_at: string | null
           reported_km: number
           source: string
@@ -1359,7 +1362,10 @@ export type Database = {
           created_by?: string | null
           employee_id: string
           id?: string
+          km_diff?: number | null
+          photo_url?: string | null
           raw_message?: string | null
+          report_type?: string | null
           reported_at?: string | null
           reported_km: number
           source?: string
@@ -1371,7 +1377,10 @@ export type Database = {
           created_by?: string | null
           employee_id?: string
           id?: string
+          km_diff?: number | null
+          photo_url?: string | null
           raw_message?: string | null
+          report_type?: string | null
           reported_at?: string | null
           reported_km?: number
           source?: string
