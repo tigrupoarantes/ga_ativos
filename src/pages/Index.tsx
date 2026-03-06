@@ -35,15 +35,15 @@ const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3
 
 export default function Index() {
   const { stats, alerts, isLoading } = useDashboardStats();
-  const { isMotorista, loading } = useAuth();
+  const { isMotorista, loading, hasRole } = useAuth();
   const navigate = useNavigate();
 
-  // Motoristas são redirecionados para a tela mobile de registro de KM
+  // Motoristas sem role de sistema são redirecionados para a tela mobile de registro de KM
   useEffect(() => {
-    if (!loading && isMotorista) {
+    if (!loading && isMotorista && !hasRole('assistente')) {
       navigate("/motorista", { replace: true });
     }
-  }, [isMotorista, loading, navigate]);
+  }, [isMotorista, loading, hasRole, navigate]);
 
   // Stats cards usando dados agregados
   const statsCards = [
