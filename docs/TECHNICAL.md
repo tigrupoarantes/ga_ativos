@@ -99,6 +99,8 @@ Tabelas citadas/observadas com uso no app/edge functions:
 - Contexto central: `src/contexts/AuthContext.tsx`
   - Mantém sessão, role e flags relevantes (ex.: se funcionário é condutor).
   - Cadastro cria registro em `user_roles` e exige aprovação (`is_approved`).
+  - **Auto-link `funcionarios.user_id`**: no login/sessão, se não houver correspondência por `user_id`, o contexto tenta encontrar o funcionário pelo email (case-insensitive, somente quando `user_id IS NULL`) e grava o vínculo automaticamente. Resolve o caso de funcionários pré-cadastrados antes de criar conta.
+  - **Redirect motorista**: usuários com `is_condutor = true` são redirecionados para `/motorista` **somente em dispositivos móveis** (verificado via `isMobileDevice()` em `src/hooks/use-mobile.tsx`, que usa `navigator.userAgent`). No desktop, caem no dashboard normal.
 - Rotas protegidas: `src/components/ProtectedRoute.tsx`
 - Permissões por módulo:
   - Hook `useModulePermissions` consulta `module_permissions` e filtra menu/navegação.
@@ -147,16 +149,18 @@ As Edge Functions ficam em `supabase/functions/*`.
 
 - `reports-chat`
   - Agrega múltiplas tabelas (veículos, funcionários, ativos, contratos, oficina, telefonia etc.).
-  - Monta um “system context” e chama o AI Gateway com streaming.
+  - Monta um “system context” e chama a API da OpenAI com streaming SSE.
 - `contrato-chat`
   - Busca contrato + métricas + consumo.
   - Opcionalmente processa Excel (base64) para contexto.
-  - Chama AI Gateway com streaming.
+  - Chama a API da OpenAI com streaming SSE.
 
-Secrets/envs esperados (as-is):
+Configuração atual:
 
-- `AI_GATEWAY_API_KEY` (ou `LOVABLE_API_KEY`) para autenticar no AI Gateway.
-- Também pode usar `EXTERNAL_SUPABASE_URL` / `EXTERNAL_SUPABASE_SERVICE_KEY` para apontar para outro projeto Supabase.
+- **Endpoint**: `https://api.openai.com/v1/chat/completions`
+- **Modelo**: `gpt-4o-mini`
+- **Secret Supabase**: `OPENAI_API_KEY`
+- (Migrado de `ai.gateway.lovable.dev` / `google/gemini-3-flash-preview` / `LOVABLE_API_KEY` em mar/2026)
 
 ### 8.5 WhatsApp (fila + envio)
 
@@ -206,18 +210,48 @@ O padrão é:
 - `response.body.getReader()`
 - parse de linhas iniciadas com `data: `
 
-## 10) Deploy
+## 10) Otimização de bundle (code splitting)
 
-- Vercel (ver `vercel.json`):
-  - build: `npm run build`
-  - output: `dist`
-  - rewrite para SPA (React Router)
+O build usa `manualChunks` no Rollup para dividir vendors em chunks separados e habilitar cache de longa duração no browser:
 
-Observação:
+| Chunk | Conteúdo |
+|---|---|
+| `vendor-misc` | react, react-dom, react-router, scheduler, lucide-react, date-fns, sonner e demais libs |
+| `vendor-supabase` | `@supabase/*` |
+| `vendor-query` | `@tanstack/react-query` |
+| `vendor-ui` | `@radix-ui/*`, cmdk, vaul, next-themes, embla-carousel e afins |
+| `vendor-forms` | react-hook-form, @hookform, zod |
+| `vendor-charts` | recharts, d3-*, victory-vendor |
+| `vendor-markdown` | react-markdown + ecossistema remark/rehype/unified (carregado lazy) |
+| `vendor-excel` | read-excel-file (carregado via dynamic import) |
 
-- Edge Functions não são deployadas pela Vercel; elas precisam estar publicadas/configuradas no Supabase.
+**Decisão importante:** `react`/`react-dom`/`react-router` ficam em `vendor-misc` (não em chunk separado). Separar o React causava dependência circular com `scheduler` e outros pacotes em `vendor-misc`, quebrando o app em produção silenciosamente (tela branca por TDZ no ESM).
 
-## 11) Segurança e pontos de atenção (as-is)
+Todas as páginas (exceto Auth, NotFound, ResetPassword) são carregadas via `React.lazy()` + `Suspense` com spinner de loading.
+
+## 11) Identidade visual / favicon
+
+- Arquivo: `public/favicon.jpg`
+- Referenciado em `index.html` com `<link rel="icon" type="image/jpeg">` e `<link rel="apple-touch-icon">`
+- Usado também nas meta tags OG e Twitter
+
+## 12) Deploy
+
+- **Vercel** (frontend) — ver `vercel.json`:
+  - Build: `npm run build`
+  - Output: `dist`
+  - Rewrite para SPA (React Router)
+  - Deploy automático via push para `main` no GitHub
+
+- **Supabase Edge Functions** — deploy manual via CLI:
+  ```bash
+  SUPABASE_ACCESS_TOKEN=<token> npx supabase functions deploy <nome> --no-verify-jwt
+  ```
+  - Project ref: `ftksidxyhnvzdsuonwop` (configurado em `supabase/config.toml`)
+  - Token: Personal Access Token gerado em `https://supabase.com/dashboard/account/tokens`
+  - Edge Functions **não** são deployadas pela Vercel; precisam ser publicadas separadamente no Supabase.
+
+## 13) Segurança e pontos de atenção (as-is)
 
 - **Credenciais Supabase hardcoded no frontend**
   - Existe um arquivo com URL/anonKey fixos para um projeto Supabase externo.
@@ -225,18 +259,18 @@ Observação:
   - Recomendação: migrar para `.env` e remover do código; usar secrets no ambiente de deploy.
 
 - **IA Config**
-  - UI salva `OPENAI_API_KEY` em `app_config`, mas Edge Functions usam `AI_GATEWAY_API_KEY`/`LOVABLE_API_KEY` via env.
-  - Recomenda-se alinhar o mecanismo (ou remover a UI, ou fazer as functions lerem `app_config`).
+  - Edge Functions usam `OPENAI_API_KEY` via secret do Supabase (configurado no projeto `ftksidxyhnvzdsuonwop`).
+  - A UI ainda tem uma seção de configuração de `OPENAI_API_KEY` salva em `app_config`, que não é lida pelas Edge Functions; pode ser removida ou alinhada futuramente.
 
 - **WhatsApp Config**
   - UI apenas testa credenciais; envio real depende de secrets das Edge Functions.
 
-## 12) Observabilidade
+## 14) Observabilidade
 
 - Analytics: `@vercel/analytics` habilitado no app.
 - Logs: Edge Functions escrevem logs via `console.log/error`.
 
-## 13) Testes
+## 15) Testes
 
 - Configurado `vitest` (`npm run test`).
 - Não há (no escopo analisado) uma suíte extensa documentada; recomenda-se adicionar testes de hooks/fluxos críticos conforme evoluir.
