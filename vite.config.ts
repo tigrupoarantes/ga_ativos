@@ -24,12 +24,10 @@ export default defineConfig(() => ({
         manualChunks(id) {
           const n = id.replace(/\\/g, "/");
 
-          if (
-            n.includes("node_modules/react/") ||
-            n.includes("node_modules/react-dom/") ||
-            n.includes("node_modules/react-router-dom/") ||
-            n.includes("node_modules/@remix-run/")
-          ) return "vendor-react";
+          // Não separar react/react-dom/react-router — eles têm co-dependências
+          // internas com packages que cairiam em vendor-misc (ex: scheduler, history),
+          // gerando dependência circular entre chunks que quebra o app em produção.
+          // React vai no catch-all vendor-misc junto com lucide-react e outros.
 
           if (n.includes("node_modules/@supabase/")) return "vendor-supabase";
           if (n.includes("node_modules/@tanstack/")) return "vendor-query";
@@ -74,7 +72,7 @@ export default defineConfig(() => ({
             n.includes("node_modules/zod/")
           ) return "vendor-forms";
 
-          // tudo mais (date-fns, lucide-react, sonner, etc.)
+          // react, react-dom, react-router, scheduler, lucide-react, date-fns, sonner…
           if (n.includes("node_modules/")) return "vendor-misc";
         },
       },
