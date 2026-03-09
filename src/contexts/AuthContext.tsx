@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Defer fetching user role with setTimeout to avoid deadlock
           setTimeout(() => {
             fetchUserRole(session.user.id);
-            fetchFuncionarioData(session.user.id);
+            fetchFuncionarioData(session.user.id, session.user.email);
           }, 0);
         } else {
           setUserRole(null);
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // evita race condition onde isMotorista ainda é false quando Motorista.tsx avalia o guard
         await Promise.all([
           fetchUserRole(session.user.id),
-          fetchFuncionarioData(session.user.id),
+          fetchFuncionarioData(session.user.id, session.user.email),
         ]);
       }
       setLoading(false);
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchFuncionarioData = async (userId: string) => {
+  const fetchFuncionarioData = async (userId: string, userEmail?: string | null) => {
     const { data, error } = await supabase
       .from('funcionarios')
       .select('id, is_condutor')
@@ -97,10 +97,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching funcionario data:', error);
       setFuncionarioId(null);
       setIsMotorista(false);
-    } else {
-      setFuncionarioId(data?.id || null);
-      setIsMotorista(data?.is_condutor || false);
+      return;
     }
+
+    if (data) {
+      setFuncionarioId(data.id);
+      setIsMotorista(data.is_condutor || false);
+      return;
+    }
+
+    // Fallback: funcionario pode ter sido cadastrado antes de criar conta de login.
+    // Tenta pelo email e vincula user_id automaticamente (apenas se user_id ainda for null).
+    if (userEmail) {
+      const { data: byEmail } = await supabase
+        .from('funcionarios')
+        .select('id, is_condutor')
+        .ilike('email', userEmail)
+        .is('user_id', null)
+        .maybeSingle();
+
+      if (byEmail) {
+        await supabase
+          .from('funcionarios')
+          .update({ user_id: userId })
+          .eq('id', byEmail.id);
+
+        setFuncionarioId(byEmail.id);
+        setIsMotorista(byEmail.is_condutor || false);
+        return;
+      }
+    }
+
+    setFuncionarioId(null);
+    setIsMotorista(false);
   };
 
   const signIn = async (email: string, password: string) => {
@@ -119,11 +148,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Verifica se é motorista para redirecionar à tela correta
       if (data.user) {
-        const { data: func } = await supabase
+        let { data: func } = await supabase
           .from('funcionarios')
           .select('is_condutor')
           .eq('user_id', data.user.id)
           .maybeSingle();
+
+        // Fallback por email se user_id ainda não estiver vinculado
+        if (!func && data.user.email) {
+          const { data: byEmail } = await supabase
+            .from('funcionarios')
+            .select('is_condutor')
+            .ilike('email', data.user.email)
+            .is('user_id', null)
+            .maybeSingle();
+          func = byEmail;
+        }
 
         if (func?.is_condutor && isMobileDevice()) {
           navigate('/motorista');
