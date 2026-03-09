@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, Component, ReactNode, ErrorInfo } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -72,6 +72,43 @@ const queryClient = new QueryClient({
   },
 });
 
+// ─── ErrorBoundary — captura falhas de chunk lazy e erros de runtime ─────────
+// Sem este componente, qualquer erro não tratado resulta em tela branca.
+
+interface EBState { hasError: boolean; error: Error | null }
+
+class AppErrorBoundary extends Component<{ children: ReactNode }, EBState> {
+  state: EBState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): EBState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[AppErrorBoundary]", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="text-lg font-semibold">Algo deu errado ao carregar a página.</p>
+          <p className="text-sm text-muted-foreground font-mono break-all max-w-lg">
+            {this.state.error?.message}
+          </p>
+          <button
+            className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm"
+            onClick={() => window.location.reload()}
+          >
+            Recarregar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─── Fallback spinner exibido enquanto o chunk lazy está sendo baixado ────────
 const PageLoader = () => (
   <div className="min-h-[100dvh] flex items-center justify-center">
@@ -89,8 +126,9 @@ const App = () => (
       <Analytics />
       <BrowserRouter>
         <AuthProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+          <AppErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
               {/* Rotas públicas — eager, sem auth check */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -142,7 +180,8 @@ const App = () => (
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </Suspense>
+            </Suspense>
+          </AppErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
