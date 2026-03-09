@@ -15,13 +15,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft, Undo2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft, Undo2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { ImportCelularesDialog } from "@/components/ImportCelularesDialog";
 import { DataTablePagination } from "@/components/DataTablePagination";
+import { GerarContratoDialog } from "@/components/GerarContratoDialog";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -47,6 +48,7 @@ export default function Ativos() {
   const [historicoAtivoNome, setHistoricoAtivoNome] = useState<string | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; nome: string } | null>(null);
+  const [contratoDialogAtivo, setContratoDialogAtivo] = useState<typeof ativos[0] | null>(null);
   const [formData, setFormData] = useState({
     patrimonio: "",
     nome: "",
@@ -485,9 +487,9 @@ export default function Ativos() {
                             <History className="h-4 w-4 text-muted-foreground" />
                           </Button>
                           {(ativo as any).funcionario?.nome && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               title="Devolver ativo"
                               onClick={() => handleDevolverAtivo(ativo)}
                               disabled={devolverAtivo.isPending}
@@ -495,6 +497,21 @@ export default function Ativos() {
                               <Undo2 className="h-4 w-4 text-orange-500" />
                             </Button>
                           )}
+                          {(() => {
+                            const tipoNome = ((ativo as any).tipo?.name ?? "").toLowerCase();
+                            const isComodato = tipoNome.includes("celular") || tipoNome.includes("notebook") || tipoNome.includes("microinform");
+                            if (!isComodato || ativo.status !== "em_uso" || !(ativo as any).funcionario?.nome) return null;
+                            return (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Gerar contrato de comodato"
+                                onClick={() => setContratoDialogAtivo(ativo)}
+                              >
+                                <FileText className="h-4 w-4 text-blue-500" />
+                              </Button>
+                            );
+                          })()}
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(ativo)}>
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -547,6 +564,12 @@ export default function Ativos() {
         itemName={itemToDelete?.nome || ""}
         itemType="ativo"
         isLoading={deleteAtivo.isPending}
+      />
+
+      <GerarContratoDialog
+        ativo={contratoDialogAtivo as any}
+        open={!!contratoDialogAtivo}
+        onOpenChange={(open) => { if (!open) setContratoDialogAtivo(null); }}
       />
     </AppLayout>
   );

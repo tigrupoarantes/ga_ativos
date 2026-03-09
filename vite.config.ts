@@ -55,6 +55,16 @@ export default defineConfig(() => ({
           // read-excel-file isolado — carregado via dynamic import em excel.ts
           if (n.includes("node_modules/read-excel-file")) return "vendor-excel";
 
+          // @react-pdf/renderer e dependências internas (fflate, yoga-layout, etc.)
+          if (
+            n.includes("node_modules/@react-pdf/") ||
+            n.includes("node_modules/fflate/") ||
+            n.includes("node_modules/@react-pdf") ||
+            n.includes("node_modules/yoga-layout") ||
+            n.includes("node_modules/pdf-fontkit") ||
+            n.includes("node_modules/pdfkit")
+          ) return "vendor-pdf";
+
           if (
             n.includes("node_modules/@radix-ui/") ||
             n.includes("node_modules/cmdk/") ||

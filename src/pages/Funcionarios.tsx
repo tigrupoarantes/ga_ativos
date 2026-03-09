@@ -94,6 +94,9 @@ export default function Funcionarios() {
     cnh_validade: "",
     is_vendedor: false,
     codigo_vendedor: "",
+    rg: "",
+    cidade: "",
+    endereco: "",
   });
 
   // Sync debounced search with hook
@@ -129,7 +132,10 @@ export default function Funcionarios() {
       cnh_validade: formData.cnh_validade || null,
       is_vendedor: formData.is_vendedor,
       codigo_vendedor: formData.codigo_vendedor || null,
-    };
+      rg: (formData as any).rg || null,
+      cidade: (formData as any).cidade || null,
+      endereco: (formData as any).endereco || null,
+    } as any;
     
     try {
       if (editingId) {
@@ -162,6 +168,9 @@ export default function Funcionarios() {
       cnh_validade: "",
       is_vendedor: false,
       codigo_vendedor: "",
+      rg: "",
+      cidade: "",
+      endereco: "",
     });
   };
 
@@ -181,6 +190,9 @@ export default function Funcionarios() {
       cnh_validade: funcionario.cnh_validade || "",
       is_vendedor: (funcionario as any).is_vendedor || false,
       codigo_vendedor: (funcionario as any).codigo_vendedor || "",
+      rg: (funcionario as any).rg || "",
+      cidade: (funcionario as any).cidade || "",
+      endereco: (funcionario as any).endereco || "",
     });
     setIsDialogOpen(true);
   };
@@ -381,6 +393,40 @@ export default function Funcionarios() {
                       />
                     </div>
                   )}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1">
+                      Dados pessoais adicionais (contratos de comodato)
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="rg">RG</Label>
+                        <Input
+                          id="rg"
+                          placeholder="Ex: 47.577.408-5"
+                          value={(formData as any).rg}
+                          onChange={(e) => setFormData({ ...formData, rg: e.target.value } as any)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cidade">Cidade</Label>
+                        <Input
+                          id="cidade"
+                          placeholder="Ex: Brodowski"
+                          value={(formData as any).cidade}
+                          onChange={(e) => setFormData({ ...formData, cidade: e.target.value } as any)}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endereco">Endereço</Label>
+                      <Input
+                        id="endereco"
+                        placeholder="Ex: Rua Campos Salles, SN"
+                        value={(formData as any).endereco}
+                        onChange={(e) => setFormData({ ...formData, endereco: e.target.value } as any)}
+                      />
+                    </div>
+                  </div>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
                     <Button type="submit" disabled={createFuncionario.isPending || updateFuncionario.isPending}>
