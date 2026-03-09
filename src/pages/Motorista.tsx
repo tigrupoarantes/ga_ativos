@@ -106,7 +106,7 @@ export default function Motorista() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
@@ -115,10 +115,10 @@ export default function Motorista() {
   if (!isMotorista) return null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="max-w-md mx-auto w-full flex flex-col min-h-screen">
+    <div className="min-h-[100dvh] bg-background flex flex-col overscroll-none">
+      <div className="max-w-md mx-auto w-full flex flex-col min-h-[100dvh]">
         {/* Header */}
-        <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-3 flex items-center justify-between">
+        <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-primary/10 p-1.5">
               <Car className="h-4 w-4 text-primary" />
@@ -137,7 +137,7 @@ export default function Motorista() {
         </header>
 
         {/* Conteúdo principal */}
-        <main className="flex-1 px-4 py-6 overflow-y-auto">
+        <main className="flex-1 px-4 py-6 overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           {view === "home" && (
             <MotoristaHome
               vehicle={vehicle}

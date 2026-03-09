@@ -22,6 +22,13 @@ function formatTime(iso: string) {
   });
 }
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Bom dia,";
+  if (hour < 18) return "Boa tarde,";
+  return "Boa noite,";
+}
+
 export function MotoristaHome({
   vehicle,
   todayState,
@@ -63,7 +70,7 @@ export function MotoristaHome({
     <div className="flex flex-col gap-6">
       {/* Saudação */}
       <div>
-        <p className="text-muted-foreground text-sm">Bom dia,</p>
+        <p className="text-muted-foreground text-sm">{getGreeting()}</p>
         <p className="text-xl font-bold">
           {driverName?.split(" ")[0] ?? "Motorista"}
         </p>

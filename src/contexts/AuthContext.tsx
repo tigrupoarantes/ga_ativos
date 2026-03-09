@@ -53,12 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id);
-        fetchFuncionarioData(session.user.id);
+        // Aguarda ambas as queries antes de sinalizar loading=false
+        // evita race condition onde isMotorista ainda é false quando Motorista.tsx avalia o guard
+        await Promise.all([
+          fetchUserRole(session.user.id),
+          fetchFuncionarioData(session.user.id),
+        ]);
       }
       setLoading(false);
     });
@@ -100,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -111,6 +115,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       toast.success('Login realizado com sucesso!');
+
+      // Verifica se é motorista para redirecionar à tela correta
+      if (data.user) {
+        const { data: func } = await supabase
+          .from('funcionarios')
+          .select('is_condutor')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
+
+        if (func?.is_condutor) {
+          navigate('/motorista');
+          return { error: null };
+        }
+      }
+
       navigate('/');
       return { error: null };
     } catch (error) {
