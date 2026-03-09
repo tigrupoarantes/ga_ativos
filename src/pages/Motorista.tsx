@@ -11,6 +11,7 @@ import {
   OdometerConfirm,
   type CaptureSession,
 } from "@/components/motorista/OdometerConfirm";
+import { isMobileDevice } from "@/hooks/use-mobile";
 
 type PageView = "home" | "capture" | "confirm";
 
@@ -27,9 +28,9 @@ export default function Motorista() {
     "checkin" | "checkout"
   >("checkin");
 
-  // Redireciona usuários não-motoristas
+  // Redireciona usuários não-motoristas e acessos via desktop
   useEffect(() => {
-    if (!loading && !isMotorista) {
+    if (!loading && (!isMotorista || !isMobileDevice())) {
       navigate("/", { replace: true });
     }
   }, [isMotorista, loading, navigate]);
@@ -112,7 +113,7 @@ export default function Motorista() {
     );
   }
 
-  if (!isMotorista) return null;
+  if (!isMotorista || !isMobileDevice()) return null;
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col overscroll-none">

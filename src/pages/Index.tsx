@@ -30,6 +30,7 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import { isMobileDevice } from "@/hooks/use-mobile";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
@@ -39,8 +40,9 @@ export default function Index() {
   const navigate = useNavigate();
 
   // Motoristas sem role de sistema são redirecionados para a tela mobile de registro de KM
+  // somente quando acessando pelo celular — no desktop ficam no dashboard normal
   useEffect(() => {
-    if (!loading && isMotorista && !hasRole('assistente')) {
+    if (!loading && isMotorista && !hasRole('assistente') && isMobileDevice()) {
       navigate("/motorista", { replace: true });
     }
   }, [isMotorista, loading, hasRole, navigate]);

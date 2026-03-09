@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/external-client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { isMobileDevice } from '@/hooks/use-mobile';
 
 type AppRole = 'assistente' | 'coordenador' | 'diretor' | 'admin';
 
@@ -124,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('user_id', data.user.id)
           .maybeSingle();
 
-        if (func?.is_condutor) {
+        if (func?.is_condutor && isMobileDevice()) {
           navigate('/motorista');
           return { error: null };
         }
