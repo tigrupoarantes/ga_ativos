@@ -1,5 +1,3 @@
-import readXlsxFile from "read-excel-file";
-
 export type ExcelCell = string | number | boolean | Date | null | undefined;
 
 export interface ReadXlsxAsObjectsOptions {
@@ -25,6 +23,7 @@ export async function readXlsxAsObjects(
   file: File,
   options: ReadXlsxAsObjectsOptions = {}
 ): Promise<Record<string, unknown>[]> {
+  const { default: readXlsxFile } = await import("read-excel-file");
   const rows = (await readXlsxFile(file)) as ExcelCell[][];
   if (rows.length === 0) return [];
 

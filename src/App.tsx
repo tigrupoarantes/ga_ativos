@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,40 +8,58 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Analytics } from "@vercel/analytics/react";
 
-// Pages
-import Index from "./pages/Index";
+// Páginas EAGER — carregadas no bundle inicial (pequenas, usadas antes/fora do auth check)
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
-import Ativos from "./pages/Ativos";
-import TiposAtivos from "./pages/TiposAtivos";
-import Funcionarios from "./pages/Funcionarios";
 
-import Empresas from "./pages/Empresas";
-import Equipes from "./pages/Equipes";
-import Veiculos from "./pages/Veiculos";
+// ─── Páginas LAZY — cada dynamic import vira um JS chunk separado ─────────────
 
-import VeiculosMultas from "./pages/VeiculosMultas";
-import VeiculosHistorico from "./pages/VeiculosHistorico";
-import Contratos from "./pages/Contratos";
-import ContratoDetalhe from "./pages/ContratoDetalhe";
-import Telefonia from "./pages/Telefonia";
-import LinhasTelefonicas from "./pages/LinhasTelefonicas";
-import Configuracoes from "./pages/Configuracoes";
-import Permissoes from "./pages/Permissoes";
-import Usuarios from "./pages/Usuarios";
-import Historico from "./pages/Historico";
-import Oficina from "./pages/Oficina";
-import Agenda from "./pages/Agenda";
-import OrdensServico from "./pages/OrdensServico";
-import Pecas from "./pages/Pecas";
-import Preventivas from "./pages/Preventivas";
-import Lavagens from "./pages/Lavagens";
-import KmColetas from "./pages/KmColetas";
-import Notificacoes from "./pages/Notificacoes";
-import Relatorios from "./pages/Relatorios";
-import AdminBugReports from "./pages/AdminBugReports";
-import Motorista from "./pages/Motorista";
+// Dashboard
+const Index             = lazy(() => import("./pages/Index"));
+
+// Ativos
+const Ativos            = lazy(() => import("./pages/Ativos"));
+const TiposAtivos       = lazy(() => import("./pages/TiposAtivos"));
+
+// Pessoas
+const Funcionarios      = lazy(() => import("./pages/Funcionarios"));
+const Empresas          = lazy(() => import("./pages/Empresas"));
+const Equipes           = lazy(() => import("./pages/Equipes"));
+
+// Veículos
+const Veiculos          = lazy(() => import("./pages/Veiculos"));
+const VeiculosMultas    = lazy(() => import("./pages/VeiculosMultas"));
+const VeiculosHistorico = lazy(() => import("./pages/VeiculosHistorico"));
+
+// Oficina
+const Oficina           = lazy(() => import("./pages/Oficina"));
+const Agenda            = lazy(() => import("./pages/Agenda"));
+const OrdensServico     = lazy(() => import("./pages/OrdensServico"));
+const Pecas             = lazy(() => import("./pages/Pecas"));
+const Preventivas       = lazy(() => import("./pages/Preventivas"));
+const Lavagens          = lazy(() => import("./pages/Lavagens"));
+const KmColetas         = lazy(() => import("./pages/KmColetas"));
+const Notificacoes      = lazy(() => import("./pages/Notificacoes"));
+
+// Outros módulos
+const Telefonia         = lazy(() => import("./pages/Telefonia"));
+const LinhasTelefonicas = lazy(() => import("./pages/LinhasTelefonicas"));
+const Contratos         = lazy(() => import("./pages/Contratos"));
+const ContratoDetalhe   = lazy(() => import("./pages/ContratoDetalhe"));
+const Historico         = lazy(() => import("./pages/Historico"));
+const Relatorios        = lazy(() => import("./pages/Relatorios"));
+
+// Configurações
+const Configuracoes     = lazy(() => import("./pages/Configuracoes"));
+const Permissoes        = lazy(() => import("./pages/Permissoes"));
+const Usuarios          = lazy(() => import("./pages/Usuarios"));
+const AdminBugReports   = lazy(() => import("./pages/AdminBugReports"));
+
+// Motorista — tela mobile-only, maioria dos usuários nunca acessa esta rota
+const Motorista         = lazy(() => import("./pages/Motorista"));
+
+// ─── Query client ─────────────────────────────────────────────────────────────
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +72,15 @@ const queryClient = new QueryClient({
   },
 });
 
+// ─── Fallback spinner exibido enquanto o chunk lazy está sendo baixado ────────
+const PageLoader = () => (
+  <div className="min-h-[100dvh] flex items-center justify-center">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+);
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -61,59 +89,60 @@ const App = () => (
       <Analytics />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            
-            {/* Dashboard */}
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            
-            {/* Ativos */}
-            <Route path="/ativos" element={<ProtectedRoute><Ativos /></ProtectedRoute>} />
-            <Route path="/tipos-ativos" element={<ProtectedRoute><TiposAtivos /></ProtectedRoute>} />
-            
-            {/* Pessoas */}
-            <Route path="/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
-            
-            <Route path="/empresas" element={<ProtectedRoute><Empresas /></ProtectedRoute>} />
-            <Route path="/equipes" element={<ProtectedRoute><Equipes /></ProtectedRoute>} />
-            
-            {/* Veículos */}
-            <Route path="/veiculos" element={<ProtectedRoute><Veiculos /></ProtectedRoute>} />
-            
-            <Route path="/veiculos/multas" element={<ProtectedRoute><VeiculosMultas /></ProtectedRoute>} />
-            <Route path="/veiculos/historico" element={<ProtectedRoute><VeiculosHistorico /></ProtectedRoute>} />
-            
-            {/* Oficina */}
-            <Route path="/oficina" element={<ProtectedRoute><Oficina /></ProtectedRoute>} />
-            <Route path="/oficina/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
-            <Route path="/oficina/os" element={<ProtectedRoute><OrdensServico /></ProtectedRoute>} />
-            <Route path="/oficina/pecas" element={<ProtectedRoute><Pecas /></ProtectedRoute>} />
-            <Route path="/oficina/preventivas" element={<ProtectedRoute><Preventivas /></ProtectedRoute>} />
-            <Route path="/oficina/lavagem" element={<ProtectedRoute><Lavagens /></ProtectedRoute>} />
-            <Route path="/oficina/km" element={<ProtectedRoute><KmColetas /></ProtectedRoute>} />
-            <Route path="/oficina/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
-            
-            {/* Outros módulos */}
-            <Route path="/telefonia" element={<ProtectedRoute><Telefonia /></ProtectedRoute>} />
-            <Route path="/linhas-telefonicas" element={<ProtectedRoute><LinhasTelefonicas /></ProtectedRoute>} />
-            <Route path="/contratos" element={<ProtectedRoute><Contratos /></ProtectedRoute>} />
-            <Route path="/contratos/:id" element={<ProtectedRoute><ContratoDetalhe /></ProtectedRoute>} />
-            <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
-            <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
-            
-            {/* Configurações */}
-            <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
-            <Route path="/permissoes" element={<ProtectedRoute><Permissoes /></ProtectedRoute>} />
-            <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
-            <Route path="/admin/bugs" element={<ProtectedRoute><AdminBugReports /></ProtectedRoute>} />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Rotas públicas — eager, sem auth check */}
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Motorista — tela mobile-first de registro de KM */}
-            <Route path="/motorista" element={<ProtectedRoute><Motorista /></ProtectedRoute>} />
+              {/* Dashboard */}
+              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
 
-            {/* Catch-all */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* Ativos */}
+              <Route path="/ativos" element={<ProtectedRoute><Ativos /></ProtectedRoute>} />
+              <Route path="/tipos-ativos" element={<ProtectedRoute><TiposAtivos /></ProtectedRoute>} />
+
+              {/* Pessoas */}
+              <Route path="/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
+              <Route path="/empresas" element={<ProtectedRoute><Empresas /></ProtectedRoute>} />
+              <Route path="/equipes" element={<ProtectedRoute><Equipes /></ProtectedRoute>} />
+
+              {/* Veículos */}
+              <Route path="/veiculos" element={<ProtectedRoute><Veiculos /></ProtectedRoute>} />
+              <Route path="/veiculos/multas" element={<ProtectedRoute><VeiculosMultas /></ProtectedRoute>} />
+              <Route path="/veiculos/historico" element={<ProtectedRoute><VeiculosHistorico /></ProtectedRoute>} />
+
+              {/* Oficina */}
+              <Route path="/oficina" element={<ProtectedRoute><Oficina /></ProtectedRoute>} />
+              <Route path="/oficina/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+              <Route path="/oficina/os" element={<ProtectedRoute><OrdensServico /></ProtectedRoute>} />
+              <Route path="/oficina/pecas" element={<ProtectedRoute><Pecas /></ProtectedRoute>} />
+              <Route path="/oficina/preventivas" element={<ProtectedRoute><Preventivas /></ProtectedRoute>} />
+              <Route path="/oficina/lavagem" element={<ProtectedRoute><Lavagens /></ProtectedRoute>} />
+              <Route path="/oficina/km" element={<ProtectedRoute><KmColetas /></ProtectedRoute>} />
+              <Route path="/oficina/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
+
+              {/* Outros módulos */}
+              <Route path="/telefonia" element={<ProtectedRoute><Telefonia /></ProtectedRoute>} />
+              <Route path="/linhas-telefonicas" element={<ProtectedRoute><LinhasTelefonicas /></ProtectedRoute>} />
+              <Route path="/contratos" element={<ProtectedRoute><Contratos /></ProtectedRoute>} />
+              <Route path="/contratos/:id" element={<ProtectedRoute><ContratoDetalhe /></ProtectedRoute>} />
+              <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
+              <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
+
+              {/* Configurações */}
+              <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+              <Route path="/permissoes" element={<ProtectedRoute><Permissoes /></ProtectedRoute>} />
+              <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
+              <Route path="/admin/bugs" element={<ProtectedRoute><AdminBugReports /></ProtectedRoute>} />
+
+              {/* Motorista — tela mobile-first de registro de KM */}
+              <Route path="/motorista" element={<ProtectedRoute><Motorista /></ProtectedRoute>} />
+
+              {/* Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

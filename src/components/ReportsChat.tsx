@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { lazy, Suspense, useState, useRef, useEffect } from "react";
 import { Send, Trash2, Bot, User, Sparkles } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+const ReactMarkdown = lazy(() => import("react-markdown"));
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -168,9 +168,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         {isUser ? (
           <p className="text-sm">{message.content}</p>
         ) : (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
-          </div>
+          <Suspense fallback={<p className="text-sm whitespace-pre-wrap">{message.content}</p>}>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          </Suspense>
         )}
       </Card>
     </div>
