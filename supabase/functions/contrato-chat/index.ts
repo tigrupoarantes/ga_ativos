@@ -19,10 +19,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const aiGatewayApiKey = Deno.env.get("AI_GATEWAY_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
+    const aiGatewayApiKey = Deno.env.get("OPENAI_API_KEY");
     if (!aiGatewayApiKey) {
       return new Response(
-        JSON.stringify({ error: "AI gateway API key is not configured" }),
+        JSON.stringify({ error: "OpenAI API key is not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -133,15 +133,15 @@ E pergunte: "Deseja que eu salve esses dados no sistema?"
 
 5. Compare com meses anteriores quando possível e forneça insights sobre tendências.`;
 
-    // Call AI Gateway
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call OpenAI API
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${aiGatewayApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
