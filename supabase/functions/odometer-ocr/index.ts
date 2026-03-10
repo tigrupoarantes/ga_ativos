@@ -106,21 +106,30 @@ Deno.serve(async (req) => {
 
     const prompt = `Você é um assistente especializado em leitura de hodômetros de veículos.
 
-Analise cuidadosamente esta foto de um hodômetro/velocímetro de veículo.
-Extraia a leitura total de quilometragem (KM) mostrada no display do hodômetro.
+Analise cuidadosamente esta foto de um painel/velocímetro de veículo.
 ${placaInfo}
 
-Retorne APENAS um objeto JSON válido neste formato exato (sem markdown, sem explicações):
-{"km": <número inteiro ou null se ilegível>, "confidence": "high" ou "medium" ou "low", "raw_text": "<dígitos ou texto visível>"}
+Sua tarefa: encontrar e extrair a leitura TOTAL de quilometragem (hodômetro total, não trip/parcial).
 
-Regras importantes:
-- km deve ser um número inteiro SEM pontos ou vírgulas (ex: "45.230" vira 45230)
-- confidence é "high" se claramente legível, "medium" se parcialmente visível, "low" se ilegível
-- Se não conseguir identificar o hodômetro, retorne km como null
-- Ignore a velocidade atual, foque apenas no contador total de KM`;
+ONDE PROCURAR:
+- Display digital central do painel (LCD ou TFT)
+- Contador numérico analógico (rodinhas mecânicas)
+- Texto pequeno no cluster de instrumentos mostrando "XXXXX km" ou "XXXXX KM"
+- O hodômetro total geralmente tem 5-6 dígitos (ex: 53197, 125430)
+- Pode aparecer com espaço entre grupos: "53 197" = 53197 km
+- Pode aparecer com ponto/vírgula: "53.197" ou "53,197" = 53197 km
+- Ignore o velocímetro (velocidade atual), foque no CONTADOR TOTAL
+
+Retorne APENAS um objeto JSON válido neste formato exato (sem markdown, sem explicações):
+{"km": <número inteiro ou null se ilegível>, "confidence": "high" ou "medium" ou "low", "raw_text": "<exatamente o que você vê no display, ex: 53 197km>"}
+
+Regras:
+- km deve ser número inteiro SEM separadores (ex: "53 197" → 53197, "53.197" → 53197)
+- confidence "high" = claramente legível, "medium" = parcialmente visível, "low" = incerto/ilegível
+- Se genuinamente não conseguir identificar nenhum número de hodômetro, retorne km como null`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {

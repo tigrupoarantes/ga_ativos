@@ -32,8 +32,8 @@ export function OdometerCapture({
     try {
       // Comprime para preview (qualidade original para exibição)
       const base64Preview = await readFileAsBase64(file);
-      // Comprime para OCR (max 1200px, JPEG 85%) — evita payload > 6 MB no Edge Function
-      const base64Ocr = await compressImage(file, 1200, 0.85);
+      // Comprime para OCR (max 2048px, JPEG 90%) — resolução maior preserva dígitos pequenos no display
+      const base64Ocr = await compressImage(file, 2048, 0.90);
 
       let ocrResult: OcrResult = {
         extractedKm: null,
