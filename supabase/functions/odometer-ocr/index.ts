@@ -10,6 +10,14 @@ interface OcrResponse {
   rawResponse: string;
 }
 
+function extractKmFromText(text: string): number | null {
+  // Remove espaços entre dígitos ("53 197" → "53197") e procura sequência de 4-7 dígitos
+  // Usa lookahead/lookbehind para não exigir word-boundary (funciona com "53197km")
+  const compactText = text.replace(/(\d)\s+(\d)/g, "$1$2");
+  const numMatch = compactText.match(/(?<!\d)(\d{4,7})(?!\d)/);
+  return numMatch ? parseInt(numMatch[1], 10) : null;
+}
+
 function parseGeminiResponse(text: string): OcrResponse {
   // Tenta extrair JSON do texto (suporta multi-linha e markdown code blocks)
   const jsonMatch = text.match(/\{[\s\S]*?\}/);
@@ -24,36 +32,34 @@ function parseGeminiResponse(text: string): OcrResponse {
           : typeof rawKm === "string" && rawKm.trim() !== ""
           ? parseInt(rawKm.replace(/\D/g, ""), 10) || null
           : null;
-      const confidence = ["high", "medium", "low"].includes(parsed.confidence)
+      const confidence = (["high", "medium", "low"].includes(parsed.confidence)
         ? parsed.confidence
-        : "low";
-      return {
-        extractedKm: km,
-        confidence: confidence as "high" | "medium" | "low",
-        rawResponse: parsed.raw_text || text,
-      };
+        : "low") as "high" | "medium" | "low";
+
+      // Se km veio preenchido, retorna direto
+      if (km !== null) {
+        return { extractedKm: km, confidence, rawResponse: parsed.raw_text || text };
+      }
+
+      // km é null mas pode ter raw_text com os dígitos visíveis ("53 197")
+      if (parsed.raw_text) {
+        const fallbackKm = extractKmFromText(parsed.raw_text);
+        if (fallbackKm !== null) {
+          return { extractedKm: fallbackKm, confidence: "low", rawResponse: parsed.raw_text };
+        }
+      }
     } catch {
-      // Continua para fallback
+      // Continua para fallback com o texto bruto
     }
   }
 
-  // Fallback: procura número de 4-7 dígitos contíguos no texto
-  // Remove espaços entre dígitos para lidar com "53 197" → "53197"
-  const compactText = text.replace(/(\d)\s+(\d)/g, "$1$2");
-  const numMatch = compactText.match(/\b(\d{4,7})\b/);
-  if (numMatch) {
-    return {
-      extractedKm: parseInt(numMatch[1], 10),
-      confidence: "low",
-      rawResponse: text,
-    };
+  // Fallback final: extrai direto do texto da resposta
+  const fallbackKm = extractKmFromText(text);
+  if (fallbackKm !== null) {
+    return { extractedKm: fallbackKm, confidence: "low", rawResponse: text };
   }
 
-  return {
-    extractedKm: null,
-    confidence: "low",
-    rawResponse: text,
-  };
+  return { extractedKm: null, confidence: "low", rawResponse: text };
 }
 
 Deno.serve(async (req) => {
