@@ -80,11 +80,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
 
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "OPENAI_API_KEY não configurada" }),
+        JSON.stringify({ error: "GEMINI_API_KEY não configurada" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -120,39 +120,37 @@ Regras importantes:
 - Ignore a velocidade atual, foque apenas no contador total de KM`;
 
     const response = await fetch(
-      "https://api.openai.com/v1/chat/completions",
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
+          contents: [
             {
-              role: "user",
-              content: [
-                { type: "text", text: prompt },
+              parts: [
+                { text: prompt },
                 {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:${mimeType};base64,${base64Data}`,
-                    detail: "high",
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64Data,
                   },
                 },
               ],
             },
           ],
-          max_tokens: 150,
-          temperature: 0.1,
+          generationConfig: {
+            maxOutputTokens: 150,
+            temperature: 0.1,
+          },
         }),
       }
     );
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("AI Gateway error:", response.status, errText);
+      console.error("Gemini API error:", response.status, errText);
       return new Response(
         JSON.stringify({
           error: "Erro no serviço de IA",
@@ -169,9 +167,9 @@ Regras importantes:
 
     const aiResult = await response.json();
     const messageContent: string =
-      aiResult.choices?.[0]?.message?.content || "";
+      aiResult.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    console.log("GPT-4o response:", messageContent);
+    console.log("Gemini response:", messageContent);
 
     const parsed = parseGeminiResponse(messageContent);
 
