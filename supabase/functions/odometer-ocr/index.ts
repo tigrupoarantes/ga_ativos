@@ -11,12 +11,19 @@ interface OcrResponse {
 }
 
 function parseGeminiResponse(text: string): OcrResponse {
-  // Tenta extrair JSON do texto de resposta
-  const jsonMatch = text.match(/\{[^}]+\}/);
+  // Tenta extrair JSON do texto (suporta multi-linha e markdown code blocks)
+  const jsonMatch = text.match(/\{[\s\S]*?\}/);
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[0]);
-      const km = typeof parsed.km === "number" ? Math.round(parsed.km) : null;
+      const rawKm = parsed.km;
+      // Aceita número ou string numérica (ex: "53197" ou 53197)
+      const km =
+        typeof rawKm === "number"
+          ? Math.round(rawKm)
+          : typeof rawKm === "string" && rawKm.trim() !== ""
+          ? parseInt(rawKm.replace(/\D/g, ""), 10) || null
+          : null;
       const confidence = ["high", "medium", "low"].includes(parsed.confidence)
         ? parsed.confidence
         : "low";
@@ -30,8 +37,10 @@ function parseGeminiResponse(text: string): OcrResponse {
     }
   }
 
-  // Fallback: procura um número de 4-7 dígitos no texto (leitura típica de hodômetro)
-  const numMatch = text.match(/\b(\d{4,7})\b/);
+  // Fallback: procura número de 4-7 dígitos contíguos no texto
+  // Remove espaços entre dígitos para lidar com "53 197" → "53197"
+  const compactText = text.replace(/(\d)\s+(\d)/g, "$1$2");
+  const numMatch = compactText.match(/\b(\d{4,7})\b/);
   if (numMatch) {
     return {
       extractedKm: parseInt(numMatch[1], 10),

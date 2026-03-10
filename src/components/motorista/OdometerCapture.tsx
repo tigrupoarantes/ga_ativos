@@ -30,7 +30,11 @@ export function OdometerCapture({
   const handleFile = async (file: File) => {
     setIsProcessing(true);
     try {
-      const base64 = await readFileAsBase64(file);
+      // Comprime para preview (qualidade original para exibição)
+      const base64Preview = await readFileAsBase64(file);
+      // Comprime para OCR (max 1200px, JPEG 85%) — evita payload > 6 MB no Edge Function
+      const base64Ocr = await compressImage(file, 1200, 0.85);
+
       let ocrResult: OcrResult = {
         extractedKm: null,
         confidence: "low",
@@ -38,7 +42,7 @@ export function OdometerCapture({
       };
 
       try {
-        ocrResult = await callOcr(base64);
+        ocrResult = await callOcr(base64Ocr);
       } catch (err) {
         console.error("OCR error:", err);
         toast.warning(
@@ -46,7 +50,7 @@ export function OdometerCapture({
         );
       }
 
-      onCapture(base64, file, ocrResult.extractedKm, ocrResult.confidence);
+      onCapture(base64Preview, file, ocrResult.extractedKm, ocrResult.confidence);
     } catch (err) {
       toast.error("Erro ao processar a foto. Tente novamente.");
     } finally {
@@ -60,6 +64,28 @@ export function OdometerCapture({
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = reject;
       reader.readAsDataURL(file);
+    });
+
+  /** Redimensiona e comprime a imagem usando Canvas antes de enviar ao OCR */
+  const compressImage = (file: File, maxPx: number, quality: number): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas context unavailable"));
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = url;
     });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
