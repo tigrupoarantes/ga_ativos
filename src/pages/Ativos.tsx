@@ -40,6 +40,8 @@ export default function Ativos() {
   const { funcionarios } = useFuncionariosCombobox();
   const { empresas } = useEmpresas();
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterTipo, setFilterTipo] = useState("all");
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -66,12 +68,15 @@ export default function Ativos() {
     valor_aquisicao: "",
   });
 
-  const filteredAtivos = ativos.filter(
-    (a) =>
+  const filteredAtivos = ativos.filter((a) => {
+    const matchSearch =
       a.nome?.toLowerCase().includes(search.toLowerCase()) ||
       a.patrimonio?.toLowerCase().includes(search.toLowerCase()) ||
-      a.numero_serie?.toLowerCase().includes(search.toLowerCase())
-  );
+      a.numero_serie?.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === "all" || a.status === filterStatus;
+    const matchTipo = filterTipo === "all" || a.tipo_id === filterTipo;
+    return matchSearch && matchStatus && matchTipo;
+  });
 
   const totalCount = filteredAtivos.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -79,7 +84,7 @@ export default function Ativos() {
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, filterStatus, filterTipo]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -417,16 +422,39 @@ export default function Ativos() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar ativos..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 w-[300px]"
+                  className="pl-10 w-[220px]"
                 />
               </div>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="disponivel">Disponível</SelectItem>
+                  <SelectItem value="em_uso">Em Uso</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="baixado">Baixado</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterTipo} onValueChange={setFilterTipo}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {tipos.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2">
               <ImportCelularesDialog />

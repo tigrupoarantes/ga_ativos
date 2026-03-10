@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout, useBreadcrumbLabel } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { useContratos } from "@/hooks/useContratos";
 import { useEmpresas } from "@/hooks/useEmpresas";
@@ -36,6 +37,14 @@ export default function ContratoDetalhe() {
 
   const contrato = contratos.find((c) => c.id === id);
   const empresaNome = empresas.find(e => e.id === (contrato as any)?.empresa_id)?.nome;
+
+  const { setDynamicLabel } = useBreadcrumbLabel();
+  useEffect(() => {
+    if (contrato) {
+      setDynamicLabel(contrato.numero ? `Contrato ${contrato.numero}` : contrato.descricao || "Contrato");
+    }
+    return () => setDynamicLabel(null);
+  }, [contrato?.id]);
 
   if (loadingContratos) {
     return (

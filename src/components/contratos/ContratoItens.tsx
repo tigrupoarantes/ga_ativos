@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useContratoItens, ContratoItem } from "@/hooks/useContratoItens";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useEmpresas } from "@/hooks/useEmpresas";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2, Upload, Search } from "lucide-react";
+import { DataTablePagination } from "@/components/DataTablePagination";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { readXlsxAsObjects } from "@/lib/excel";
@@ -51,6 +52,8 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const [formData, setFormData] = useState({
     modelo: "",
@@ -232,6 +235,22 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
     { icon: DollarSign, label: "Custo mensal", value: `R$ ${custoMensal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, color: "bg-orange-500/10 text-orange-600" },
   ];
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm]);
+
+  const filteredItens = itens.filter((item) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    const serie = (item.identificador || "").toLowerCase();
+    const func = funcionarios.find((f) => f.id === item.funcionario_id);
+    const responsavel = (func?.nome || "").toLowerCase();
+    return serie.includes(term) || responsavel.includes(term);
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredItens.length / PAGE_SIZE));
+  const paginatedItens = filteredItens.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   if (isLoading) return <Skeleton className="h-48" />;
 
   const fmtCurrency = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -339,16 +358,7 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {itens
-                  .filter((item) => {
-                    if (!searchTerm.trim()) return true;
-                    const term = searchTerm.toLowerCase();
-                    const serie = (item.identificador || "").toLowerCase();
-                    const func = funcionarios.find((f) => f.id === item.funcionario_id);
-                    const responsavel = (func?.nome || "").toLowerCase();
-                    return serie.includes(term) || responsavel.includes(term);
-                  })
-                  .map((item) => {
+                {paginatedItens.map((item) => {
                   const func = funcionarios.find((f) => f.id === item.funcionario_id);
                   const empresa = getEmpresaFromFuncionario(item.funcionario_id);
                   return (
@@ -394,16 +404,25 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
                     </TableRow>
                   );
                 })}
-                {itens.length === 0 && (
+                {filteredItens.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      Nenhum coletor cadastrado
+                      {searchTerm ? "Nenhum coletor encontrado para a busca" : "Nenhum coletor cadastrado"}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+          {filteredItens.length > PAGE_SIZE && (
+            <DataTablePagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={filteredItens.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+            />
+          )}
         </CardContent>
       </Card>
 

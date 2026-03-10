@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, createContext, useContext, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -43,6 +43,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+
+// Contexto para páginas de detalhe sobrescreverem o label do último breadcrumb
+interface BreadcrumbContextType {
+  setDynamicLabel: (label: string | null) => void;
+}
+export const BreadcrumbContext = createContext<BreadcrumbContextType>({
+  setDynamicLabel: () => {},
+});
+export const useBreadcrumbLabel = () => useContext(BreadcrumbContext);
 
 // Mapeamento de rotas para labels e hierarquia
 const routeConfig: Record<string, { label: string; parent?: string }> = {
@@ -340,6 +349,7 @@ function BugReportButton() {
 export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [dynamicLabel, setDynamicLabel] = useState<string | null>(null);
 
   // Não mostrar botão voltar na página inicial (dashboard)
   const showBackButton = location.pathname !== "/";
@@ -389,6 +399,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
+    <BreadcrumbContext.Provider value={{ setDynamicLabel }}>
     <div className="flex h-screen w-full bg-background">
       {/* Sidebar - sempre visível */}
       <aside className="flex w-64 flex-col flex-shrink-0">
@@ -428,7 +439,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     ) : (
                       <BreadcrumbPage className="flex items-center gap-1.5">
                         {breadcrumbs.length === 1 && <Home className="h-3.5 w-3.5" />}
-                        <span>{crumb.label}</span>
+                        <span>{dynamicLabel ?? crumb.label}</span>
                       </BreadcrumbPage>
                     )}
                   </BreadcrumbItem>
@@ -453,5 +464,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
     </div>
+    </BreadcrumbContext.Provider>
   );
 }
