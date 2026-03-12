@@ -31,6 +31,7 @@ const Equipes           = lazy(() => import("./pages/Equipes"));
 const Veiculos          = lazy(() => import("./pages/Veiculos"));
 const VeiculosMultas    = lazy(() => import("./pages/VeiculosMultas"));
 const VeiculosHistorico = lazy(() => import("./pages/VeiculosHistorico"));
+const CustosVeiculos    = lazy(() => import("./pages/CustosVeiculos"));
 
 // Oficina
 const Oficina           = lazy(() => import("./pages/Oficina"));
@@ -150,6 +151,7 @@ const App = () => (
               <Route path="/veiculos" element={<ProtectedRoute><Veiculos /></ProtectedRoute>} />
               <Route path="/veiculos/multas" element={<ProtectedRoute><VeiculosMultas /></ProtectedRoute>} />
               <Route path="/veiculos/historico" element={<ProtectedRoute><VeiculosHistorico /></ProtectedRoute>} />
+              <Route path="/veiculos/custos" element={<ProtectedRoute><CustosVeiculos /></ProtectedRoute>} />
 
               {/* Oficina */}
               <Route path="/oficina" element={<ProtectedRoute><Oficina /></ProtectedRoute>} />

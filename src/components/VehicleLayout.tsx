@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Car, List, AlertTriangle, History } from "lucide-react";
+import { Car, List, AlertTriangle, History, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/AppLayout";
 
@@ -12,6 +12,7 @@ const subNavItems = [
   { icon: List, label: "Lista de Veículos", shortLabel: "Lista", path: "/veiculos" },
   { icon: AlertTriangle, label: "Multas", shortLabel: "Multas", path: "/veiculos/multas" },
   { icon: History, label: "Histórico", shortLabel: "Hist.", path: "/veiculos/historico" },
+  { icon: DollarSign, label: "Custos", shortLabel: "Custos", path: "/veiculos/custos" },
 ];
 
 export function VehicleLayout({ children }: VehicleLayoutProps) {
