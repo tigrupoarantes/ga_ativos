@@ -46,44 +46,47 @@ function digitsOnly(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+const PAGE_SIZE = 50;
+
 export function useLinhasTelefonicas(searchTerm?: string) {
   const queryClient = useQueryClient();
 
-  const { data: allLinhas, isLoading, error } = useQuery({
-    queryKey: ["linhas-telefonicas"],
+  // Query server-side: filtra por número (ilike) ou por nome do funcionário,
+  // paginada em 50 registros. Isso evita carregar as 649 linhas de uma vez.
+  const { data: result, isLoading, error } = useQuery({
+    queryKey: ["linhas-telefonicas", searchTerm ?? ""],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const search = searchTerm?.trim() ?? "";
+      const isNumericSearch = search.length > 0 && /^\d+$/.test(digitsOnly(search));
+
+      let query = supabase
         .from("linhas_telefonicas")
         .select(`
           *,
           funcionario:funcionarios(id, nome, cpf)
-        `)
+        `, { count: "exact" })
         .eq("active", true)
-        .order("numero");
+        .order("numero")
+        .limit(PAGE_SIZE);
 
+      if (search) {
+        if (isNumericSearch) {
+          // Busca por dígitos do número
+          query = query.ilike("numero", `%${digitsOnly(search)}%`);
+        } else {
+          // Busca por nome do funcionário via inner join filter
+          query = query.ilike("funcionario.nome", `%${search}%`);
+        }
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data as LinhaTelefonica[];
+      return { linhas: data as LinhaTelefonica[], total: count ?? 0 };
     },
   });
 
-  // Client-side filtering by funcionario nome (partial) and/or numero (mask-insensitive)
-  const linhas = allLinhas?.filter((linha) => {
-    if (!searchTerm?.trim()) return true;
-
-    const tokens = normalizeForSearch(searchTerm).split(" ").filter(Boolean);
-    if (tokens.length === 0) return true;
-
-    const numeroDigits = digitsOnly(linha.numero || "");
-    const nome = linha.funcionario?.nome || "";
-    const nomeNormalized = normalizeForSearch(nome);
-
-    return tokens.every((token) => {
-      if (/^\d+$/.test(token)) {
-        return numeroDigits.includes(token);
-      }
-      return nomeNormalized.includes(token);
-    });
-  });
+  const linhas = result?.linhas ?? [];
+  const total = result?.total ?? 0;
 
   const createLinha = useMutation({
     mutationFn: async (data: CreateLinhaData) => {
@@ -98,6 +101,7 @@ export function useLinhasTelefonicas(searchTerm?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas"] });
+      queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas-stats"] });
       toast.success("Linha telefônica cadastrada com sucesso!");
     },
     onError: (error: Error) => {
@@ -119,6 +123,7 @@ export function useLinhasTelefonicas(searchTerm?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas"] });
+      queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas-stats"] });
       toast.success("Linha telefônica atualizada com sucesso!");
     },
     onError: (error: Error) => {
@@ -137,6 +142,7 @@ export function useLinhasTelefonicas(searchTerm?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas"] });
+      queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas-stats"] });
       toast.success("Linha telefônica removida com sucesso!");
     },
     onError: (error: Error) => {
@@ -156,20 +162,37 @@ export function useLinhasTelefonicas(searchTerm?: string) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas"] });
-      toast.success(`${data.length} linhas importadas com sucesso!`);
+      queryClient.invalidateQueries({ queryKey: ["linhas-telefonicas-stats"] });
+      toast.success(`${data.length} linhas sincronizadas com sucesso!`);
     },
     onError: (error: Error) => {
       toast.error(friendlyErrorMessage("importar linhas", error));
     },
   });
 
-  // Stats
-  const totalLinhas = allLinhas?.length || 0;
-  const linhasAtribuidas = allLinhas?.filter(l => l.funcionario_id)?.length || 0;
-  const linhasDisponiveis = totalLinhas - linhasAtribuidas;
+  // Stats: query leve separada (sem JOIN, apenas contagens) — stale 5min
+  const { data: statsData } = useQuery({
+    queryKey: ["linhas-telefonicas-stats"],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const [{ count: total }, { count: atribuidas }] = await Promise.all([
+        supabase
+          .from("linhas_telefonicas")
+          .select("*", { count: "exact", head: true })
+          .eq("active", true),
+        supabase
+          .from("linhas_telefonicas")
+          .select("*", { count: "exact", head: true })
+          .eq("active", true)
+          .not("funcionario_id", "is", null),
+      ]);
+      return { total: total ?? 0, atribuidas: atribuidas ?? 0 };
+    },
+  });
 
   return {
     linhas,
+    total,
     isLoading,
     error,
     createLinha,
@@ -177,9 +200,9 @@ export function useLinhasTelefonicas(searchTerm?: string) {
     deleteLinha,
     bulkCreateLinhas,
     stats: {
-      total: totalLinhas,
-      atribuidas: linhasAtribuidas,
-      disponiveis: linhasDisponiveis,
+      total: statsData?.total ?? 0,
+      atribuidas: statsData?.atribuidas ?? 0,
+      disponiveis: (statsData?.total ?? 0) - (statsData?.atribuidas ?? 0),
     },
   };
 }

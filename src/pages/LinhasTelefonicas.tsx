@@ -39,8 +39,9 @@ import {
   UserX,
   RefreshCw,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/external-client";
 import { useLinhasTelefonicas } from "@/hooks/useLinhasTelefonicas";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { ImportLinhasDialog } from "@/components/ImportLinhasDialog";
 import { SincronizarLinhasDialog } from "@/components/telefonia/SincronizarLinhasDialog";
@@ -75,9 +76,25 @@ export default function LinhasTelefonicas() {
   const [itemToDelete, setItemToDelete] = useState<{ id: string; numero: string } | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
 
-  const { linhas, isLoading, createLinha, updateLinha, deleteLinha, bulkCreateLinhas, stats } =
+  const { linhas, total, isLoading, createLinha, updateLinha, deleteLinha, bulkCreateLinhas, stats } =
     useLinhasTelefonicas(debouncedSearch);
-  const { funcionarios } = useFuncionarios();
+
+  // Carrega funcionários APENAS quando o dialog de criação/edição abre
+  // Usa query mínima (id, nome, cpf) em vez de SELECT * com JOINs de empresa/equipe
+  const { data: funcionarios = [] } = useQuery({
+    queryKey: ["funcionarios", "combobox"],
+    enabled: dialogOpen,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("funcionarios")
+        .select("id, nome, cpf")
+        .eq("active", true)
+        .order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const formatPhone = (phone: string): string => {
     const cleaned = phone.replace(/\D/g, "");
@@ -328,6 +345,16 @@ export default function LinhasTelefonicas() {
 
         {/* Table */}
         <div className="border rounded-lg">
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+            <p className="text-sm text-muted-foreground">
+              {debouncedSearch
+                ? `${total} resultado${total !== 1 ? "s" : ""} para "${debouncedSearch}"`
+                : `${total} linha${total !== 1 ? "s" : ""} encontrada${total !== 1 ? "s" : ""}`}
+              {total === 50 && (
+                <span className="ml-1 text-xs text-amber-600">(mostrando primeiros 50 — refine a busca para ver mais)</span>
+              )}
+            </p>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
