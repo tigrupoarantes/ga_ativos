@@ -37,11 +37,13 @@ import {
   Phone,
   UserCheck,
   UserX,
+  RefreshCw,
 } from "lucide-react";
 import { useLinhasTelefonicas } from "@/hooks/useLinhasTelefonicas";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { FuncionarioCombobox } from "@/components/FuncionarioCombobox";
 import { ImportLinhasDialog } from "@/components/ImportLinhasDialog";
+import { SincronizarLinhasDialog } from "@/components/telefonia/SincronizarLinhasDialog";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
@@ -71,6 +73,7 @@ export default function LinhasTelefonicas() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; numero: string } | null>(null);
+  const [syncOpen, setSyncOpen] = useState(false);
 
   const { linhas, isLoading, createLinha, updateLinha, deleteLinha, bulkCreateLinhas, stats } =
     useLinhasTelefonicas(debouncedSearch);
@@ -157,6 +160,10 @@ export default function LinhasTelefonicas() {
           description="Gerencie as linhas telefônicas e suas atribuições"
           actions={
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSyncOpen(true)}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Sincronizar com Claro
+              </Button>
               <ImportLinhasDialog onImportComplete={handleImportComplete} />
               <Dialog open={dialogOpen} onOpenChange={(open) => {
                 setDialogOpen(open);
@@ -395,6 +402,12 @@ export default function LinhasTelefonicas() {
           </Table>
         </div>
       </div>
+
+      <SincronizarLinhasDialog
+        open={syncOpen}
+        onOpenChange={setSyncOpen}
+        onSyncComplete={() => {}}
+      />
 
       <ConfirmDeleteDialog
         open={deleteDialogOpen}

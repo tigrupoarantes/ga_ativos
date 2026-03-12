@@ -141,11 +141,7 @@ export function useFaturaDetalhe(faturaId: string | null) {
         `)
         .eq("fatura_id", faturaId!)
         .order("numero_linha");
-      if (error) {
-        console.error("[useFaturaDetalhe] erro:", error);
-        throw error;
-      }
-      console.log("[useFaturaDetalhe] linhas retornadas:", data?.length, data?.[0]);
+      if (error) throw error;
       return data as FaturaLinhaDetalhe[];
     },
   });
@@ -298,6 +294,69 @@ export function useDeleteFatura() {
     },
     onError: (error: Error) => {
       toast.error(friendlyErrorMessage("remover fatura", error));
+    },
+  });
+}
+
+/** Reconcilia as linhas de uma fatura importada com as linhas_telefonicas cadastradas.
+ *  Atualiza `linha_id` para todas as linhas que ainda estão sem vínculo mas têm
+ *  o número cadastrado em linhas_telefonicas. */
+export function useRevincularFaturaLinhas() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (faturaId: string) => {
+      // 1. Linhas da fatura sem vínculo
+      const { data: unlinked, error: e1 } = await supabase
+        .from("fatura_telefonia_linhas")
+        .select("id, numero_linha")
+        .eq("fatura_id", faturaId)
+        .is("linha_id", null);
+      if (e1) throw e1;
+      if (!unlinked || unlinked.length === 0) return { total: 0, vinculadas: 0 };
+
+      // 2. Todas as linhas_telefonicas ativas
+      const { data: linhasCad, error: e2 } = await supabase
+        .from("linhas_telefonicas")
+        .select("id, numero")
+        .eq("active", true);
+      if (e2) throw e2;
+
+      const numMap = new Map<string, string>();
+      for (const l of linhasCad ?? []) {
+        numMap.set(digitsOnly(l.numero), l.id);
+      }
+
+      // 3. Resolve matches
+      const updates = unlinked
+        .map((u) => ({ id: u.id, linha_id: numMap.get(digitsOnly(u.numero_linha)) ?? null }))
+        .filter((u) => u.linha_id !== null);
+
+      // 4. UPDATE em lotes de 50 (concorrente dentro de cada lote)
+      const BATCH = 50;
+      for (let i = 0; i < updates.length; i += BATCH) {
+        await Promise.all(
+          updates.slice(i, i + BATCH).map((u) =>
+            supabase
+              .from("fatura_telefonia_linhas")
+              .update({ linha_id: u.linha_id })
+              .eq("id", u.id)
+          )
+        );
+      }
+
+      return { total: unlinked.length, vinculadas: updates.length };
+    },
+    onSuccess: (result, faturaId) => {
+      queryClient.invalidateQueries({ queryKey: ["fatura-telefonia-detalhe", faturaId] });
+      if (result.vinculadas === 0) {
+        toast.info("Nenhuma linha nova vinculada. Verifique o cadastro de linhas.");
+      } else {
+        toast.success(`${result.vinculadas} linha${result.vinculadas > 1 ? "s" : ""} vinculada${result.vinculadas > 1 ? "s" : ""} com sucesso!`);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(friendlyErrorMessage("revincular linhas", error));
     },
   });
 }

@@ -18,12 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download, Users, List, AlertTriangle } from "lucide-react";
+import { Download, Users, List, AlertTriangle, RefreshCw } from "lucide-react";
 import {
   useFaturaDetalhe,
   computeRateio,
   formatCurrency,
   formatPeriod,
+  useRevincularFaturaLinhas,
   type FaturaTelefonia,
 } from "@/hooks/useFaturasTelefonia";
 
@@ -77,6 +78,7 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
   const [tab, setTab] = useState("linhas");
   const { data: linhas = [], isLoading, error: linhasError } = useFaturaDetalhe(fatura?.id ?? null);
   const rateio = computeRateio(linhas);
+  const revincular = useRevincularFaturaLinhas();
 
   const handleExport = async () => {
     if (!fatura) return;
@@ -127,10 +129,32 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
               {formatPeriod(fatura.periodo_inicio, fatura.periodo_fim)} —{" "}
               <span className="text-blue-600">{formatCurrency(fatura.valor_total)}</span>
             </DialogTitle>
-            <Button size="sm" variant="outline" onClick={handleExport} disabled={isLoading}>
-              <Download className="mr-2 h-4 w-4" />
-              Exportar Excel
-            </Button>
+            <div className="flex items-center gap-2">
+              {semVinculo > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => revincular.mutate(fatura.id)}
+                  disabled={revincular.isPending}
+                >
+                  {revincular.isPending ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Vinculando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Revincular linhas
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={handleExport} disabled={isLoading}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar Excel
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
