@@ -47,9 +47,8 @@ async function exportToExcel(
   ws1["!cols"] = [
     { wch: 15 }, // Número
     { wch: 25 }, // Funcionário
-    { wch: 20 }, // Equipe
-    { wch: 20 }, // Área
-    { wch: 12 }, // CC
+    { wch: 25 }, // Empresa
+    { wch: 20 }, // Cargo
     { wch: 12 }, // Mensalidade
     { wch: 12 }, // Ligações
     { wch: 12 }, // Dados
@@ -62,9 +61,8 @@ async function exportToExcel(
   // Aba 2: Rateio
   const ws2 = utils.json_to_sheet(rateioRows);
   ws2["!cols"] = [
-    { wch: 25 }, // Equipe
-    { wch: 25 }, // Área
-    { wch: 12 }, // CC
+    { wch: 25 }, // Empresa
+    { wch: 25 }, // Cargo
     { wch: 10 }, // Qtd Linhas
     { wch: 14 }, // Total
   ];
@@ -86,9 +84,8 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
     const linhasRows = linhas.map((l) => ({
       "Número": l.numero_linha,
       "Funcionário": l.linhas_telefonicas?.funcionario?.nome ?? "(sem vínculo)",
-      "Equipe": l.linhas_telefonicas?.funcionario?.equipe?.nome ?? "-",
-      "Área": l.linhas_telefonicas?.funcionario?.area?.name ?? "-",
-      "Centro de Custo": l.linhas_telefonicas?.funcionario?.area?.cost_center ?? "-",
+      "Empresa": l.linhas_telefonicas?.funcionario?.empresa?.nome ?? "-",
+      "Cargo": l.linhas_telefonicas?.funcionario?.cargo ?? "-",
       "Mensalidade (R$)": l.valor_mensalidade,
       "Ligações (R$)": l.valor_ligacoes,
       "Dados (R$)": l.valor_dados,
@@ -98,9 +95,8 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
     }));
 
     const rateioRows = rateio.map((r) => ({
-      "Equipe": r.equipeNome,
-      "Área": r.areaNome,
-      "Centro de Custo": r.costCenter,
+      "Empresa": r.empresaNome,
+      "Cargo": r.cargo,
       "Qtd Linhas": r.qtdLinhas,
       "Mensalidade (R$)": r.valorMensalidade,
       "Ligações (R$)": r.valorLigacoes,
@@ -183,7 +179,7 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
             </TabsTrigger>
             <TabsTrigger value="rateio" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Rateio por Equipe
+              Rateio por Empresa
             </TabsTrigger>
           </TabsList>
 
@@ -202,7 +198,7 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
                     <TableRow>
                       <TableHead>Número</TableHead>
                       <TableHead>Funcionário</TableHead>
-                      <TableHead>Equipe</TableHead>
+                      <TableHead>Empresa</TableHead>
                       <TableHead className="text-right">Mensalidade</TableHead>
                       <TableHead className="text-right">Ligações</TableHead>
                       <TableHead className="text-right">Dados</TableHead>
@@ -232,7 +228,7 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
                             {funcionario?.nome ?? <span className="text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {funcionario?.equipe?.nome ?? "—"}
+                            {funcionario?.empresa?.nome ?? "—"}
                           </TableCell>
                           <TableCell className="text-right text-xs">
                             {formatCurrency(l.valor_mensalidade)}
@@ -296,9 +292,8 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Equipe</TableHead>
-                      <TableHead>Área</TableHead>
-                      <TableHead>CC</TableHead>
+                      <TableHead>Empresa</TableHead>
+                      <TableHead>Cargo</TableHead>
                       <TableHead className="text-right">Linhas</TableHead>
                       <TableHead className="text-right">Mensalidade</TableHead>
                       <TableHead className="text-right">Ligações</TableHead>
@@ -311,19 +306,10 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
                     {rateio.map((r, idx) => (
                       <TableRow
                         key={idx}
-                        className={r.equipeNome === "Sem equipe" ? "bg-amber-50/60" : undefined}
+                        className={r.empresaNome === "Sem empresa" ? "bg-amber-50/60" : undefined}
                       >
-                        <TableCell className="font-medium text-sm">{r.equipeNome}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{r.areaNome}</TableCell>
-                        <TableCell>
-                          {r.costCenter !== "-" ? (
-                            <Badge variant="outline" className="text-xs font-mono">
-                              {r.costCenter}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
-                        </TableCell>
+                        <TableCell className="font-medium text-sm">{r.empresaNome}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{r.cargo}</TableCell>
                         <TableCell className="text-right text-sm">{r.qtdLinhas}</TableCell>
                         <TableCell className="text-right text-xs">
                           {formatCurrency(r.valorMensalidade)}
@@ -344,7 +330,7 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
                     ))}
                     {/* Totais */}
                     <TableRow className="font-semibold bg-muted/40 border-t-2">
-                      <TableCell colSpan={3}>Total</TableCell>
+                      <TableCell colSpan={2}>Total</TableCell>
                       <TableCell className="text-right text-sm">
                         {rateio.reduce((s, r) => s + r.qtdLinhas, 0)}
                       </TableCell>

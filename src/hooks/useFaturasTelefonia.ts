@@ -45,16 +45,15 @@ export interface FaturaLinhaDetalhe {
     funcionario?: {
       id: string;
       nome: string;
-      equipe?: { id: string; nome: string } | null;
-      area?: { id: string; name: string; cost_center: string | null } | null;
+      cargo: string | null;
+      empresa?: { id: string; nome: string } | null;
     } | null;
   } | null;
 }
 
 export interface RateioItem {
-  equipeNome: string;
-  areaNome: string;
-  costCenter: string;
+  empresaNome: string;
+  cargo: string;
   qtdLinhas: number;
   valorTotal: number;
   valorMensalidade: number;
@@ -134,8 +133,8 @@ export function useFaturaDetalhe(faturaId: string | null) {
             funcionario:funcionarios (
               id,
               nome,
-              equipe:equipes!funcionarios_equipe_id_fkey ( id, nome ),
-              area:areas!funcionarios_area_id_fkey ( id, name, cost_center )
+              cargo,
+              empresa:empresas ( id, nome )
             )
           )
         `)
@@ -147,22 +146,20 @@ export function useFaturaDetalhe(faturaId: string | null) {
   });
 }
 
-/** Agrupamento de rateio por equipe/área (computed client-side) */
+/** Agrupamento de rateio por empresa/cargo (computed client-side) */
 export function computeRateio(linhas: FaturaLinhaDetalhe[]): RateioItem[] {
   const map = new Map<string, RateioItem>();
 
   for (const l of linhas) {
     const funcionario = l.linhas_telefonicas?.funcionario;
-    const equipeNome = funcionario?.equipe?.nome ?? "Sem equipe";
-    const areaNome = funcionario?.area?.name ?? "Sem área";
-    const costCenter = funcionario?.area?.cost_center ?? "-";
-    const key = `${equipeNome}||${areaNome}||${costCenter}`;
+    const empresaNome = funcionario?.empresa?.nome ?? "Sem empresa";
+    const cargo = funcionario?.cargo ?? "Sem cargo";
+    const key = `${empresaNome}||${cargo}`;
 
     if (!map.has(key)) {
       map.set(key, {
-        equipeNome,
-        areaNome,
-        costCenter,
+        empresaNome,
+        cargo,
         qtdLinhas: 0,
         valorTotal: 0,
         valorMensalidade: 0,
@@ -184,7 +181,7 @@ export function computeRateio(linhas: FaturaLinhaDetalhe[]): RateioItem[] {
   }
 
   return Array.from(map.values()).sort((a, b) =>
-    a.equipeNome.localeCompare(b.equipeNome)
+    a.empresaNome.localeCompare(b.empresaNome) || a.cargo.localeCompare(b.cargo)
   );
 }
 
