@@ -65,7 +65,6 @@ export interface RateioItem {
 }
 
 export interface ImportFaturaPayload {
-  empresaId: string;
   operadora: string;
   numeroFatura: string;
   periodoInicio: string; // ISO date "2026-01-20"
@@ -212,7 +211,6 @@ export function useImportarFatura() {
       const { data: fatura, error: faturaErr } = await supabase
         .from("faturas_telefonia")
         .insert({
-          empresa_id: payload.empresaId,
           operadora: payload.operadora,
           numero_fatura: payload.numeroFatura || null,
           periodo_inicio: payload.periodoInicio,
