@@ -98,6 +98,125 @@ export type Database = {
         }
         Relationships: []
       }
+      faturas_telefonia: {
+        Row: {
+          id: string
+          empresa_id: string
+          operadora: string
+          numero_fatura: string | null
+          periodo_inicio: string
+          periodo_fim: string
+          data_vencimento: string | null
+          valor_total: number
+          custo_compartilhado: number
+          qtd_linhas: number
+          status: string
+          observacoes: string | null
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id: string
+          operadora?: string
+          numero_fatura?: string | null
+          periodo_inicio: string
+          periodo_fim: string
+          data_vencimento?: string | null
+          valor_total: number
+          custo_compartilhado?: number
+          qtd_linhas?: number
+          status?: string
+          observacoes?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          operadora?: string
+          numero_fatura?: string | null
+          periodo_inicio?: string
+          periodo_fim?: string
+          data_vencimento?: string | null
+          valor_total?: number
+          custo_compartilhado?: number
+          qtd_linhas?: number
+          status?: string
+          observacoes?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturas_telefonia_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      fatura_telefonia_linhas: {
+        Row: {
+          id: string
+          fatura_id: string
+          numero_linha: string
+          linha_id: string | null
+          valor_mensalidade: number
+          valor_ligacoes: number
+          valor_dados: number
+          valor_servicos: number
+          valor_compartilhado: number
+          valor_total: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          fatura_id: string
+          numero_linha: string
+          linha_id?: string | null
+          valor_mensalidade?: number
+          valor_ligacoes?: number
+          valor_dados?: number
+          valor_servicos?: number
+          valor_compartilhado?: number
+          valor_total?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          fatura_id?: string
+          numero_linha?: string
+          linha_id?: string | null
+          valor_mensalidade?: number
+          valor_ligacoes?: number
+          valor_dados?: number
+          valor_servicos?: number
+          valor_compartilhado?: number
+          valor_total?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fatura_telefonia_linhas_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "faturas_telefonia"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fatura_telefonia_linhas_linha_id_fkey"
+            columns: ["linha_id"]
+            isOneToOne: false
+            referencedRelation: "linhas_telefonicas"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       areas: {
         Row: {
           active: boolean | null

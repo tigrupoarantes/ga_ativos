@@ -55,6 +55,9 @@ export default defineConfig(() => ({
           // read-excel-file isolado — carregado via dynamic import em excel.ts
           if (n.includes("node_modules/read-excel-file")) return "vendor-excel";
 
+          // xlsx (SheetJS) — carregado via dynamic import para export de Excel
+          if (n.includes("node_modules/xlsx")) return "vendor-xlsx";
+
           // @react-pdf/renderer e dependências internas (fflate, yoga-layout, etc.)
           if (
             n.includes("node_modules/@react-pdf/") ||

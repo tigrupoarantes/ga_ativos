@@ -43,8 +43,9 @@ const KmColetas         = lazy(() => import("./pages/KmColetas"));
 const Notificacoes      = lazy(() => import("./pages/Notificacoes"));
 
 // Outros módulos
-const Telefonia         = lazy(() => import("./pages/Telefonia"));
-const LinhasTelefonicas = lazy(() => import("./pages/LinhasTelefonicas"));
+const Telefonia          = lazy(() => import("./pages/Telefonia"));
+const LinhasTelefonicas  = lazy(() => import("./pages/LinhasTelefonicas"));
+const FaturasTelefonia   = lazy(() => import("./pages/FaturasTelefonia"));
 const Contratos         = lazy(() => import("./pages/Contratos"));
 const ContratoDetalhe   = lazy(() => import("./pages/ContratoDetalhe"));
 const Historico         = lazy(() => import("./pages/Historico"));
@@ -163,6 +164,7 @@ const App = () => (
               {/* Outros módulos */}
               <Route path="/telefonia" element={<ProtectedRoute><Telefonia /></ProtectedRoute>} />
               <Route path="/linhas-telefonicas" element={<ProtectedRoute><LinhasTelefonicas /></ProtectedRoute>} />
+              <Route path="/telefonia/faturas" element={<ProtectedRoute><FaturasTelefonia /></ProtectedRoute>} />
               <Route path="/contratos" element={<ProtectedRoute><Contratos /></ProtectedRoute>} />
               <Route path="/contratos/:id" element={<ProtectedRoute><ContratoDetalhe /></ProtectedRoute>} />
               <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
