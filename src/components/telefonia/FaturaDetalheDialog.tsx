@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, Users, List, AlertTriangle } from "lucide-react";
 import {
   useFaturaDetalhe,
@@ -74,7 +75,7 @@ async function exportToExcel(
 
 export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalheDialogProps) {
   const [tab, setTab] = useState("linhas");
-  const { data: linhas = [], isLoading } = useFaturaDetalhe(fatura?.id ?? null);
+  const { data: linhas = [], isLoading, error: linhasError } = useFaturaDetalhe(fatura?.id ?? null);
   const rateio = computeRateio(linhas);
 
   const handleExport = async () => {
@@ -132,6 +133,15 @@ export function FaturaDetalheDialog({ fatura, open, onOpenChange }: FaturaDetalh
             </Button>
           </div>
         </DialogHeader>
+
+        {linhasError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs font-mono">
+              Erro ao carregar linhas: {(linhasError as Error).message}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {semVinculo > 0 && (
           <div className="flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-700">

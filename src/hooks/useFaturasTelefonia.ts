@@ -134,14 +134,18 @@ export function useFaturaDetalhe(faturaId: string | null) {
             funcionario:funcionarios (
               id,
               nome,
-              equipe:equipes ( id, nome ),
-              area:areas ( id, name, cost_center )
+              equipe:equipes!funcionarios_equipe_id_fkey ( id, nome ),
+              area:areas!funcionarios_area_id_fkey ( id, name, cost_center )
             )
           )
         `)
         .eq("fatura_id", faturaId!)
         .order("numero_linha");
-      if (error) throw error;
+      if (error) {
+        console.error("[useFaturaDetalhe] erro:", error);
+        throw error;
+      }
+      console.log("[useFaturaDetalhe] linhas retornadas:", data?.length, data?.[0]);
       return data as FaturaLinhaDetalhe[];
     },
   });
