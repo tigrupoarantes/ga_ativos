@@ -33,7 +33,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/external-client";
-import { parseCustoFrotaXlsx, type DespesaFromExcel, type TipoDespesa } from "@/lib/parsers/custo-frota-parser";
+import { parseCustoFrota, type DespesaFromExcel, type TipoDespesa } from "@/lib/parsers/custo-frota-parser";
 import {
   useImportarLoteDespesa,
   formatCurrencyFrota,
@@ -78,7 +78,7 @@ export function ImportCustoFrotaDialog({ open, onOpenChange }: ImportCustoFrotaD
     setIsParsing(true);
 
     try {
-      const result = await parseCustoFrotaXlsx(file);
+      const result = await parseCustoFrota(file);
 
       // Busca placas cadastradas para match
       const { data: veiculosDb } = await supabase
@@ -121,10 +121,10 @@ export function ImportCustoFrotaDialog({ open, onOpenChange }: ImportCustoFrotaD
     e.preventDefault();
     setIsDragging(false);
     const file = Array.from(e.dataTransfer.files).find((f) =>
-      f.name.toLowerCase().endsWith(".xlsx")
+      /\.(xlsx|csv|pdf)$/i.test(f.name)
     );
     if (!file) {
-      setError("Apenas arquivos .xlsx são aceitos.");
+      setError("Apenas arquivos .xlsx, .csv ou .pdf são aceitos.");
       return;
     }
     processFile(file);
@@ -186,14 +186,14 @@ export function ImportCustoFrotaDialog({ open, onOpenChange }: ImportCustoFrotaD
             )}
             <div>
               <p className="text-sm font-medium">
-                Arraste o arquivo .xlsx aqui ou{" "}
+                Arraste o arquivo (.xlsx, .csv, .pdf) aqui ou{" "}
                 <label className="cursor-pointer text-blue-600 hover:underline">
                   clique para selecionar
-                  <input type="file" accept=".xlsx" className="hidden" onChange={handleFileChange} />
+                  <input type="file" accept=".xlsx,.csv,.pdf" className="hidden" onChange={handleFileChange} />
                 </label>
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Formatos suportados: Veloe (pedágio) e planilhas de abastecimento
+                Formatos suportados: .xlsx, .csv e .pdf
               </p>
             </div>
             {fileName && (

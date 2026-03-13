@@ -186,7 +186,102 @@ function parseFormatoBruto(rows: Record<string, unknown>[]): DespesaFromExcel[] 
   }));
 }
 
-// ─── Função principal ──────────────────────────────────────────────────────────
+// ─── Parser CSV ────────────────────────────────────────────────────────────────
+
+export async function parseCustoFrotaCsv(file: File): Promise<ParseCustoFrotaResult> {
+  let text: string;
+  try {
+    text = await file.text();
+  } catch {
+    // Fallback windows-1252
+    const buf = await file.arrayBuffer();
+    text = new TextDecoder("windows-1252").decode(buf);
+  }
+
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length < 2) {
+    throw new Error("CSV vazio ou sem dados.");
+  }
+
+  // Detecta delimitador
+  const delim = lines[0].includes(";") ? ";" : ",";
+
+  const headers = lines[0].split(delim).map((h) => h.trim().replace(/^["']|["']$/g, ""));
+  const normalizedHeaders = headers.map(normalizeHeader);
+
+  function colIdx(patterns: string[]): number {
+    for (const p of patterns) {
+      const i = normalizedHeaders.findIndex((h) => h === p);
+      if (i >= 0) return i;
+    }
+    for (const p of patterns) {
+      const i = normalizedHeaders.findIndex((h) => h.includes(p));
+      if (i >= 0) return i;
+    }
+    return -1;
+  }
+
+  const iPlaca = colIdx(["placa correta", "placa"]);
+  const iCondutor = colIdx(["condutor", "motorista"]);
+  const iValor = colIdx(["valor total", "valor"]);
+  const iRateio1 = colIdx(["rateio 1", "rateio1", "rateio"]);
+  const iRateio2 = colIdx(["rateio 2", "rateio2"]);
+
+  if (iPlaca < 0 || iValor < 0) {
+    throw new Error(
+      'CSV sem colunas reconhecidas. Esperado: "PLACA" e "VALOR" (ou "VALOR TOTAL").'
+    );
+  }
+
+  const despesas: DespesaFromExcel[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(delim).map((c) => c.trim().replace(/^["']|["']$/g, ""));
+    const placaRaw = cols[iPlaca] ?? "";
+    const placa = normalizePlaca(placaRaw);
+    if (placa.length < 5) continue;
+
+    const valorRaw = cols[iValor] ?? "";
+    const valor = numVal(valorRaw);
+    if (valor === 0) continue;
+
+    despesas.push({
+      placaOriginal: placa,
+      placaCorreta: placa,
+      condutor: iCondutor >= 0 ? strVal(cols[iCondutor]) : "",
+      valor,
+      rateio1Empresa: iRateio1 >= 0 ? strVal(cols[iRateio1]) : "",
+      rateio1Valor: 0,
+      rateio2Empresa: iRateio2 >= 0 ? strVal(cols[iRateio2]) : "",
+      rateio2Valor: 0,
+    });
+  }
+
+  if (despesas.length === 0) {
+    throw new Error("Nenhum dado válido encontrado no CSV. Verifique o formato do arquivo.");
+  }
+
+  return {
+    tipo: detectTipo(file.name),
+    fornecedor: detectFornecedor(file.name),
+    despesas,
+  };
+}
+
+// ─── Dispatcher principal ──────────────────────────────────────────────────────
+
+export async function parseCustoFrota(file: File): Promise<ParseCustoFrotaResult> {
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext === "pdf") {
+    const { parseCustoFrotaPdf } = await import("./pdf-frota-parser");
+    const despesas = await parseCustoFrotaPdf(file);
+    return { tipo: detectTipo(file.name), fornecedor: detectFornecedor(file.name), despesas };
+  }
+  if (ext === "csv") return parseCustoFrotaCsv(file);
+  return parseCustoFrotaXlsx(file);
+}
+
+// ─── Função XLSX ───────────────────────────────────────────────────────────────
 
 export async function parseCustoFrotaXlsx(file: File): Promise<ParseCustoFrotaResult> {
   const { default: readXlsxFile } = await import("read-excel-file");
