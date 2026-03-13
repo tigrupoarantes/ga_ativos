@@ -13,8 +13,10 @@ import type { DespesaFromExcel } from "./custo-frota-parser";
 // Placa old: ABC1234 ou ABC-1234; Mercosul: ABC1D23 (4ª posição é letra)
 const PLATE_RE = /\b([A-Z]{3}[-\s]?[0-9][A-Z0-9][0-9]{2})\b/g;
 
-// Valor monetário: 1.234,56 | 1234,56 | 1.234.56 | 1234.56 (pelo menos 2 casas decimais)
-const VALUE_RE = /(?:R\$\s*)?(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})\b/g;
+// Valor monetário: sempre precedido de "R$" neste formato de PDF de posto.
+// O odômetro fica colado ao valor sem separador (ex: "R$ 540,6893703000")
+// então NÃO usamos \b — apenas exigimos o prefixo R$ e capturamos X,YY
+const VALUE_RE = /R\$\s*([\d.]+,\d{2})/g;
 
 function normalizePlaca(p: string): string {
   return p.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
