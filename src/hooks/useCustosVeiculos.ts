@@ -99,17 +99,27 @@ export function useLoteDetalhe(loteId: string | null) {
     queryKey: ["lote-despesa-detalhe", loteId],
     enabled: !!loteId,
     queryFn: async () => {
+      // Busca linhas sem join (despesas_veiculo.veiculo_placa não tem FK para veiculos)
       const { data, error } = await supabase
         .from("despesas_veiculo")
-        .select(`
-          *,
-          veiculo:veiculos ( placa, modelo, marca )
-        `)
+        .select("*")
         .eq("lote_id", loteId!)
         .eq("active", true)
         .order("veiculo_placa");
       if (error) throw error;
-      return data as DespesaVeiculo[];
+
+      // Join manual: busca veículos pelas placas presentes no lote
+      const placas = [...new Set((data ?? []).map((d) => d.veiculo_placa))];
+      const { data: veiculos } = placas.length
+        ? await supabase.from("veiculos").select("placa, modelo, marca").in("placa", placas)
+        : { data: [] };
+
+      const veiculoMap = new Map((veiculos ?? []).map((v) => [v.placa, v]));
+
+      return (data ?? []).map((d) => ({
+        ...d,
+        veiculo: veiculoMap.get(d.veiculo_placa) ?? null,
+      })) as DespesaVeiculo[];
     },
   });
 }
