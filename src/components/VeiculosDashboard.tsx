@@ -117,6 +117,7 @@ export function VeiculosDashboard({
             <SelectContent>
               <SelectItem value="todas">Todas as empresas</SelectItem>
               <SelectItem value="particular">Sem empresa (Particular)</SelectItem>
+              <SelectItem value="alugado">Alugado</SelectItem>
               {empresas.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
                   {emp.nome}

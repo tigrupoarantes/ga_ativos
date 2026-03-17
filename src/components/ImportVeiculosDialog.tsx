@@ -286,8 +286,8 @@ const mapRowToVeiculo = (
   const proprietario = normalizeString(row.proprietario);
   const empresaNome = normalizeString(row.empresa);
   
-  if (proprietario.toLowerCase() === 'particular') {
-    // Particular - no empresa_id
+  if (proprietario.toLowerCase() === 'particular' || proprietario.toLowerCase() === 'alugado') {
+    // Particular ou Alugado - sem empresa_id
     empresa_id = null;
   } else if (empresaNome) {
     // Try exact match first
@@ -490,7 +490,7 @@ export function ImportVeiculosDialog() {
           renavam: row.renavam || null,
           chassi: row.chassi || null,
           codigo_fipe: row.codigo_fipe || null,
-          propriedade: row.proprietario?.toLowerCase() === 'particular' ? 'particular' : 'empresa',
+          propriedade: ['particular', 'alugado'].includes(row.proprietario?.toLowerCase() ?? '') ? row.proprietario!.toLowerCase() : 'empresa',
           empresa_id: row.empresa_id,
           funcionario_id: row.funcionario_id,
           status: 'em_uso',
@@ -643,10 +643,12 @@ export function ImportVeiculosDialog() {
                       <td className="p-2">{row.marca || '-'}</td>
                       <td className="p-2">{row.modelo || '-'}</td>
                       <td className="p-2">
-                        {row.proprietario?.toLowerCase() === 'particular' 
-                          ? 'Particular' 
-                          : row.empresa_id 
-                            ? <span className="text-status-success">✓</span> 
+                        {row.proprietario?.toLowerCase() === 'particular'
+                          ? 'Particular'
+                          : row.proprietario?.toLowerCase() === 'alugado'
+                          ? 'Alugado'
+                          : row.empresa_id
+                            ? <span className="text-status-success">✓</span>
                             : <span className="text-status-warning">?</span>}
                       </td>
                       <td className="p-2">

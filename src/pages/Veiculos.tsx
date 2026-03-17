@@ -155,7 +155,11 @@ export default function Veiculos() {
     
     const matchesEmpresa =
       !empresaFilter ||
-      (empresaFilter === "particular" ? !v.empresa_id : v.empresa_id === empresaFilter);
+      (empresaFilter === "particular"
+        ? v.propriedade === "particular"
+        : empresaFilter === "alugado"
+        ? v.propriedade === "alugado"
+        : v.empresa_id === empresaFilter);
     
     return matchesSearch && matchesEmpresa;
   });
@@ -533,6 +537,7 @@ export default function Veiculos() {
                             <SelectContent>
                               <SelectItem value="empresa">Empresa</SelectItem>
                               <SelectItem value="particular">Particular</SelectItem>
+                              <SelectItem value="alugado">Alugado</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
