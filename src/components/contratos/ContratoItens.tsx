@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2, Upload, Search } from "lucide-react";
+import { Plus, UserPlus, Undo2, Trash2, Edit, Package, Users, DollarSign, Box, Building2, Upload, Search, Wifi } from "lucide-react";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -348,7 +348,6 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
                 <TableRow>
                   <TableHead>Modelo</TableHead>
                   <TableHead>N. Série</TableHead>
-                  <TableHead>MAC</TableHead>
                   <TableHead>Responsável</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Valor Locação</TableHead>
@@ -363,9 +362,15 @@ export function ContratoItens({ contratoId }: ContratoItensProps) {
                   const empresa = getEmpresaFromFuncionario(item.funcionario_id);
                   return (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.modelo || "-"}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1.5">
+                          {item.modelo || "-"}
+                          {item.endereco_mac && (
+                            <Wifi className="h-3 w-3 text-muted-foreground shrink-0" title={item.endereco_mac} />
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{item.identificador || "-"}</TableCell>
-                      <TableCell className="font-mono text-xs">{item.endereco_mac || "-"}</TableCell>
                       <TableCell>{func?.nome || "-"}</TableCell>
                       <TableCell>{empresa?.nome || "-"}</TableCell>
                       <TableCell>{item.valor_mensal ? fmtCurrency(item.valor_mensal) : "-"}</TableCell>

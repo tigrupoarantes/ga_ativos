@@ -34,6 +34,14 @@ import { isMobileDevice } from "@/hooks/use-mobile";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
+function diffDays(dateStr: string): number {
+  const target = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export default function Index() {
   const { stats, alerts, isLoading } = useDashboardStats();
   const { isMotorista, loading, hasRole } = useAuth();
@@ -76,16 +84,20 @@ export default function Index() {
   // CNHs vencidas
   if (alerts.cnhs_vencidas) {
     alerts.cnhs_vencidas.forEach((f) => {
-      alertasList.push({ tipo: "danger", msg: `CNH vencida: ${f.nome}`, link: "/funcionarios" });
+      const dias = f.cnh_validade ? Math.abs(diffDays(f.cnh_validade)) : null;
+      const sufixo = dias != null ? ` (há ${dias} dia${dias !== 1 ? "s" : ""})` : "";
+      alertasList.push({ tipo: "danger", msg: `CNH vencida: ${f.nome}${sufixo}`, link: "/funcionarios" });
     });
   }
 
   // CNHs vencendo
   if (alerts.cnhs_vencendo) {
     alerts.cnhs_vencendo.forEach((f) => {
+      const dias = f.cnh_validade ? diffDays(f.cnh_validade) : null;
+      const sufixo = dias != null ? ` (em ${dias} dia${dias !== 1 ? "s" : ""})` : f.cnh_validade ? ` (${format(new Date(f.cnh_validade), "dd/MM/yyyy")})` : "";
       alertasList.push({
         tipo: "warning",
-        msg: `CNH vencendo: ${f.nome} (${f.cnh_validade ? format(new Date(f.cnh_validade), "dd/MM/yyyy") : ""})`,
+        msg: `CNH vencendo: ${f.nome}${sufixo}`,
         link: "/funcionarios",
       });
     });
@@ -94,9 +106,11 @@ export default function Index() {
   // Contratos vencendo
   if (alerts.contratos_vencendo) {
     alerts.contratos_vencendo.forEach((c) => {
+      const dias = c.data_fim ? diffDays(c.data_fim) : null;
+      const sufixo = dias != null ? ` (em ${dias} dia${dias !== 1 ? "s" : ""})` : c.data_fim ? ` (${format(new Date(c.data_fim), "dd/MM/yyyy")})` : "";
       alertasList.push({
         tipo: "warning",
-        msg: `Contrato vencendo: ${c.numero} (${c.data_fim ? format(new Date(c.data_fim), "dd/MM/yyyy") : ""})`,
+        msg: `Contrato vencendo: ${c.numero}${sufixo}`,
         link: "/contratos",
       });
     });
@@ -105,9 +119,11 @@ export default function Index() {
   // Preventivas vencidas
   if (alerts.preventivas_vencidas) {
     alerts.preventivas_vencidas.forEach((p) => {
+      const dias = p.proxima_realizacao ? Math.abs(diffDays(p.proxima_realizacao)) : null;
+      const sufixo = dias != null ? ` (há ${dias} dia${dias !== 1 ? "s" : ""})` : "";
       alertasList.push({
         tipo: "danger",
-        msg: `Preventiva vencida: ${p.tipo_manutencao} - ${p.placa || ""}`,
+        msg: `Preventiva vencida: ${p.tipo_manutencao} - ${p.placa || ""}${sufixo}`,
         link: "/oficina/preventivas",
       });
     });
@@ -116,9 +132,11 @@ export default function Index() {
   // Preventivas próximas
   if (alerts.preventivas_proximas) {
     alerts.preventivas_proximas.forEach((p) => {
+      const dias = p.proxima_realizacao ? diffDays(p.proxima_realizacao) : null;
+      const sufixo = dias != null ? ` (em ${dias} dia${dias !== 1 ? "s" : ""})` : "";
       alertasList.push({
         tipo: "warning",
-        msg: `Preventiva próxima: ${p.tipo_manutencao} - ${p.placa || ""}`,
+        msg: `Preventiva próxima: ${p.tipo_manutencao} - ${p.placa || ""}${sufixo}`,
         link: "/oficina/preventivas",
       });
     });

@@ -77,6 +77,19 @@ export const STATUS_COLOR: Record<LoteStatus, string> = {
   pago: "bg-green-100 text-green-700 border-green-200",
 };
 
+// ─── Types: Dashboard ─────────────────────────────────────────────────────────
+
+export interface DespesaComLote {
+  veiculo_placa: string;
+  condutor: string | null;
+  valor: number;
+  rateio_1_empresa: string | null;
+  rateio_1_valor: number | null;
+  rateio_2_empresa: string | null;
+  rateio_2_valor: number | null;
+  lote: { tipo: TipoDespesa; periodo_referencia: string } | null;
+}
+
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
 export function useLotesDespesa() {
@@ -145,6 +158,39 @@ export function useCustosFrotaStats() {
       const totalLotes = lotes.length;
 
       return { totalPedagio, totalCombustivel, totalOutros, totalGeral, totalLotes };
+    },
+  });
+}
+
+/** Dashboard: todas as despesas com lote embutido, para agregação e filtros */
+export function useCustosDashboard() {
+  return useQuery({
+    queryKey: ["custos-dashboard"],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("despesas_veiculo")
+        .select(`
+          veiculo_placa, condutor, valor,
+          rateio_1_empresa, rateio_1_valor,
+          rateio_2_empresa, rateio_2_valor,
+          lote:lotes_despesa_veiculo(tipo, periodo_referencia)
+        `)
+        .eq("active", true);
+      if (error) throw error;
+
+      const despesas = (data ?? []) as DespesaComLote[];
+
+      const placas = [...new Set(despesas.map((d) => d.veiculo_placa).filter(Boolean))].sort();
+      const condutores = [...new Set(despesas.map((d) => d.condutor).filter((c): c is string => !!c))].sort();
+      const empresasSet = new Set<string>();
+      despesas.forEach((d) => {
+        if (d.rateio_1_empresa) empresasSet.add(d.rateio_1_empresa);
+        if (d.rateio_2_empresa) empresasSet.add(d.rateio_2_empresa);
+      });
+      const empresas = [...empresasSet].sort();
+
+      return { despesas, placas, condutores, empresas };
     },
   });
 }

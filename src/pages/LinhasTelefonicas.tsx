@@ -47,6 +47,7 @@ import { ImportLinhasDialog } from "@/components/ImportLinhasDialog";
 import { SincronizarLinhasDialog } from "@/components/telefonia/SincronizarLinhasDialog";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
+import { DataTablePagination } from "@/components/DataTablePagination";
 
 const OPERADORAS = ["Vivo", "Claro", "TIM", "Oi", "Outras"];
 
@@ -67,7 +68,10 @@ const initialFormData: FormData = {
 };
 
 export default function LinhasTelefonicas() {
+  const PAGE_SIZE = 50;
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [operadoraFilter, setOperadoraFilter] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,7 +81,9 @@ export default function LinhasTelefonicas() {
   const [syncOpen, setSyncOpen] = useState(false);
 
   const { linhas, total, isLoading, createLinha, updateLinha, deleteLinha, bulkCreateLinhas, stats } =
-    useLinhasTelefonicas(debouncedSearch);
+    useLinhasTelefonicas(debouncedSearch, page, operadoraFilter || undefined);
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   // Carrega funcionários APENAS quando o dialog de criação/edição abre
   // Usa query mínima (id, nome, cpf) em vez de SELECT * com JOINs de empresa/equipe
@@ -332,15 +338,28 @@ export default function LinhasTelefonicas() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome e/ou número da linha..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search + Filters */}
+        <div className="flex flex-wrap gap-3">
+          <div className="relative max-w-sm flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome e/ou número da linha..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-10"
+            />
+          </div>
+          <Select value={operadoraFilter} onValueChange={(v) => { setOperadoraFilter(v === "all" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Todas operadoras" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas operadoras</SelectItem>
+              {OPERADORAS.map((op) => (
+                <SelectItem key={op} value={op}>{op}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
@@ -350,9 +369,6 @@ export default function LinhasTelefonicas() {
               {debouncedSearch
                 ? `${total} resultado${total !== 1 ? "s" : ""} para "${debouncedSearch}"`
                 : `${total} linha${total !== 1 ? "s" : ""} encontrada${total !== 1 ? "s" : ""}`}
-              {total === 50 && (
-                <span className="ml-1 text-xs text-amber-600">(mostrando primeiros 50 — refine a busca para ver mais)</span>
-              )}
             </p>
           </div>
           <Table>
@@ -409,6 +425,7 @@ export default function LinhasTelefonicas() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          title="Editar linha"
                           onClick={() => handleEdit(linha)}
                         >
                           <Edit className="h-4 w-4" />
@@ -416,6 +433,7 @@ export default function LinhasTelefonicas() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          title="Excluir linha"
                           onClick={() => handleDeleteClick(linha)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -427,6 +445,13 @@ export default function LinhasTelefonicas() {
               )}
             </TableBody>
           </Table>
+          <DataTablePagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={total}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

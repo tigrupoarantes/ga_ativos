@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ArrowLeft, FileText, Calendar, Building2, DollarSign, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -114,37 +115,44 @@ export default function ContratoDetalhe() {
           ))}
         </div>
 
-        {/* Metricas config */}
-        <Card className="animate-fade-in">
-          <CardHeader>
-            <CardTitle className="text-lg">Modelo de Cobrança</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MetricasForm
-              metricas={metricas}
+        <Tabs defaultValue="visao-geral">
+          <TabsList>
+            <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
+            <TabsTrigger value="itens">Itens</TabsTrigger>
+            <TabsTrigger value="chat">Chat IA</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="visao-geral" className="space-y-6 mt-6">
+            <Card className="animate-fade-in">
+              <CardHeader>
+                <CardTitle className="text-lg">Modelo de Cobrança</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MetricasForm
+                  metricas={metricas}
+                  contratoId={id!}
+                  onAdd={(m) => createMetrica.mutate(m)}
+                  onDelete={(mId) => deleteMetrica.mutate(mId)}
+                  isAdding={createMetrica.isPending}
+                />
+              </CardContent>
+            </Card>
+            <ContratoKPIs metricas={metricas} consumos={consumos} />
+            <ContratoChart metricas={metricas} consumos={consumos} />
+          </TabsContent>
+
+          <TabsContent value="itens" className="mt-6">
+            <ContratoItens contratoId={id!} />
+          </TabsContent>
+
+          <TabsContent value="chat" className="mt-6">
+            <ContratoChat
               contratoId={id!}
-              onAdd={(m) => createMetrica.mutate(m)}
-              onDelete={(mId) => deleteMetrica.mutate(mId)}
-              isAdding={createMetrica.isPending}
+              contratoNumero={contrato.numero}
+              onDataSaved={invalidate}
             />
-          </CardContent>
-        </Card>
-
-        {/* KPIs */}
-        <ContratoKPIs metricas={metricas} consumos={consumos} />
-
-        {/* Chart */}
-        <ContratoChart metricas={metricas} consumos={consumos} />
-
-        {/* Itens do Contrato */}
-        <ContratoItens contratoId={id!} />
-
-        {/* Chat IA */}
-        <ContratoChat
-          contratoId={id!}
-          contratoNumero={contrato.numero}
-          onDataSaved={invalidate}
-        />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );

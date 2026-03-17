@@ -48,16 +48,16 @@ function digitsOnly(value: string): string {
 
 const PAGE_SIZE = 50;
 
-export function useLinhasTelefonicas(searchTerm?: string) {
+export function useLinhasTelefonicas(searchTerm?: string, page = 1, operadoraFilter?: string) {
   const queryClient = useQueryClient();
 
-  // Query server-side: filtra por número (ilike) ou por nome do funcionário,
-  // paginada em 50 registros. Isso evita carregar as 649 linhas de uma vez.
   const { data: result, isLoading, error } = useQuery({
-    queryKey: ["linhas-telefonicas", searchTerm ?? ""],
+    queryKey: ["linhas-telefonicas", searchTerm ?? "", page, operadoraFilter ?? ""],
     queryFn: async () => {
       const search = searchTerm?.trim() ?? "";
       const isNumericSearch = search.length > 0 && /^\d+$/.test(digitsOnly(search));
+      const from = (page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
 
       let query = supabase
         .from("linhas_telefonicas")
@@ -67,16 +67,18 @@ export function useLinhasTelefonicas(searchTerm?: string) {
         `, { count: "exact" })
         .eq("active", true)
         .order("numero")
-        .limit(PAGE_SIZE);
+        .range(from, to);
 
       if (search) {
         if (isNumericSearch) {
-          // Busca por dígitos do número
           query = query.ilike("numero", `%${digitsOnly(search)}%`);
         } else {
-          // Busca por nome do funcionário via inner join filter
           query = query.ilike("funcionario.nome", `%${search}%`);
         }
+      }
+
+      if (operadoraFilter) {
+        query = query.eq("operadora", operadoraFilter);
       }
 
       const { data, error, count } = await query;

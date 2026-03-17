@@ -540,10 +540,10 @@ export default function Ativos() {
                               </Button>
                             );
                           })()}
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(ativo)}>
+                          <Button variant="ghost" size="icon" title="Editar ativo" onClick={() => handleEdit(ativo)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(ativo)}>
+                          <Button variant="ghost" size="icon" title="Excluir ativo" onClick={() => handleDeleteClick(ativo)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>

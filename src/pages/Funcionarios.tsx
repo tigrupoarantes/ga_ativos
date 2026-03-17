@@ -474,10 +474,10 @@ export default function Funcionarios() {
                           ) : "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(funcionario)}>
+                        <Button variant="ghost" size="icon" title="Editar funcionário" onClick={() => handleEdit(funcionario)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(funcionario)}>
+                        <Button variant="ghost" size="icon" title="Excluir funcionário" onClick={() => handleDeleteClick(funcionario)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                         </TableCell>
