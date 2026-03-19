@@ -39,6 +39,7 @@ import {
   UserX,
   RefreshCw,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/external-client";
 import { useLinhasTelefonicas } from "@/hooks/useLinhasTelefonicas";
@@ -400,7 +401,7 @@ export default function LinhasTelefonicas() {
                 </TableRow>
               ) : (
                 linhas?.map((linha) => (
-                  <TableRow key={linha.id}>
+                  <TableRow key={linha.id} className="transition-colors hover:bg-muted/40">
                     <TableCell className="font-medium">
                       {formatPhone(linha.numero)}
                     </TableCell>
@@ -421,23 +422,23 @@ export default function LinhasTelefonicas() {
                     <TableCell>{linha.operadora || "-"}</TableCell>
                     <TableCell>{linha.plano || "-"}</TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Editar linha"
-                          onClick={() => handleEdit(linha)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Excluir linha"
-                          onClick={() => handleDeleteClick(linha)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(linha)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Editar linha</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteClick(linha)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Excluir linha</TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Users, Car } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
 import { ImportFuncionariosDialog } from "@/components/ImportFuncionariosDialog";
@@ -447,7 +448,10 @@ export default function Funcionarios() {
               </div>
             ) : (
               <>
-                <Table>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {funcionarios.length} {funcionarios.length === 1 ? "funcionário encontrado" : "funcionários encontrados"}
+                </p>
+                <Table className="animate-in fade-in-0 duration-200">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>
@@ -460,7 +464,7 @@ export default function Funcionarios() {
                   </TableHeader>
                   <TableBody>
                     {funcionarios.map((funcionario) => (
-                      <TableRow key={funcionario.id}>
+                      <TableRow key={funcionario.id} className="transition-colors hover:bg-muted/40">
                         <TableCell className="font-medium">{funcionario.nome}</TableCell>
                         <TableCell>{funcionario.email || "-"}</TableCell>
                         <TableCell>{funcionario.cargo || "-"}</TableCell>
@@ -474,12 +478,24 @@ export default function Funcionarios() {
                           ) : "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" title="Editar funcionário" onClick={() => handleEdit(funcionario)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Excluir funcionário" onClick={() => handleDeleteClick(funcionario)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(funcionario)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar funcionário</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteClick(funcionario)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Excluir funcionário</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

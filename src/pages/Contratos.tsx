@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Trash2, FileText, AlertCircle, Eye } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInDays, parseISO } from "date-fns";
@@ -303,7 +304,11 @@ export default function Contratos() {
                 ))}
               </div>
             ) : (
-              <Table>
+              <>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {filteredContratos.length} {filteredContratos.length === 1 ? "contrato encontrado" : "contratos encontrados"}
+                </p>
+              <Table className="animate-in fade-in-0 duration-200">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Número</TableHead>
@@ -320,7 +325,7 @@ export default function Contratos() {
                   {filteredContratos.map((contrato) => {
                     const daysToExpire = getDaysToExpire(contrato.data_fim);
                     return (
-                      <TableRow key={contrato.id}>
+                      <TableRow key={contrato.id} className="transition-colors hover:bg-muted/40">
                         <TableCell className="font-medium">{contrato.numero || "-"}</TableCell>
                         <TableCell>{contrato.descricao || "-"}</TableCell>
                         <TableCell>{empresas.find(e => e.id === (contrato as any).empresa_id)?.nome || "-"}</TableCell>
@@ -329,7 +334,12 @@ export default function Contratos() {
                           <div className="flex items-center gap-2">
                             {contrato.data_fim ? format(parseISO(contrato.data_fim), "dd/MM/yyyy", { locale: ptBR }) : "-"}
                             {daysToExpire !== null && daysToExpire <= 30 && daysToExpire > 0 && (
-                              <AlertCircle className="h-4 w-4 text-status-warning" />
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertCircle className="h-4 w-4 text-status-warning cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>Vence em {daysToExpire} {daysToExpire === 1 ? "dia" : "dias"}</TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
                         </TableCell>
@@ -344,15 +354,32 @@ export default function Contratos() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/contratos/${contrato.id}`)} title="Ver detalhe">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(contrato)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(contrato)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/contratos/${contrato.id}`)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Ver detalhe</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(contrato)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar contrato</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteClick(contrato)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Excluir contrato</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -366,6 +393,7 @@ export default function Contratos() {
                   )}
                 </TableBody>
               </Table>
+              </>
             )}
           </CardContent>
         </Card>

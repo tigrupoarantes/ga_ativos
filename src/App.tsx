@@ -112,9 +112,13 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, EBState> {
 }
 
 // ─── Fallback spinner exibido enquanto o chunk lazy está sendo baixado ────────
+// Mantém o esqueleto da sidebar visível para evitar o "flash de tela branca"
 const PageLoader = () => (
-  <div className="min-h-[100dvh] flex items-center justify-center">
-    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  <div className="flex h-[100dvh] bg-background">
+    <div className="w-64 shrink-0 bg-sidebar border-r border-sidebar-border" />
+    <div className="flex flex-1 items-center justify-center">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
   </div>
 );
 

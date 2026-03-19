@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft, Undo2, FileText } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft, Undo2, FileText, X, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
@@ -23,6 +23,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ImportCelularesDialog } from "@/components/ImportCelularesDialog";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { GerarContratoDialog } from "@/components/GerarContratoDialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -42,6 +44,8 @@ export default function Ativos() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterTipo, setFilterTipo] = useState("all");
+  const [filterEmpresa, setFilterEmpresa] = useState("all");
+  const [filterFuncionario, setFilterFuncionario] = useState("");
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -69,13 +73,22 @@ export default function Ativos() {
   });
 
   const filteredAtivos = ativos.filter((a) => {
+    const q = search.toLowerCase();
     const matchSearch =
-      a.nome?.toLowerCase().includes(search.toLowerCase()) ||
-      a.patrimonio?.toLowerCase().includes(search.toLowerCase()) ||
-      a.numero_serie?.toLowerCase().includes(search.toLowerCase());
+      !q ||
+      a.nome?.toLowerCase().includes(q) ||
+      a.patrimonio?.toLowerCase().includes(q) ||
+      a.numero_serie?.toLowerCase().includes(q) ||
+      a.marca?.toLowerCase().includes(q) ||
+      a.modelo?.toLowerCase().includes(q) ||
+      a.imei?.toLowerCase().includes(q) ||
+      a.chip_linha?.toLowerCase().includes(q) ||
+      (a as any).funcionario?.nome?.toLowerCase().includes(q);
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
     const matchTipo = filterTipo === "all" || a.tipo_id === filterTipo;
-    return matchSearch && matchStatus && matchTipo;
+    const matchEmpresa = filterEmpresa === "all" || a.empresa_id === filterEmpresa;
+    const matchFuncionario = !filterFuncionario || a.funcionario_id === filterFuncionario;
+    return matchSearch && matchStatus && matchTipo && matchEmpresa && matchFuncionario;
   });
 
   const totalCount = filteredAtivos.length;
@@ -84,7 +97,7 @@ export default function Ativos() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, filterStatus, filterTipo]);
+  }, [search, filterStatus, filterTipo, filterEmpresa, filterFuncionario]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -421,54 +434,87 @@ export default function Ativos() {
         />
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar ativos..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 w-[220px]"
-                />
+          <CardHeader className="space-y-3 pb-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap flex-1">
+                {/* Linha 1: busca + status + tipo */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, patrimônio, série, marca, modelo, IMEI, chip ou responsável..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10 w-[360px]"
+                  />
+                </div>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="disponivel">Disponível</SelectItem>
+                    <SelectItem value="em_uso">Em Uso</SelectItem>
+                    <SelectItem value="manutencao">Manutenção</SelectItem>
+                    <SelectItem value="baixado">Baixado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterTipo} onValueChange={setFilterTipo}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {tipos.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
+              <div className="flex items-center gap-2 shrink-0">
+                <ImportCelularesDialog />
+                <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Ativo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    {renderDialogContent()}
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+            {/* Linha 2: empresa + funcionário */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Empresa" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="disponivel">Disponível</SelectItem>
-                  <SelectItem value="em_uso">Em Uso</SelectItem>
-                  <SelectItem value="manutencao">Manutenção</SelectItem>
-                  <SelectItem value="baixado">Baixado</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterTipo} onValueChange={setFilterTipo}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                  {tipos.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  <SelectItem value="all">Todas as empresas</SelectItem>
+                  {empresas.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <ImportCelularesDialog />
-              <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Ativo
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  {renderDialogContent()}
-                </DialogContent>
-              </Dialog>
+              <div className="relative">
+                <FuncionarioCombobox
+                  value={filterFuncionario}
+                  onValueChange={setFilterFuncionario}
+                  funcionarios={funcionarios}
+                  placeholder="Filtrar por funcionário..."
+                />
+                {filterFuncionario && (
+                  <button
+                    onClick={() => setFilterFuncionario("")}
+                    className="absolute right-8 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -480,7 +526,10 @@ export default function Ativos() {
               </div>
             ) : (
               <>
-                <Table>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {totalCount} {totalCount === 1 ? "ativo encontrado" : "ativos encontrados"}
+                </p>
+                <Table className="animate-in fade-in-0 duration-200">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Patrimônio</TableHead>
@@ -493,62 +542,76 @@ export default function Ativos() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedAtivos.map((ativo) => (
-                      <TableRow key={ativo.id}>
-                        <TableCell className="font-medium">{ativo.patrimonio}</TableCell>
-                        <TableCell>{ativo.nome}</TableCell>
-                        <TableCell>{(ativo as any).tipo?.name || "-"}</TableCell>
-                        <TableCell>{ativo.marca} {ativo.modelo}</TableCell>
-                        <TableCell>
-                          <Badge className={cn("capitalize", statusColors[ativo.status || "disponivel"])}>
-                            {ativo.status?.replace("_", " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{(ativo as any).funcionario?.nome || "-"}</TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            title="Histórico de movimentação"
-                            onClick={() => handleOpenHistorico(ativo)}
-                          >
-                            <History className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          {(ativo as any).funcionario?.nome && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Devolver ativo"
-                              onClick={() => handleDevolverAtivo(ativo)}
-                              disabled={devolverAtivo.isPending}
-                            >
-                              <Undo2 className="h-4 w-4 text-orange-500" />
-                            </Button>
-                          )}
-                          {(() => {
-                            const tipoNome = ((ativo as any).tipo?.name ?? "").toLowerCase();
-                            const isComodato = tipoNome.includes("celular") || tipoNome.includes("notebook") || tipoNome.includes("microinform");
-                            if (!isComodato || ativo.status !== "em_uso" || !(ativo as any).funcionario?.nome) return null;
-                            return (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Gerar contrato de comodato"
-                                onClick={() => setContratoDialogAtivo(ativo)}
-                              >
-                                <FileText className="h-4 w-4 text-blue-500" />
-                              </Button>
-                            );
-                          })()}
-                          <Button variant="ghost" size="icon" title="Editar ativo" onClick={() => handleEdit(ativo)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" title="Excluir ativo" onClick={() => handleDeleteClick(ativo)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {paginatedAtivos.map((ativo) => {
+                      const tipoNome = ((ativo as any).tipo?.name ?? "").toLowerCase();
+                      const isComodato = tipoNome.includes("celular") || tipoNome.includes("notebook") || tipoNome.includes("microinform");
+                      const temFuncionario = !!(ativo as any).funcionario?.nome;
+                      const podeGerарContrato = isComodato && ativo.status === "em_uso" && temFuncionario;
+                      return (
+                        <TableRow key={ativo.id} className="transition-colors hover:bg-muted/40">
+                          <TableCell className="font-medium">{ativo.patrimonio}</TableCell>
+                          <TableCell>{ativo.nome}</TableCell>
+                          <TableCell>{(ativo as any).tipo?.name || "-"}</TableCell>
+                          <TableCell>{ativo.marca} {ativo.modelo}</TableCell>
+                          <TableCell>
+                            <Badge className={cn("capitalize", statusColors[ativo.status || "disponivel"])}>
+                              {ativo.status?.replace("_", " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{(ativo as any).funcionario?.nome || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {/* Menu ... com ações secundárias */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleOpenHistorico(ativo)}>
+                                    <History className="h-4 w-4 mr-2" />
+                                    Histórico de movimentação
+                                  </DropdownMenuItem>
+                                  {temFuncionario && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleDevolverAtivo(ativo)}
+                                      disabled={devolverAtivo.isPending}
+                                    >
+                                      <Undo2 className="h-4 w-4 mr-2 text-orange-500" />
+                                      Devolver ativo
+                                    </DropdownMenuItem>
+                                  )}
+                                  {podeGerарContrato && (
+                                    <DropdownMenuItem onClick={() => setContratoDialogAtivo(ativo)}>
+                                      <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                                      Gerar contrato de comodato
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              {/* Ações primárias diretas */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(ativo)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar ativo</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteClick(ativo)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Excluir ativo</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                     {paginatedAtivos.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">

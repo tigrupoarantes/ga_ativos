@@ -53,6 +53,24 @@ export const BreadcrumbContext = createContext<BreadcrumbContextType>({
 });
 export const useBreadcrumbLabel = () => useContext(BreadcrumbContext);
 
+// Mapa de preload: hover no link inicia o download do chunk antes do clique
+const routePreloadMap: Record<string, () => Promise<unknown>> = {
+  "/":                   () => import("@/pages/Index"),
+  "/ativos":             () => import("@/pages/Ativos"),
+  "/tipos-ativos":       () => import("@/pages/TiposAtivos"),
+  "/funcionarios":       () => import("@/pages/Funcionarios"),
+  "/veiculos":           () => import("@/pages/Veiculos"),
+  "/oficina":            () => import("@/pages/Oficina"),
+  "/relatorios":         () => import("@/pages/Relatorios"),
+  "/contratos":          () => import("@/pages/Contratos"),
+  "/historico":          () => import("@/pages/Historico"),
+  "/linhas-telefonicas": () => import("@/pages/LinhasTelefonicas"),
+  "/telefonia/faturas":  () => import("@/pages/FaturasTelefonia"),
+  "/configuracoes":      () => import("@/pages/Configuracoes"),
+  "/usuarios":           () => import("@/pages/Usuarios"),
+  "/permissoes":         () => import("@/pages/Permissoes"),
+};
+
 // Mapeamento de rotas para labels e hierarquia
 const routeConfig: Record<string, { label: string; parent?: string }> = {
   "/": { label: "Dashboard" },
@@ -218,6 +236,7 @@ function NavContent() {
       <Link
         key={item.path}
         to={item.path}
+        onMouseEnter={() => routePreloadMap[item.path]?.()}
         className={cn(
           "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
           isNested && "pl-10",

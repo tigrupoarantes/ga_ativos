@@ -16,7 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield, Upload, Loader2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield, Upload, Loader2, MoreHorizontal } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ImportVeiculosDialog } from "@/components/ImportVeiculosDialog";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/DataTablePagination";
@@ -148,10 +150,14 @@ export default function Veiculos() {
 
   // Filtragem client-side (para conjuntos pequenos, manteremos assim)
   const filteredVeiculos = veiculos.filter((v) => {
+    const q = debouncedSearch.toLowerCase();
     const matchesSearch =
-      v.placa?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      v.marca?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      v.modelo?.toLowerCase().includes(debouncedSearch.toLowerCase());
+      !q ||
+      v.placa?.toLowerCase().includes(q) ||
+      v.marca?.toLowerCase().includes(q) ||
+      v.modelo?.toLowerCase().includes(q) ||
+      (v as any).funcionario?.nome?.toLowerCase().includes(q) ||
+      v.renavam?.toLowerCase().includes(q);
     
     const matchesEmpresa =
       !empresaFilter ||
@@ -705,7 +711,10 @@ export default function Veiculos() {
               </div>
             ) : (
               <>
-                <Table>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {totalCount} {totalCount === 1 ? "veículo encontrado" : "veículos encontrados"}
+                </p>
+                <Table className="animate-in fade-in-0 duration-200">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Placa</TableHead>
@@ -720,7 +729,7 @@ export default function Veiculos() {
                   </TableHeader>
                   <TableBody>
                     {paginatedVeiculos.map((veiculo) => (
-                      <TableRow key={veiculo.id}>
+                      <TableRow key={veiculo.id} className="transition-colors hover:bg-muted/40">
                         <TableCell className="font-medium">{veiculo.placa}</TableCell>
                         <TableCell>{veiculo.marca} {veiculo.modelo}</TableCell>
                         <TableCell>{veiculo.ano_modelo || "-"}</TableCell>
@@ -735,10 +744,7 @@ export default function Veiculos() {
                           {(veiculo as any).valor_fipe ? (
                             <div className="text-right">
                               <div className="font-medium">
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
-                                }).format((veiculo as any).valor_fipe)}
+                                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((veiculo as any).valor_fipe)}
                               </div>
                               {(veiculo as any).data_consulta_fipe && (
                                 <div className="text-xs text-muted-foreground">
@@ -751,36 +757,51 @@ export default function Veiculos() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={(veiculo as any).codigo_fipe ? "Consultar FIPE (automático)" : "Consultar FIPE (manual)"}
-                            onClick={() => handleConsultaFipe(veiculo)}
-                            disabled={consultandoFipeId === veiculo.id}
-                          >
-                            {consultandoFipeId === veiculo.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                            ) : (
-                              <DollarSign className="h-4 w-4 text-primary" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Histórico de responsáveis"
-                            onClick={() => {
-                              setHistoricoVeiculoPlaca(veiculo.placa);
-                              setHistoricoVeiculoInfo(`${veiculo.placa} - ${veiculo.marca} ${veiculo.modelo}`);
-                            }}
-                          >
-                            <History className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(veiculo)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(veiculo)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleConsultaFipe(veiculo)}
+                                  disabled={consultandoFipeId === veiculo.id}
+                                >
+                                  {consultandoFipeId === veiculo.id ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <DollarSign className="h-4 w-4 mr-2 text-primary" />
+                                  )}
+                                  Consultar FIPE
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setHistoricoVeiculoPlaca(veiculo.placa);
+                                  setHistoricoVeiculoInfo(`${veiculo.placa} - ${veiculo.marca} ${veiculo.modelo}`);
+                                }}>
+                                  <History className="h-4 w-4 mr-2" />
+                                  Histórico de responsáveis
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(veiculo)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar veículo</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteClick(veiculo)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Excluir veículo</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
