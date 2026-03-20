@@ -35,6 +35,14 @@ const statusColors: Record<string, string> = {
 
 const PAGE_SIZE = 25;
 
+function normalizeSearchValue(value: string | null | undefined) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 export default function Ativos() {
   const queryClient = useQueryClient();
   const { ativos, isLoading, createAtivo, updateAtivo, deleteAtivo, devolverAtivo } = useAtivos();
@@ -73,17 +81,26 @@ export default function Ativos() {
   });
 
   const filteredAtivos = ativos.filter((a) => {
-    const q = search.toLowerCase();
+    const q = normalizeSearchValue(search);
+    const searchableValues = [
+      a.nome,
+      a.patrimonio,
+      a.descricao,
+      a.numero_serie,
+      a.marca,
+      a.modelo,
+      a.imei,
+      a.chip_linha,
+      a.status,
+      (a as any).funcionario?.nome,
+      (a as any).funcionario?.email,
+      (a as any).funcionario?.cpf,
+      (a as any).empresa?.nome,
+      (a as any).tipo?.name,
+    ];
     const matchSearch =
       !q ||
-      a.nome?.toLowerCase().includes(q) ||
-      a.patrimonio?.toLowerCase().includes(q) ||
-      a.numero_serie?.toLowerCase().includes(q) ||
-      a.marca?.toLowerCase().includes(q) ||
-      a.modelo?.toLowerCase().includes(q) ||
-      a.imei?.toLowerCase().includes(q) ||
-      a.chip_linha?.toLowerCase().includes(q) ||
-      (a as any).funcionario?.nome?.toLowerCase().includes(q);
+      searchableValues.some((value) => normalizeSearchValue(value).includes(q));
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
     const matchTipo = filterTipo === "all" || a.tipo_id === filterTipo;
     const matchEmpresa = filterEmpresa === "all" || a.empresa_id === filterEmpresa;
@@ -441,7 +458,7 @@ export default function Ativos() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por nome, patrimônio, série, marca, modelo, IMEI, chip ou responsável..."
+                    placeholder="Buscar por ativo, patrimônio, série, marca, modelo, funcionário, empresa, tipo, IMEI ou chip..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-10 w-[360px]"
