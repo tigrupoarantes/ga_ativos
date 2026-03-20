@@ -164,9 +164,9 @@ Características observadas:
 
 - **Credenciais Supabase hardcoded no frontend**: existe um client “external” com `url` e `anonKey` no código (risco de segurança/operacional). Ideal: usar `.env` (Vite) e segredos no deploy.
 - **Configuração de IA na UI não está alinhada com as Edge Functions**:
-  - Há UI para salvar `OPENAI_API_KEY` em `app_config`.
-  - As Edge Functions de chat usam `AI_GATEWAY_API_KEY`/`LOVABLE_API_KEY` via `Deno.env` (secrets), não consultam `app_config`.
-  - Resultado: o “token OpenAI” salvo no banco pode não ter efeito prático no chat atual.
+  - A tela administrativa de IA não edita mais a chave pela aplicação; ela apenas orienta o uso de secrets no Supabase.
+  - As Edge Functions de chat usam `OPENAI_API_KEY` via `Deno.env` (secret do projeto), sem consultar `app_config`.
+  - Resultado: a configuração efetiva de IA fica centralizada no backend e fora do banco acessível pela UI.
 - **Configuração WhatsApp na UI**: a tela atual permite testar credenciais, mas não persiste tokens no banco; o envio depende de secrets em Edge Functions.
 - Alguns fluxos (ex.: “salvar consumo” via chat em JSON) parecem **previstos** no prompt, mas não há confirmação de persistência automática no frontend.
 

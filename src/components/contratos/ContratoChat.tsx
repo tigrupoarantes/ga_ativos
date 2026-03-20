@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useContratoChat, ContratoChatMessage } from "@/hooks/useContratoChat";
+import { extractSaveConsumoIntent } from "@/lib/assistant-tools";
 
 interface ContratoChatProps {
   contratoId: string;
@@ -22,13 +23,14 @@ const SUGGESTIONS = [
 ];
 
 export function ContratoChat({ contratoId, contratoNumero, onDataSaved }: ContratoChatProps) {
-  const { messages, isLoading, sendMessage, clearMessages } = useContratoChat(contratoId);
+  const { messages, isLoading, sendMessage, confirmSaveConsumo, clearMessages } = useContratoChat(contratoId);
   const [input, setInput] = useState("");
   const [pendingFile, setPendingFile] = useState<{ name: string; base64: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSavingSuggestion, setIsSavingSuggestion] = useState(false);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -70,6 +72,11 @@ export function ContratoChat({ contratoId, contratoNumero, onDataSaved }: Contra
       handleSubmit(e);
     }
   };
+
+  const lastAssistantMessage = [...messages].reverse().find((msg) => msg.role === "assistant");
+  const pendingSaveIntent = lastAssistantMessage
+    ? extractSaveConsumoIntent(lastAssistantMessage.content)
+    : null;
 
   return (
     <Card className="animate-fade-in">
@@ -137,6 +144,26 @@ export function ContratoChat({ contratoId, contratoNumero, onDataSaved }: Contra
                     </div>
                   </Card>
                 </div>
+              )}
+              {pendingSaveIntent && (
+                <Card className="border-primary/20 bg-primary/5 p-3">
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm">
+                      O assistente preparou {pendingSaveIntent.data.length} registro(s) de consumo para salvar neste contrato.
+                    </p>
+                    <Button
+                      onClick={async () => {
+                        setIsSavingSuggestion(true);
+                        const saved = await confirmSaveConsumo(pendingSaveIntent);
+                        if (saved) onDataSaved?.();
+                        setIsSavingSuggestion(false);
+                      }}
+                      disabled={isLoading || isSavingSuggestion}
+                    >
+                      {isSavingSuggestion ? "Salvando..." : "Confirmar e salvar consumos"}
+                    </Button>
+                  </div>
+                </Card>
               )}
             </div>
           )}

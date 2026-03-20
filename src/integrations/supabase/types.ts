@@ -98,6 +98,125 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_runs: {
+        Row: {
+          agent_key: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          error_code: string | null
+          error_message: string | null
+          finished_at: string | null
+          has_file: boolean
+          id: string
+          message_count: number
+          metadata: Json | null
+          model: string | null
+          provider: string
+          request_id: string
+          route: string
+          status: string
+          tool_action: string | null
+          user_id: string | null
+        }
+        Insert: {
+          agent_key?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          has_file?: boolean
+          id?: string
+          message_count?: number
+          metadata?: Json | null
+          model?: string | null
+          provider?: string
+          request_id?: string
+          route: string
+          status?: string
+          tool_action?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          agent_key?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          has_file?: boolean
+          id?: string
+          message_count?: number
+          metadata?: Json | null
+          model?: string | null
+          provider?: string
+          request_id?: string
+          route?: string
+          status?: string
+          tool_action?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_tool_calls: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          error_code: string | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          input_summary: Json | null
+          result_summary: Json | null
+          run_id: string
+          status: string
+          tool_name: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          input_summary?: Json | null
+          result_summary?: Json | null
+          run_id: string
+          status?: string
+          tool_name: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          input_summary?: Json | null
+          result_summary?: Json | null
+          run_id?: string
+          status?: string
+          tool_name?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_tool_calls_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faturas_telefonia: {
         Row: {
           id: string

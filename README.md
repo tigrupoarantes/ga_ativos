@@ -30,6 +30,10 @@ cp .env.example .env
 
 - PRD (as-is): `docs/PRD.md`
 - Documentação técnica: `docs/TECHNICAL.md`
+- Roadmap de multiagentes do produto: `docs/multiagentes-roadmap.md`
+- Multiagentes de desenvolvimento: `docs/dev-multiagentes.md`
+- Catálogo de agentes de desenvolvimento: `docs/agents/README.md`
+- Agente de segurança de aplicação: `docs/agents/security-appsec.md`
 
 ## Desenvolvimento
 

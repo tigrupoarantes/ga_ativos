@@ -16,7 +16,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.reports-chat]
-verify_jwt = false
+verify_jwt = true
+
+[functions.assistant-hub]
+verify_jwt = true
 
 [functions.sync-to-ga360]
 verify_jwt = false
@@ -25,7 +28,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.contrato-chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.odometer-ocr]
 verify_jwt = false

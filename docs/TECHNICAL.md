@@ -83,6 +83,7 @@ No estado atual, muitos imports usam o `external-client` reexportado como `supab
 Tabelas citadas/observadas com uso no app/edge functions:
 
 - `assets`, `asset_types`
+- `ai_runs`, `ai_tool_calls`
 - `veiculos`, `vehicle_odometer_reports`
 - `funcionarios`, `empresas`, `equipes`
 - `contratos`, `contrato_itens`, `contrato_metricas`, `contrato_consumo`
@@ -154,6 +155,10 @@ As Edge Functions ficam em `supabase/functions/*`.
   - Busca contrato + métricas + consumo.
   - Opcionalmente processa Excel (base64) para contexto.
   - Chama a API da OpenAI com streaming SSE.
+- `assistant-hub`
+  - Ponto único de entrada para IA.
+  - Roteia entre `reports`, `contratos`, `frota` e `oficina`.
+  - `frota` e `oficina` estão em modo read-only nesta fase.
 
 Configuração atual:
 
@@ -260,7 +265,8 @@ Todas as páginas (exceto Auth, NotFound, ResetPassword) são carregadas via `Re
 
 - **IA Config**
   - Edge Functions usam `OPENAI_API_KEY` via secret do Supabase (configurado no projeto `ftksidxyhnvzdsuonwop`).
-  - A UI ainda tem uma seção de configuração de `OPENAI_API_KEY` salva em `app_config`, que não é lida pelas Edge Functions; pode ser removida ou alinhada futuramente.
+  - A UI administrativa de IA agora é apenas informativa e não salva mais `OPENAI_API_KEY` em `app_config`.
+  - Alterações de chave devem ser feitas via secrets do projeto Supabase, fora da interface da aplicação.
 
 - **WhatsApp Config**
   - UI apenas testa credenciais; envio real depende de secrets das Edge Functions.
@@ -269,6 +275,9 @@ Todas as páginas (exceto Auth, NotFound, ResetPassword) são carregadas via `Re
 
 - Analytics: `@vercel/analytics` habilitado no app.
 - Logs: Edge Functions escrevem logs via `console.log/error`.
+- Runtime de IA: `assistant-hub` registra execuções estruturadas em `ai_runs` e `ai_tool_calls`.
+- Escopo atual da telemetria: rota, status, usuário, ferramenta executada, erro sanitizado e metadados operacionais mínimos.
+- A telemetria não persiste prompt completo, resposta completa nem arquivos em base64.
 
 ## 15) Testes
 
