@@ -54,8 +54,6 @@ import {
 import { ImportFaturaDialog } from "@/components/telefonia/ImportFaturaDialog";
 import { FaturaDetalheDialog } from "@/components/telefonia/FaturaDetalheDialog";
 
-// ─── Helpers de status ─────────────────────────────────────────────────────────
-
 const STATUS_LABELS: Record<FaturaStatus, string> = {
   importada: "Importada",
   aprovada: "Aprovada",
@@ -68,8 +66,6 @@ const STATUS_COLORS: Record<FaturaStatus, string> = {
   paga: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
-// ─── Componente ────────────────────────────────────────────────────────────────
-
 export default function FaturasTelefonia() {
   const { data: faturas = [], isLoading } = useFaturasTelefonia();
   const updateStatus = useUpdateFaturaStatus();
@@ -80,11 +76,9 @@ export default function FaturasTelefonia() {
   const [selectedFatura, setSelectedFatura] = useState<FaturaTelefonia | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<FaturaTelefonia | null>(null);
 
-  // Stats
-  const totalGasto = faturas.reduce((s, f) => s + f.valor_total, 0);
-  const totalLinhas = faturas.reduce((s, f) => s + f.qtd_linhas, 0);
-  const mediaPorFatura =
-    faturas.length > 0 ? totalGasto / faturas.length : 0;
+  const totalGasto = faturas.reduce((sum, fatura) => sum + fatura.valor_total, 0);
+  const totalLinhas = faturas.reduce((sum, fatura) => sum + fatura.qtd_linhas, 0);
+  const mediaPorFatura = faturas.length > 0 ? totalGasto / faturas.length : 0;
 
   const handleVerDetalhe = (fatura: FaturaTelefonia) => {
     setSelectedFatura(fatura);
@@ -106,15 +100,15 @@ export default function FaturasTelefonia() {
     <AppLayout>
       <PageHeader
         title="Faturas de Telefonia"
-        description="Importação e rateio de faturas por linha e departamento"
-      >
-        <Button onClick={() => setImportOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Importar Fatura
-        </Button>
-      </PageHeader>
+        description="Importacao e rateio de faturas por linha e departamento"
+        actions={
+          <Button onClick={() => setImportOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Importar Fatura
+          </Button>
+        }
+      />
 
-      {/* Cards de resumo */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
         <Card>
           <CardContent className="flex items-center gap-4 p-5">
@@ -146,20 +140,19 @@ export default function FaturasTelefonia() {
               <FileText className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Média por fatura</p>
+              <p className="text-xs text-muted-foreground">Media por fatura</p>
               <p className="text-xl font-bold">{formatCurrency(mediaPorFatura)}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabela de faturas */}
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-4 space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+              {[...Array(5)].map((_, index) => (
+                <Skeleton key={index} className="h-12 w-full" />
               ))}
             </div>
           ) : faturas.length === 0 ? (
@@ -178,45 +171,45 @@ export default function FaturasTelefonia() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Período</TableHead>
+                    <TableHead>Periodo</TableHead>
                     <TableHead>Operadora</TableHead>
-                    <TableHead>Nº Fatura</TableHead>
+                    <TableHead>No Fatura</TableHead>
                     <TableHead className="text-right">Linhas</TableHead>
                     <TableHead className="text-right">Valor Total</TableHead>
                     <TableHead>Vencimento</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-right">Acoes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {faturas.map((f) => (
+                  {faturas.map((fatura) => (
                     <TableRow
-                      key={f.id}
+                      key={fatura.id}
                       className="cursor-pointer hover:bg-muted/40"
-                      onClick={() => handleVerDetalhe(f)}
+                      onClick={() => handleVerDetalhe(fatura)}
                     >
                       <TableCell className="font-medium">
-                        {formatPeriod(f.periodo_inicio, f.periodo_fim)}
+                        {formatPeriod(fatura.periodo_inicio, fatura.periodo_fim)}
                       </TableCell>
-                      <TableCell>{f.operadora}</TableCell>
+                      <TableCell>{fatura.operadora}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {f.numero_fatura ?? "—"}
+                        {fatura.numero_fatura ?? "-"}
                       </TableCell>
-                      <TableCell className="text-right">{f.qtd_linhas}</TableCell>
+                      <TableCell className="text-right">{fatura.qtd_linhas}</TableCell>
                       <TableCell className="text-right font-semibold">
-                        {formatCurrency(f.valor_total)}
+                        {formatCurrency(fatura.valor_total)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {f.data_vencimento
-                          ? new Date(f.data_vencimento + "T12:00:00").toLocaleDateString("pt-BR")
-                          : "—"}
+                        {fatura.data_vencimento
+                          ? new Date(`${fatura.data_vencimento}T12:00:00`).toLocaleDateString("pt-BR")
+                          : "-"}
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className={cn("text-xs", STATUS_COLORS[f.status as FaturaStatus])}
+                          className={cn("text-xs", STATUS_COLORS[fatura.status as FaturaStatus])}
                         >
-                          {STATUS_LABELS[f.status as FaturaStatus] ?? f.status}
+                          {STATUS_LABELS[fatura.status as FaturaStatus] ?? fatura.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -226,49 +219,49 @@ export default function FaturasTelefonia() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(event) => event.stopPropagation()}
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleVerDetalhe(f);
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleVerDetalhe(fatura);
                               }}
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               Ver detalhes / Rateio
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            {f.status !== "aprovada" && (
+                            {fatura.status !== "aprovada" && (
                               <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUpdateStatus(f, "aprovada");
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleUpdateStatus(fatura, "aprovada");
                                 }}
                               >
                                 <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
                                 Marcar como Aprovada
                               </DropdownMenuItem>
                             )}
-                            {f.status !== "paga" && (
+                            {fatura.status !== "paga" && (
                               <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUpdateStatus(f, "paga");
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleUpdateStatus(fatura, "paga");
                                 }}
                               >
                                 <DollarSign className="mr-2 h-4 w-4 text-blue-600" />
                                 Marcar como Paga
                               </DropdownMenuItem>
                             )}
-                            {f.status !== "importada" && (
+                            {fatura.status !== "importada" && (
                               <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUpdateStatus(f, "importada");
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleUpdateStatus(fatura, "importada");
                                 }}
                               >
                                 <Clock className="mr-2 h-4 w-4" />
@@ -278,9 +271,9 @@ export default function FaturasTelefonia() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteConfirm(f);
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDeleteConfirm(fatura);
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -298,20 +291,18 @@ export default function FaturasTelefonia() {
         </CardContent>
       </Card>
 
-      {/* Dialogs */}
       <ImportFaturaDialog open={importOpen} onOpenChange={setImportOpen} />
 
       <FaturaDetalheDialog
         fatura={selectedFatura}
         open={detalheOpen}
-        onOpenChange={(o) => {
-          setDetalheOpen(o);
-          if (!o) setSelectedFatura(null);
+        onOpenChange={(open) => {
+          setDetalheOpen(open);
+          if (!open) setSelectedFatura(null);
         }}
       />
 
-      {/* Confirmar exclusão */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => !o && setDeleteConfirm(null)}>
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir fatura?</AlertDialogTitle>
@@ -319,7 +310,7 @@ export default function FaturasTelefonia() {
               A fatura de{" "}
               {deleteConfirm &&
                 formatPeriod(deleteConfirm.periodo_inicio, deleteConfirm.periodo_fim)}{" "}
-              ({deleteConfirm && formatCurrency(deleteConfirm.valor_total)}) será removida
+              ({deleteConfirm && formatCurrency(deleteConfirm.valor_total)}) sera removida
               permanentemente, incluindo todas as linhas associadas.
             </AlertDialogDescription>
           </AlertDialogHeader>
