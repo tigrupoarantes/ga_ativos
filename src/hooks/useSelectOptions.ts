@@ -143,6 +143,7 @@ interface FuncionarioCombobox {
   id: string;
   nome: string;
   cpf: string | null;
+  empresa_id: string | null;
 }
 
 export function useFuncionariosCombobox() {
@@ -151,7 +152,7 @@ export function useFuncionariosCombobox() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("funcionarios")
-        .select("id, nome, cpf")
+        .select("id, nome, cpf, empresa_id")
         .eq("active", true)
         .order("nome");
 

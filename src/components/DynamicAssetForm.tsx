@@ -194,7 +194,14 @@ export function DynamicAssetForm({ tipoId, tipoNome, formFields, onSuccess, onCa
             </Label>
             <FuncionarioCombobox
               value={formData[config.field] || ""}
-              onValueChange={(v) => handleChange(config.field, v)}
+              onValueChange={(v) => {
+                const func = funcionarios.find((f) => f.id === v);
+                setFormData((prev) => ({
+                  ...prev,
+                  [config.field]: v,
+                  empresa_id: func?.empresa_id || prev.empresa_id || "",
+                }));
+              }}
               funcionarios={funcionarios}
               placeholder="Buscar por nome ou CPF"
             />

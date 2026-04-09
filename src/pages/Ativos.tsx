@@ -354,7 +354,14 @@ export default function Ativos() {
                 <Label htmlFor="funcionario_id">Funcionário</Label>
                 <FuncionarioCombobox
                   value={formData.funcionario_id}
-                  onValueChange={(v) => setFormData({ ...formData, funcionario_id: v })}
+                  onValueChange={(v) => {
+                    const func = funcionarios.find((f) => f.id === v);
+                    setFormData({
+                      ...formData,
+                      funcionario_id: v,
+                      empresa_id: func?.empresa_id || formData.empresa_id,
+                    });
+                  }}
                   funcionarios={funcionarios}
                   placeholder="Buscar por nome ou CPF"
                 />

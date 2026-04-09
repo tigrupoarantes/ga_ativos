@@ -69,7 +69,9 @@ export function NotebookForm({ onSuccess, onCancel }: NotebookFormProps) {
         p_data_aquisicao: formData.data_aquisicao || null,
         p_valor_aquisicao: formData.valor_aquisicao ? parseFloat(formData.valor_aquisicao) : null,
         p_funcionario_id: formData.funcionario_id || null,
-        p_empresa_id: null,
+        p_empresa_id: formData.funcionario_id
+          ? (funcionarios.find((f) => f.id === formData.funcionario_id)?.empresa_id || null)
+          : null,
         p_status: status,
       });
 
