@@ -61,6 +61,9 @@ const AdminBugReports   = lazy(() => import("./pages/AdminBugReports"));
 // Motorista — tela mobile-only, maioria dos usuários nunca acessa esta rota
 const Motorista         = lazy(() => import("./pages/Motorista"));
 
+// Ajuda
+const Ajuda             = lazy(() => import("./pages/Ajuda"));
+
 // ─── Query client ─────────────────────────────────────────────────────────────
 
 const queryClient = new QueryClient({
@@ -183,6 +186,7 @@ const App = () => (
               <Route path="/admin/bugs" element={<ProtectedRoute><AdminBugReports /></ProtectedRoute>} />
 
               {/* Motorista — tela mobile-first de registro de KM */}
+              <Route path="/ajuda" element={<ProtectedRoute><Ajuda /></ProtectedRoute>} />
               <Route path="/motorista" element={<ProtectedRoute><Motorista /></ProtectedRoute>} />
 
               {/* Catch-all */}

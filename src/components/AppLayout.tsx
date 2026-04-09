@@ -23,6 +23,7 @@ import {
   Boxes,
   UsersRound,
   Bug,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -163,6 +164,7 @@ const navStructure: NavEntry[] = [
   { icon: MessageSquare, label: "Relatórios IA", path: "/relatorios", module: "relatorios" },
   { icon: History, label: "Histórico", path: "/historico", module: "historico" },
   { icon: FileText, label: "Contratos", path: "/contratos", module: "contratos" },
+  { icon: HelpCircle, label: "Ajuda", path: "/ajuda", module: "ajuda" },
 ];
 
 // Admin items
@@ -212,6 +214,7 @@ function NavContent() {
 
   // Check if user can see a module
   const canSeeModule = (module: string) => {
+    if (module === "ajuda") return true;
     if (isAdmin) return true;
     return allowedModules.includes(module);
   };
