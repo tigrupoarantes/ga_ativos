@@ -92,6 +92,25 @@ export function useRecalculateVeiculoDepreciation() {
   });
 }
 
+export function useRecalculateAllVehicles() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("recalculate_all_vehicle_depreciation");
+      if (error) throw error;
+      return data as unknown as { calculated: number; errors: number };
+    },
+    onSuccess: (result) => {
+      toast.success(`Depreciação calculada: ${result.calculated} veículos, ${result.errors} erros`);
+      queryClient.invalidateQueries({ queryKey: ["veiculos"] });
+    },
+    onError: (error) => {
+      toast.error(friendlyErrorMessage("recalcular depreciação em lote", error));
+    },
+  });
+}
+
 export function useVeiculoDepreciationHistory(vehicleId: string | null) {
   return useQuery({
     queryKey: ["vehicle-depreciation-history", vehicleId],

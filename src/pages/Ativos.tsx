@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft, Undo2, FileText, X, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, History, ArrowLeft, Undo2, FileText, X, MoreHorizontal, TrendingDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AtivoDepreciacaoTab } from "@/components/AtivoDepreciacaoTab";
+import { useRecalculateAll } from "@/hooks/useDepreciation";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -49,6 +50,7 @@ function normalizeSearchValue(value: string | null | undefined) {
 export default function Ativos() {
   const queryClient = useQueryClient();
   const { ativos, isLoading, createAtivo, updateAtivo, deleteAtivo, devolverAtivo } = useAtivos();
+  const recalculateAll = useRecalculateAll();
   const { tipos } = useTiposAtivos();
   const { funcionarios } = useFuncionariosCombobox();
   const { empresas } = useEmpresas();
@@ -520,6 +522,14 @@ export default function Ativos() {
                 </Select>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => recalculateAll.mutate()}
+                  disabled={recalculateAll.isPending}
+                >
+                  {recalculateAll.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <TrendingDown className="h-4 w-4 mr-2" />}
+                  Calcular Depreciação
+                </Button>
                 <ImportCelularesDialog />
                 <ImportNotebooksDialog />
                 <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>

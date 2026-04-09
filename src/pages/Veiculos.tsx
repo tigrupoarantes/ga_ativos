@@ -32,6 +32,7 @@ import { VeiculoSegurosTab } from "@/components/VeiculoSegurosTab";
 import { VeiculosDashboard } from "@/components/VeiculosDashboard";
 import { ConsultaFipeMassaDialog } from "@/components/ConsultaFipeMassaDialog";
 import { VeiculoDepreciacaoTab } from "@/components/VeiculoDepreciacaoTab";
+import { useRecalculateAllVehicles } from "@/hooks/useVeiculoDepreciation";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
@@ -61,6 +62,7 @@ export default function Veiculos() {
   const { empresas } = useEmpresasSelect();
   const { registrarAlteracaoResponsavel } = useVeiculosHistoricoResponsavel();
   const fipeConsultaDireta = useFipeConsultaDireta();
+  const recalculateAllVehicles = useRecalculateAllVehicles();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -401,6 +403,14 @@ export default function Veiculos() {
             </div>
             <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => recalculateAllVehicles.mutate()}
+                  disabled={recalculateAllVehicles.isPending}
+                >
+                  {recalculateAllVehicles.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <TrendingDown className="h-4 w-4 mr-2" />}
+                  Calcular Depreciação
+                </Button>
                 <ImportVeiculosDialog />
                 <DialogTrigger asChild>
                   <Button>
