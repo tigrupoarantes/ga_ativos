@@ -45,7 +45,8 @@ export function VeiculoDepreciacaoTab({ vehicleId }: Props) {
     );
   }
 
-  if (data.is_depreciable === false || !data.valor_aquisicao || data.valor_aquisicao <= 0) {
+  const baseValue = data.valor_aquisicao || data.valor_fipe;
+  if (data.is_depreciable === false || !baseValue || baseValue <= 0) {
     return (
       <div className="space-y-4">
         <div className="text-center py-8">
@@ -101,8 +102,10 @@ export function VeiculoDepreciacaoTab({ vehicleId }: Props) {
       <div className="grid grid-cols-3 gap-3">
         <Card className="shadow-none">
           <CardContent className="pt-4 pb-3 px-4">
-            <p className="text-xs text-muted-foreground">Valor de Aquisição</p>
-            <p className="text-lg font-semibold">{fmt(data.valor_aquisicao)}</p>
+            <p className="text-xs text-muted-foreground">
+              {data.valor_aquisicao ? "Valor de Aquisição" : "Valor Base (FIPE)"}
+            </p>
+            <p className="text-lg font-semibold">{fmt(baseValue)}</p>
           </CardContent>
         </Card>
         <Card className="shadow-none">

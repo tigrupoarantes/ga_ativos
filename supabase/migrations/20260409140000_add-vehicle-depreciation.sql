@@ -60,9 +60,13 @@ BEGIN
     RETURN jsonb_build_object('error', 'Veículo não encontrado');
   END IF;
 
-  IF v_veiculo.valor_aquisicao IS NULL OR v_veiculo.valor_aquisicao <= 0 THEN
+  -- Usar valor_aquisicao, senão valor_fipe como fallback
+  DECLARE v_base_value NUMERIC(12,2);
+  BEGIN
+  v_base_value := COALESCE(v_veiculo.valor_aquisicao, v_veiculo.valor_fipe);
+  IF v_base_value IS NULL OR v_base_value <= 0 THEN
     UPDATE veiculos SET is_depreciable = false WHERE id = p_vehicle_id;
-    RETURN jsonb_build_object('status', 'not_depreciable', 'reason', 'Sem valor de aquisição');
+    RETURN jsonb_build_object('status', 'not_depreciable', 'reason', 'Sem valor de aquisição ou FIPE');
   END IF;
 
   -- Override do veículo
@@ -105,7 +109,12 @@ BEGIN
   END IF;
 
   -- Data de início: depreciation_start_date > data_aquisicao
-  v_start_date := COALESCE(v_veiculo.depreciation_start_date, v_veiculo.data_aquisicao);
+  -- Data de início: depreciation_start_date > data_aquisicao > 01/01/ano_fabricacao
+  v_start_date := COALESCE(
+    v_veiculo.depreciation_start_date,
+    v_veiculo.data_aquisicao,
+    CASE WHEN v_veiculo.ano_fabricacao IS NOT NULL THEN make_date(v_veiculo.ano_fabricacao, 1, 1) ELSE NULL END
+  );
   IF v_start_date IS NULL THEN
     UPDATE veiculos SET is_depreciable = false WHERE id = p_vehicle_id;
     RETURN jsonb_build_object('status', 'not_depreciable', 'reason', 'Sem data de início');
