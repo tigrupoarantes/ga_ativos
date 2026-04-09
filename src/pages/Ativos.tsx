@@ -26,6 +26,8 @@ import { DataTablePagination } from "@/components/DataTablePagination";
 import { GerarContratoDialog } from "@/components/GerarContratoDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AtivoDepreciacaoTab } from "@/components/AtivoDepreciacaoTab";
 
 const statusColors: Record<string, string> = {
   disponivel: "bg-status-success/10 text-status-success",
@@ -233,13 +235,19 @@ export default function Ativos() {
 
   // Renderizar conteúdo do dialog baseado no estado
   const renderDialogContent = () => {
-    // Modo de edição: formulário completo
+    // Modo de edição: formulário com tabs (Dados + Depreciação)
     if (editingId) {
       return (
         <>
           <DialogHeader>
             <DialogTitle>Editar Ativo</DialogTitle>
           </DialogHeader>
+          <Tabs defaultValue="dados">
+            <TabsList className="mb-4">
+              <TabsTrigger value="dados">Dados</TabsTrigger>
+              <TabsTrigger value="depreciacao">Depreciação</TabsTrigger>
+            </TabsList>
+            <TabsContent value="dados">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -387,6 +395,11 @@ export default function Ativos() {
               </Button>
             </DialogFooter>
           </form>
+            </TabsContent>
+            <TabsContent value="depreciacao">
+              <AtivoDepreciacaoTab assetId={editingId} />
+            </TabsContent>
+          </Tabs>
         </>
       );
     }
@@ -516,7 +529,7 @@ export default function Ativos() {
                       Novo Ativo
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     {renderDialogContent()}
                   </DialogContent>
                 </Dialog>
