@@ -52,6 +52,13 @@ import {
 
 const statusOptions = ["Pendente", "Pago", "Recorrido", "Cancelado"];
 
+const gravidadeOptions = [
+  { value: "leve", label: "Leve", pontos: 3 },
+  { value: "media", label: "Média", pontos: 4 },
+  { value: "grave", label: "Grave", pontos: 5 },
+  { value: "gravissima", label: "Gravíssima", pontos: 7 },
+];
+
 export default function VeiculosMultas() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -72,10 +79,32 @@ export default function VeiculosMultas() {
     codigo_infracao: "",
     local_infracao: "",
     valor_multa: "",
+    gravidade: "",
     pontos: "",
     status: "Pendente",
     observacoes: "",
   });
+
+  // Auto-preencher motorista ao selecionar veículo
+  const handleVeiculoChange = (placa: string) => {
+    const veiculo = veiculos.find((v) => v.placa === placa);
+    const motorista = veiculo?.funcionario_id || "";
+    setFormData((prev) => ({
+      ...prev,
+      veiculo_placa: placa,
+      funcionario_responsavel_id: motorista,
+    }));
+  };
+
+  // Auto-preencher pontos ao selecionar gravidade
+  const handleGravidadeChange = (gravidade: string) => {
+    const option = gravidadeOptions.find((g) => g.value === gravidade);
+    setFormData((prev) => ({
+      ...prev,
+      gravidade,
+      pontos: option ? option.pontos.toString() : prev.pontos,
+    }));
+  };
 
   const filteredMultas = multas.filter((multa) => {
     const search = debouncedSearch.toLowerCase();
@@ -102,6 +131,7 @@ export default function VeiculosMultas() {
       codigo_infracao: formData.codigo_infracao || null,
       local_infracao: formData.local_infracao || null,
       valor_multa: formData.valor_multa ? parseFloat(formData.valor_multa) : null,
+      gravidade: formData.gravidade || null,
       pontos: formData.pontos ? parseInt(formData.pontos) : null,
       status: formData.status,
       observacoes: formData.observacoes || null,
@@ -125,6 +155,7 @@ export default function VeiculosMultas() {
       codigo_infracao: "",
       local_infracao: "",
       valor_multa: "",
+      gravidade: "",
       pontos: "",
       status: "Pendente",
       observacoes: "",
@@ -141,6 +172,7 @@ export default function VeiculosMultas() {
       codigo_infracao: multa.codigo_infracao || "",
       local_infracao: multa.local_infracao || "",
       valor_multa: multa.valor_multa?.toString() || "",
+      gravidade: multa.gravidade || "",
       pontos: multa.pontos?.toString() || "",
       status: multa.status || "Pendente",
       observacoes: multa.observacoes || "",
@@ -204,9 +236,7 @@ export default function VeiculosMultas() {
                       <Label>Veículo *</Label>
                       <Select
                         value={formData.veiculo_placa}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, veiculo_placa: value })
-                        }
+                        onValueChange={handleVeiculoChange}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o veículo" />
@@ -295,6 +325,24 @@ export default function VeiculosMultas() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label>Gravidade</Label>
+                      <Select
+                        value={formData.gravidade}
+                        onValueChange={handleGravidadeChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a gravidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gravidadeOptions.map((g) => (
+                            <SelectItem key={g.value} value={g.value}>
+                              {g.label} ({g.pontos} pontos)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label>Pontos</Label>
                       <Input
                         type="number"
@@ -368,6 +416,7 @@ export default function VeiculosMultas() {
                       <TableHead>Veículo</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead>Descrição</TableHead>
+                      <TableHead>Gravidade</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Pontos</TableHead>
                       <TableHead>Status</TableHead>
@@ -377,7 +426,7 @@ export default function VeiculosMultas() {
                   <TableBody>
                     {paginatedMultas.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           <AlertTriangle className="h-12 w-12 mx-auto mb-2 opacity-50" />
                           Nenhuma multa encontrada
                         </TableCell>
@@ -391,6 +440,13 @@ export default function VeiculosMultas() {
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate">
                             {multa.descricao_infracao}
+                          </TableCell>
+                          <TableCell>
+                            {multa.gravidade ? (
+                              <Badge variant="outline" className="capitalize">
+                                {gravidadeOptions.find((g) => g.value === multa.gravidade)?.label || multa.gravidade}
+                              </Badge>
+                            ) : "-"}
                           </TableCell>
                           <TableCell>
                             {multa.valor_multa

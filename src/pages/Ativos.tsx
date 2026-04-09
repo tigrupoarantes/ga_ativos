@@ -21,6 +21,7 @@ import { HistoricoAtivoDialog } from "@/components/HistoricoAtivoDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { ImportCelularesDialog } from "@/components/ImportCelularesDialog";
+import { ImportNotebooksDialog } from "@/components/ImportNotebooksDialog";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { GerarContratoDialog } from "@/components/GerarContratoDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -319,6 +320,16 @@ export default function Ativos() {
                   onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
                 />
               </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="descricao">Descrição</Label>
+                <textarea
+                  id="descricao"
+                  value={formData.descricao}
+                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Descrição do ativo"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="data_aquisicao">Data de Aquisição</Label>
                 <Input
@@ -490,6 +501,7 @@ export default function Ativos() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <ImportCelularesDialog />
+                <ImportNotebooksDialog />
                 <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
                   <DialogTrigger asChild>
                     <Button>

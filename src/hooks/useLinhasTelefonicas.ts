@@ -9,6 +9,9 @@ interface LinhaTelefonica {
   funcionario_id: string | null;
   operadora: string | null;
   plano: string | null;
+  empresa_id: string | null;
+  centro_custo: string | null;
+  funcao: string | null;
   observacoes: string | null;
   active: boolean | null;
   created_at: string;
@@ -17,6 +20,10 @@ interface LinhaTelefonica {
     id: string;
     nome: string;
     cpf: string | null;
+  } | null;
+  empresa?: {
+    id: string;
+    nome: string;
   } | null;
 }
 
@@ -55,26 +62,47 @@ export function useLinhasTelefonicas(searchTerm?: string, page = 1, operadoraFil
     queryKey: ["linhas-telefonicas", searchTerm ?? "", page, operadoraFilter ?? ""],
     queryFn: async () => {
       const search = searchTerm?.trim() ?? "";
-      const isNumericSearch = search.length > 0 && /^\d+$/.test(digitsOnly(search));
+      const digits = digitsOnly(search);
+      const isNumericSearch = search.length > 0 && digits.length === search.replace(/[\s\-()]/g, "").length;
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
+
+      if (search && !isNumericSearch) {
+        // Busca por nome: usa !inner para que o filtro na FK funcione como WHERE
+        let query = supabase
+          .from("linhas_telefonicas")
+          .select(`
+            *,
+            funcionario:funcionarios!inner(id, nome, cpf),
+            empresa:empresas(id, nome)
+          `, { count: "exact" })
+          .eq("active", true)
+          .ilike("funcionario.nome", `%${search}%`)
+          .order("numero")
+          .range(from, to);
+
+        if (operadoraFilter) {
+          query = query.eq("operadora", operadoraFilter);
+        }
+
+        const { data, error, count } = await query;
+        if (error) throw error;
+        return { linhas: data as LinhaTelefonica[], total: count ?? 0 };
+      }
 
       let query = supabase
         .from("linhas_telefonicas")
         .select(`
           *,
-          funcionario:funcionarios(id, nome, cpf)
+          funcionario:funcionarios(id, nome, cpf),
+          empresa:empresas(id, nome)
         `, { count: "exact" })
         .eq("active", true)
         .order("numero")
         .range(from, to);
 
-      if (search) {
-        if (isNumericSearch) {
-          query = query.ilike("numero", `%${digitsOnly(search)}%`);
-        } else {
-          query = query.ilike("funcionario.nome", `%${search}%`);
-        }
+      if (search && isNumericSearch) {
+        query = query.ilike("numero", `%${digits}%`);
       }
 
       if (operadoraFilter) {

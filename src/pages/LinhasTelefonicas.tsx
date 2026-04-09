@@ -49,6 +49,7 @@ import { SincronizarLinhasDialog } from "@/components/telefonia/SincronizarLinha
 import { useDebounce } from "@/hooks/useDebounce";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { DataTablePagination } from "@/components/DataTablePagination";
+import { useEmpresas } from "@/hooks/useEmpresas";
 
 const OPERADORAS = ["Vivo", "Claro", "TIM", "Oi", "Outras"];
 
@@ -57,6 +58,9 @@ interface FormData {
   funcionario_id: string;
   operadora: string;
   plano: string;
+  empresa_id: string;
+  centro_custo: string;
+  funcao: string;
   observacoes: string;
 }
 
@@ -65,6 +69,9 @@ const initialFormData: FormData = {
   funcionario_id: "",
   operadora: "",
   plano: "",
+  empresa_id: "",
+  centro_custo: "",
+  funcao: "",
   observacoes: "",
 };
 
@@ -83,6 +90,7 @@ export default function LinhasTelefonicas() {
 
   const { linhas, total, isLoading, createLinha, updateLinha, deleteLinha, bulkCreateLinhas, stats } =
     useLinhasTelefonicas(debouncedSearch, page, operadoraFilter || undefined);
+  const { empresas } = useEmpresas();
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -122,11 +130,14 @@ export default function LinhasTelefonicas() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const data = {
+    const data: any = {
       numero: formData.numero.replace(/\D/g, ""),
       funcionario_id: formData.funcionario_id || null,
       operadora: formData.operadora || null,
       plano: formData.plano || null,
+      empresa_id: formData.empresa_id || null,
+      centro_custo: formData.centro_custo || null,
+      funcao: formData.funcao || null,
       observacoes: formData.observacoes || null,
     };
 
@@ -153,6 +164,9 @@ export default function LinhasTelefonicas() {
       funcionario_id: linha.funcionario_id || "",
       operadora: linha.operadora || "",
       plano: linha.plano || "",
+      empresa_id: linha.empresa_id || "",
+      centro_custo: linha.centro_custo || "",
+      funcao: linha.funcao || "",
       observacoes: linha.observacoes || "",
     });
     setEditingId(linha.id);
@@ -261,6 +275,54 @@ export default function LinhasTelefonicas() {
                       value={formData.plano}
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, plano: e.target.value }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1">
+                    Rateio
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Empresa</Label>
+                      <Select
+                        value={formData.empresa_id}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({ ...prev, empresa_id: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {empresas.map((e) => (
+                            <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="centro_custo">Centro de Custo</Label>
+                      <Input
+                        id="centro_custo"
+                        placeholder="Ex: CC-001"
+                        value={formData.centro_custo}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, centro_custo: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="funcao">Função</Label>
+                    <Input
+                      id="funcao"
+                      placeholder="Ex: Comercial"
+                      value={formData.funcao}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, funcao: e.target.value }))
                       }
                     />
                   </div>
@@ -377,6 +439,9 @@ export default function LinhasTelefonicas() {
               <TableRow>
                 <TableHead>Número</TableHead>
                 <TableHead>Funcionário</TableHead>
+                <TableHead>Empresa</TableHead>
+                <TableHead>Centro de Custo</TableHead>
+                <TableHead>Função</TableHead>
                 <TableHead>Operadora</TableHead>
                 <TableHead>Plano</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
@@ -388,6 +453,9 @@ export default function LinhasTelefonicas() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
@@ -395,7 +463,7 @@ export default function LinhasTelefonicas() {
                 ))
               ) : linhas?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Nenhuma linha telefônica cadastrada
                   </TableCell>
                 </TableRow>
@@ -419,6 +487,9 @@ export default function LinhasTelefonicas() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
+                    <TableCell>{(linha as any).empresa?.nome || "-"}</TableCell>
+                    <TableCell>{(linha as any).centro_custo || "-"}</TableCell>
+                    <TableCell>{(linha as any).funcao || "-"}</TableCell>
                     <TableCell>{linha.operadora || "-"}</TableCell>
                     <TableCell>{linha.plano || "-"}</TableCell>
                     <TableCell>

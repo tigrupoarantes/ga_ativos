@@ -95,6 +95,7 @@ export default function Funcionarios() {
     cnh_validade: "",
     is_vendedor: false,
     codigo_vendedor: "",
+    is_promotor: false,
     rg: "",
     cidade: "",
     endereco: "",
@@ -133,6 +134,7 @@ export default function Funcionarios() {
       cnh_validade: formData.cnh_validade || null,
       is_vendedor: formData.is_vendedor,
       codigo_vendedor: formData.codigo_vendedor || null,
+      is_promotor: formData.is_promotor,
       rg: (formData as any).rg || null,
       cidade: (formData as any).cidade || null,
       endereco: (formData as any).endereco || null,
@@ -191,6 +193,7 @@ export default function Funcionarios() {
       cnh_validade: funcionario.cnh_validade || "",
       is_vendedor: (funcionario as any).is_vendedor || false,
       codigo_vendedor: (funcionario as any).codigo_vendedor || "",
+      is_promotor: (funcionario as any).is_promotor || false,
       rg: (funcionario as any).rg || "",
       cidade: (funcionario as any).cidade || "",
       endereco: (funcionario as any).endereco || "",
@@ -394,6 +397,14 @@ export default function Funcionarios() {
                       />
                     </div>
                   )}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_promotor"
+                      checked={formData.is_promotor}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_promotor: checked as boolean })}
+                    />
+                    <Label htmlFor="is_promotor">É promotor</Label>
+                  </div>
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1">
                       Dados pessoais adicionais (contratos de comodato)

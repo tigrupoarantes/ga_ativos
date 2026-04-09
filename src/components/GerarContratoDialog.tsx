@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/external-client";
 import { useContratoComodato, type DadosContratoComodato } from "@/hooks/useContratoComodato";
 
@@ -102,7 +103,7 @@ export function GerarContratoDialog({ ativo, open, onOpenChange }: GerarContrato
         if (ativo!.funcionario_id) {
           const { data: func } = await supabase
             .from("funcionarios")
-            .select("id, nome, cpf, rg, cidade, endereco, cargo, empresa_id, empresa:empresas!funcionarios_empresa_id_fkey(id, nome, cnpj)")
+            .select("id, nome, cpf, rg, cidade, endereco, cargo, is_promotor, empresa_id, empresa:empresas!funcionarios_empresa_id_fkey(id, nome, cnpj)")
             .eq("id", ativo!.funcionario_id)
             .single();
 
@@ -189,7 +190,7 @@ export function GerarContratoDialog({ ativo, open, onOpenChange }: GerarContrato
         rg: rg || funcionario.rg,
         cidade: cidade || funcionario.cidade,
         endereco: endereco || funcionario.endereco,
-        cargo: funcionario.cargo,
+        cargo: funcionario.cargo || ((funcionario as any).is_promotor ? "Promotor(a)" : null),
       },
       ativo: {
         id: ativo.id,
@@ -283,8 +284,13 @@ export function GerarContratoDialog({ ativo, open, onOpenChange }: GerarContrato
                 {funcionario.cpf && (
                   <p className="text-sm text-muted-foreground">CPF: {funcionario.cpf}</p>
                 )}
-                {funcionario.cargo && (
-                  <p className="text-sm text-muted-foreground">{funcionario.cargo}</p>
+                {(funcionario.cargo || (funcionario as any).is_promotor) && (
+                  <p className="text-sm text-muted-foreground">
+                    {funcionario.cargo || "Promotor(a)"}
+                    {(funcionario as any).is_promotor && !funcionario.cargo && (
+                      <Badge variant="outline" className="ml-2 text-xs">Promotor</Badge>
+                    )}
+                  </p>
                 )}
               </div>
             )}
