@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield, Upload, Loader2, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Car, History, DollarSign, FileText, ClipboardList, Shield, Upload, Loader2, MoreHorizontal, TrendingDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ImportVeiculosDialog } from "@/components/ImportVeiculosDialog";
@@ -31,6 +31,7 @@ import { VeiculoLicenciamentoTab } from "@/components/VeiculoLicenciamentoTab";
 import { VeiculoSegurosTab } from "@/components/VeiculoSegurosTab";
 import { VeiculosDashboard } from "@/components/VeiculosDashboard";
 import { ConsultaFipeMassaDialog } from "@/components/ConsultaFipeMassaDialog";
+import { VeiculoDepreciacaoTab } from "@/components/VeiculoDepreciacaoTab";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
@@ -414,7 +415,7 @@ export default function Veiculos() {
                 </DialogHeader>
                 
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-4">
+                  <TabsList className={cn("grid w-full", editingId && formData.placa ? "grid-cols-5" : "grid-cols-4")}>
                     <TabsTrigger value="dados">
                       <Car className="h-4 w-4 mr-2" />
                       Dados
@@ -431,6 +432,12 @@ export default function Veiculos() {
                       <TabsTrigger value="documentos">
                         <FileText className="h-4 w-4 mr-2" />
                         Documentos
+                      </TabsTrigger>
+                    )}
+                    {editingId && (
+                      <TabsTrigger value="depreciacao">
+                        <TrendingDown className="h-4 w-4 mr-2" />
+                        Depreciação
                       </TabsTrigger>
                     )}
                   </TabsList>
@@ -696,6 +703,11 @@ export default function Veiculos() {
                   {editingId && formData.placa && (
                     <TabsContent value="documentos">
                       <VeiculoDocumentosSection veiculoPlaca={formData.placa} />
+                    </TabsContent>
+                  )}
+                  {editingId && (
+                    <TabsContent value="depreciacao">
+                      <VeiculoDepreciacaoTab vehicleId={editingId} />
                     </TabsContent>
                   )}
                 </Tabs>
